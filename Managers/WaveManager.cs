@@ -38,15 +38,15 @@ public class WaveManager
         _waves = new List<WaveDefinition>
         {
             new(EnemyCount: 5,  EnemyHealth: 30,  EnemySpeed: 90,  EnemyBounty: 5,  SpawnInterval: 1.0f),
-            // new(EnemyCount: 8,  EnemyHealth: 40,  EnemySpeed: 95,  EnemyBounty: 5,  SpawnInterval: 0.9f),
-            // new(EnemyCount: 10, EnemyHealth: 60,  EnemySpeed: 100,  EnemyBounty: 8,  SpawnInterval: 0.8f),
-            // new(EnemyCount: 12, EnemyHealth: 80,  EnemySpeed: 110,  EnemyBounty: 8,  SpawnInterval: 0.8f),
-            // new(EnemyCount: 15, EnemyHealth: 100, EnemySpeed: 120,  EnemyBounty: 10, SpawnInterval: 0.7f),
-            // new(EnemyCount: 18, EnemyHealth: 130, EnemySpeed: 130,  EnemyBounty: 10, SpawnInterval: 0.7f),
-            // new(EnemyCount: 20, EnemyHealth: 170, EnemySpeed: 135,  EnemyBounty: 12, SpawnInterval: 0.6f),
-            // new(EnemyCount: 22, EnemyHealth: 220, EnemySpeed: 140,  EnemyBounty: 15, SpawnInterval: 0.6f),
-            // new(EnemyCount: 25, EnemyHealth: 300, EnemySpeed: 145,  EnemyBounty: 18, SpawnInterval: 0.5f),
-            // new(EnemyCount: 30, EnemyHealth: 400, EnemySpeed: 145,  EnemyBounty: 25, SpawnInterval: 0.4f),
+            new(EnemyCount: 8,  EnemyHealth: 40,  EnemySpeed: 95,  EnemyBounty: 5,  SpawnInterval: 0.9f),
+            new(EnemyCount: 10, EnemyHealth: 60,  EnemySpeed: 100,  EnemyBounty: 8,  SpawnInterval: 0.8f),
+            new(EnemyCount: 12, EnemyHealth: 80,  EnemySpeed: 110,  EnemyBounty: 8,  SpawnInterval: 0.8f),
+            new(EnemyCount: 15, EnemyHealth: 100, EnemySpeed: 120,  EnemyBounty: 10, SpawnInterval: 0.7f),
+            new(EnemyCount: 18, EnemyHealth: 130, EnemySpeed: 130,  EnemyBounty: 10, SpawnInterval: 0.7f),
+            new(EnemyCount: 20, EnemyHealth: 170, EnemySpeed: 135,  EnemyBounty: 12, SpawnInterval: 0.6f),
+            new(EnemyCount: 22, EnemyHealth: 220, EnemySpeed: 140,  EnemyBounty: 15, SpawnInterval: 0.6f),
+            new(EnemyCount: 25, EnemyHealth: 300, EnemySpeed: 145,  EnemyBounty: 18, SpawnInterval: 0.5f),
+            new(EnemyCount: 30, EnemyHealth: 400, EnemySpeed: 145,  EnemyBounty: 25, SpawnInterval: 0.4f),
         };
     }
 
