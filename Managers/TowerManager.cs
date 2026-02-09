@@ -78,11 +78,11 @@ public class TowerManager
     /// <summary>
     /// Draw all towers and their projectiles.
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch)
+    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
     {
         foreach (var tower in _towers)
         {
-            tower.Draw(spriteBatch);
+            tower.Draw(spriteBatch, font);
         }
 
         // Draw range indicator for selected tower

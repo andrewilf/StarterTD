@@ -116,7 +116,7 @@ public class Tower : ITower
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch)
+    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
     {
         // Draw tower body (centered via DrawSprite)
         TextureManager.DrawSprite(spriteBatch, WorldPosition, new Vector2(SpriteSize, SpriteSize), TowerColor);
@@ -128,6 +128,21 @@ public class Tower : ITower
                 WorldPosition - new Vector2(0, SpriteSize / 2f - 3f),
                 new Vector2(6f, 6f),
                 Color.Gold);
+        }
+
+        // Draw upgrade cost indicator (if not max level)
+        if (Level < 2 && font != null && UpgradeCost > 0)
+        {
+            string costText = $"${UpgradeCost}";
+            Vector2 textSize = font.MeasureString(costText);
+            Vector2 textPos = new Vector2(
+                WorldPosition.X - textSize.X / 2f,
+                WorldPosition.Y - SpriteSize / 2f - 20f);
+
+            // Shadow
+            spriteBatch.DrawString(font, costText, textPos + new Vector2(1, 1), Color.Black);
+            // Main text (cyan for visibility)
+            spriteBatch.DrawString(font, costText, textPos, Color.Cyan);
         }
 
         // Draw projectiles

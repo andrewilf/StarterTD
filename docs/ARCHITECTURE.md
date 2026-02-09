@@ -24,6 +24,7 @@ graph TD
         E -- Manages --> H[TowerManager];
         E -- Manages --> I[InputManager];
         E -- Manages --> J[UIPanel];
+        E -- Manages --> K[FloatingTexts];
     end
 ```
 
@@ -62,6 +63,34 @@ When a wave spawns an enemy, `WaveManager` doesn't know about the global list of
 3.  Inside `Tower.Update()`, the tower loops through the provided `enemies` list to find the closest target within its range.
 
 This one-way data flow (`GameplayScene` -> `TowerManager` -> `Tower`) keeps dependencies clean. A `Tower` doesn't need to know about `GameplayScene` at all.
+
+### Visual Feedback System
+
+The game provides visual feedback through two mechanisms:
+
+**FloatingText for Money Transactions**
+
+`GameplayScene` manages a list of `FloatingText` objects that display temporary money indicators:
+
+-   When a tower is placed: Red "-$X" floats up from the placement location
+-   When a tower is upgraded: Orange "-$X" floats up from the tower
+-   When an enemy dies: Gold "+$X" floats up from the enemy's position
+
+Each `FloatingText` has:
+-   A lifetime of 1.5 seconds
+-   Upward velocity (20 pixels/second)
+-   Fade-out effect in the final 30% of its lifetime
+-   Automatic cleanup when inactive
+
+**Tower Upgrade Cost Display**
+
+Towers display their upgrade cost above them when not at max level:
+
+1.  `GameplayScene.Draw()` passes the `SpriteFont` to `TowerManager.Draw()`
+2.  `TowerManager` passes it to each `Tower.Draw()`
+3.  If `Level < 2`, the tower renders cyan "$X" text above itself
+
+This pattern (passing font through the draw pipeline) keeps the architecture clean while enabling text rendering at any level.
 
 ## Key Interfaces
 

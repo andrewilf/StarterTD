@@ -25,6 +25,7 @@ public class GameplayScene : IScene
     private UIPanel _uiPanel = null!;
 
     private List<IEnemy> _enemies = new();
+    private List<FloatingText> _floatingTexts = new();
     private int _money;
     private int _lives;
     private bool _gameOver;
@@ -70,9 +71,17 @@ public class GameplayScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        if (_gameOver || _gameWon) return;
-
+        // Update input first so we can detect restart key
         _inputManager.Update();
+
+        // Handle restart
+        if ((_gameOver || _gameWon) && _inputManager.IsKeyPressed(Keys.R))
+        {
+            LoadContent();
+            return;
+        }
+
+        if (_gameOver || _gameWon) return;
 
         // --- Handle ESC to deselect ---
         if (_inputManager.IsKeyPressed(Keys.Escape))
@@ -111,6 +120,8 @@ public class GameplayScene : IScene
                         if (cost > 0)
                         {
                             _money -= cost;
+                            Vector2 worldPos = Map.GridToWorld(gridPos);
+                            SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
                         }
                     }
                 }
@@ -137,6 +148,9 @@ public class GameplayScene : IScene
                     if (cost > 0)
                     {
                         _money -= cost;
+                        var upgradedTower = _towerManager.GetTowerAt(gridPos);
+                        if (upgradedTower != null)
+                            SpawnFloatingText(upgradedTower.WorldPosition, $"-${cost}", Color.Orange);
                     }
                 }
             }
@@ -152,7 +166,9 @@ public class GameplayScene : IScene
 
             if (_enemies[i].IsDead)
             {
-                _money += _enemies[i].Bounty;
+                int bounty = _enemies[i].Bounty;
+                _money += bounty;
+                SpawnFloatingText(_enemies[i].Position, $"+${bounty}", Color.Gold);
                 _enemies.RemoveAt(i);
             }
             else if (_enemies[i].ReachedEnd)
@@ -179,6 +195,14 @@ public class GameplayScene : IScene
 
         // --- Update towers ---
         _towerManager.Update(gameTime, _enemies);
+
+        // --- Update floating texts ---
+        for (int i = _floatingTexts.Count - 1; i >= 0; i--)
+        {
+            _floatingTexts[i].Update(gameTime);
+            if (!_floatingTexts[i].IsActive)
+                _floatingTexts.RemoveAt(i);
+        }
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -187,12 +211,18 @@ public class GameplayScene : IScene
         _map.Draw(spriteBatch);
 
         // Draw towers
-        _towerManager.Draw(spriteBatch);
+        _towerManager.Draw(spriteBatch, _uiPanel.GetFont());
 
         // Draw enemies
         foreach (var enemy in _enemies)
         {
             enemy.Draw(spriteBatch);
+        }
+
+        // Draw floating texts
+        foreach (var floatingText in _floatingTexts)
+        {
+            floatingText.Draw(spriteBatch, _uiPanel.GetFont());
         }
 
         // Draw UI panel
@@ -222,19 +252,85 @@ public class GameplayScene : IScene
         // Draw game over / win overlay
         if (_gameOver || _gameWon)
         {
-            // Semi-transparent overlay
-            TextureManager.DrawRect(spriteBatch,
-                new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-                new Color(0, 0, 0, 150));
+            DrawGameOverOverlay(spriteBatch, _uiPanel.GetFont());
+        }
+    }
 
-            // Colored indicator block in center
+    private void DrawGameOverOverlay(SpriteBatch spriteBatch, SpriteFont? font)
+    {
+        // Semi-transparent dark overlay
+        TextureManager.DrawRect(spriteBatch,
+            new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
+            new Color(0, 0, 0, 180));
+
+        int centerX = GameSettings.ScreenWidth / 2;
+        int centerY = GameSettings.ScreenHeight / 2;
+
+        if (font != null)
+        {
+            // Title text
+            string title = _gameWon ? "VICTORY!" : "DEFEAT";
+            Color titleColor = _gameWon ? Color.Gold : Color.Red;
+            Vector2 titleSize = font.MeasureString(title);
+            Vector2 titlePos = new Vector2(centerX - titleSize.X / 2, centerY - 100);
+
+            // Draw title with shadow for readability
+            spriteBatch.DrawString(font, title, titlePos + new Vector2(2, 2), Color.Black);
+            spriteBatch.DrawString(font, title, titlePos, titleColor);
+
+            // Statistics
+            int statsY = centerY - 40;
+            string[] stats;
+
+            if (_gameWon)
+            {
+                stats = new[]
+                {
+                    $"All {_waveManager.TotalWaves} waves completed!",
+                    $"Final Money: ${_money}",
+                    $"Lives Remaining: {_lives}",
+                    "",
+                    "Press R to restart"
+                };
+            }
+            else
+            {
+                stats = new[]
+                {
+                    $"Wave Reached: {_waveManager.CurrentWave}/{_waveManager.TotalWaves}",
+                    $"Money: ${_money}",
+                    $"Lives: {_lives}",
+                    "",
+                    "Press R to restart"
+                };
+            }
+
+            for (int i = 0; i < stats.Length; i++)
+            {
+                Vector2 size = font.MeasureString(stats[i]);
+                Vector2 pos = new Vector2(centerX - size.X / 2, statsY + i * 30);
+
+                // Shadow
+                spriteBatch.DrawString(font, stats[i], pos + new Vector2(1, 1), Color.Black);
+                // Main text
+                spriteBatch.DrawString(font, stats[i], pos, Color.White);
+            }
+        }
+        else
+        {
+            // Fallback: colored indicator (existing code)
             Color indicatorColor = _gameWon ? Color.Gold : Color.Red;
             TextureManager.DrawRect(spriteBatch,
-                new Rectangle(
-                    GameSettings.ScreenWidth / 2 - 100,
-                    GameSettings.ScreenHeight / 2 - 30,
-                    200, 60),
+                new Rectangle(centerX - 100, centerY - 30, 200, 60),
                 indicatorColor);
         }
+    }
+
+    /// <summary>
+    /// Spawns a floating text at the specified world position.
+    /// </summary>
+    private void SpawnFloatingText(Vector2 worldPos, string text, Color color)
+    {
+        _floatingTexts.Add(new FloatingText(worldPos, text, color));
     }
 }

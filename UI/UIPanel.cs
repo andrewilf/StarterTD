@@ -61,6 +61,14 @@ public class UIPanel
     }
 
     /// <summary>
+    /// Get the current font (may be null if not loaded).
+    /// </summary>
+    public SpriteFont? GetFont()
+    {
+        return _font;
+    }
+
+    /// <summary>
     /// Handle click input on the UI panel. Returns true if the click was consumed.
     /// </summary>
     public bool HandleClick(Point mousePos, int playerMoney)

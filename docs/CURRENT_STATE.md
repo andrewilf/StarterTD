@@ -10,7 +10,8 @@ This file is a checklist of what is implemented vs. what is mocked or missing. U
     - [x] `Game1` -> `SceneManager` -> `GameplayScene` loop.
     - [x] `ITower`, `IEnemy`, `IScene` interfaces.
 - [x] **Asset Management**
-    - [x] **No MGCB**: The project does not use the MonoGame Content Pipeline.
+    - [x] **MonoGame Content Pipeline**: Content.mgcb configured for asset building.
+    - [x] **SpriteFont**: DefaultFont.spritefont (Arial 14pt) for text rendering.
     - [x] `TextureManager` static class.
     - [x] Programmatic 1x1 white pixel `Texture2D` created in memory.
     - [x] `DrawSprite` helper method that uses a centered origin.
@@ -23,11 +24,16 @@ This file is a checklist of what is implemented vs. what is mocked or missing. U
     - [x] **Waves**: `WaveManager` with 10 hardcoded waves of increasing difficulty.
     - [x] **Projectiles**: Towers fire projectiles that track and damage enemies.
     - [x] **Player State**: Money and Lives are tracked.
-- [x] **UI**
-    - [x] Basic right-side UI panel.
-    - [x] Buttons for selecting towers.
+- [x] **UI & Visual Feedback**
+    - [x] Right-side UI panel with text rendering.
+    - [x] Tower selection buttons with costs.
     - [x] "Start Wave" button.
-    - [x] Player stats display (Money, Lives, Wave).
+    - [x] Player stats display (Money, Lives, Wave counter).
+    - [x] **Victory Screen**: Shows "VICTORY!" with final statistics.
+    - [x] **Defeat Screen**: Shows "DEFEAT" with wave reached and stats.
+    - [x] **Restart Functionality**: Press R to restart game after victory/defeat.
+    - [x] **Floating Money Indicators**: Visual feedback showing -$X (red/orange) when spending, +$X (gold) when gaining money.
+    - [x] **Tower Upgrade Cost Display**: Shows upgrade cost in cyan above each Level 1 tower.
 
 ## Mocked or Missing Features
 
@@ -35,11 +41,10 @@ This is the list of things you can ask an AI assistant to help you build next.
 
 - [ ] **No Real Sprites**: All rendering uses colored rectangles. The `TextureManager` is ready, but you need to load `Texture2D` assets and pass them to the `Draw` calls.
 - [ ] **No Sound**: There is no audio engine or sound effects.
-- [ ] **No SpriteFont for Text**: The UI Panel has a fallback rendering mode. To display text, a `SpriteFont` file needs to be created with the MGCB tool and loaded in `GameplayScene.LoadContent()`.
 - [ ] **No Main Menu**: The game starts directly in the `GameplayScene`.
-- [ ] **No Game Over / Win Logic**: The game shows a colored overlay when the game ends, but there is no logic to restart or return to a menu.
 - [ ] **Limited Enemy Variety**: Only one basic enemy type exists.
 - [ ] **Limited Tower Variety**: The 3 towers are functional but simple.
 - [ ] **No Special Abilities**: Towers do not have special abilities (e.g., slow, poison).
 - [ ] **No Selling Towers**: You can place and upgrade, but not sell.
+- [ ] **No Pause Menu**: Cannot pause the game during gameplay.
 '''

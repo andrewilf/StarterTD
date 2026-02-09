@@ -52,5 +52,5 @@ public interface ITower
     void Update(GameTime gameTime, List<Interfaces.IEnemy> enemies);
 
     /// <summary>Draw the tower.</summary>
-    void Draw(SpriteBatch spriteBatch);
+    void Draw(SpriteBatch spriteBatch, SpriteFont? font = null);
 }
