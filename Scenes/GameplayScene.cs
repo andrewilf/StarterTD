@@ -18,6 +18,8 @@ namespace StarterTD.Scenes;
 public class GameplayScene : IScene
 {
     private readonly Game1 _game;
+    private readonly SceneManager _sceneManager;
+    private readonly MapType _mapType;
     private Map _map = null!;
     private TowerManager _towerManager = null!;
     private WaveManager _waveManager = null!;
@@ -35,14 +37,16 @@ public class GameplayScene : IScene
     // so we know when the wave is truly finished
     private bool _allEnemiesCleared;
 
-    public GameplayScene(Game1 game)
+    public GameplayScene(Game1 game, SceneManager sceneManager, MapType mapType)
     {
         _game = game;
+        _sceneManager = sceneManager;
+        _mapType = mapType;
     }
 
     public void LoadContent()
     {
-        _map = new Map();
+        _map = new Map(_mapType);
         _towerManager = new TowerManager(_map);
         _waveManager = new WaveManager(_map.PathPoints);
         _inputManager = new InputManager();
@@ -74,10 +78,10 @@ public class GameplayScene : IScene
         // Update input first so we can detect restart key
         _inputManager.Update();
 
-        // Handle restart
+        // Handle restart — go back to map selection
         if ((_gameOver || _gameWon) && _inputManager.IsKeyPressed(Keys.R))
         {
-            LoadContent();
+            _sceneManager.SetScene(new MapSelectionScene(_game, _sceneManager));
             return;
         }
 
@@ -290,7 +294,7 @@ public class GameplayScene : IScene
                     $"Final Money: ${_money}",
                     $"Lives Remaining: {_lives}",
                     "",
-                    "Press R to restart"
+                    "Press R for map select"
                 };
             }
             else
@@ -301,7 +305,7 @@ public class GameplayScene : IScene
                     $"Money: ${_money}",
                     $"Lives: {_lives}",
                     "",
-                    "Press R to restart"
+                    "Press R for map select"
                 };
             }
 

@@ -5,6 +5,16 @@ using Microsoft.Xna.Framework.Graphics;
 namespace StarterTD.Engine;
 
 /// <summary>
+/// Identifies the different map layouts available for selection.
+/// </summary>
+public enum MapType
+{
+    SShape,
+    Spiral,
+    ZigZag
+}
+
+/// <summary>
 /// Represents what a tile on the grid can be.
 /// </summary>
 public enum TileType
@@ -48,8 +58,11 @@ public class Map
     /// </summary>
     public List<Point> PathPoints { get; }
 
-    public Map()
+    public MapType MapType { get; }
+
+    public Map(MapType mapType = MapType.SShape)
     {
+        MapType = mapType;
         Columns = GameSettings.GridColumns;
         Rows = GameSettings.GridRows;
         Tiles = new Tile[Columns, Rows];
@@ -63,8 +76,13 @@ public class Map
             }
         }
 
-        // Define a hardcoded path (an S-shaped path across the map)
-        PathPoints = GeneratePath();
+        // Generate path based on map type
+        PathPoints = mapType switch
+        {
+            MapType.Spiral => GenerateSpiralPath(),
+            MapType.ZigZag => GenerateZigZagPath(),
+            _ => GenerateSShapePath()
+        };
 
         // Mark path tiles
         foreach (var point in PathPoints)
@@ -73,12 +91,7 @@ public class Map
         }
     }
 
-    /// <summary>
-    /// Generates an S-shaped path from left to right across the map.
-    /// The path goes: left-to-right on row 2, down, right-to-left on row 6,
-    /// down, left-to-right on row 10, down, right-to-left on row 13.
-    /// </summary>
-    private List<Point> GeneratePath()
+    private List<Point> GenerateSShapePath()
     {
         var path = new List<Point>();
 
@@ -109,6 +122,78 @@ public class Map
         // Segment 7: Right to left on row 13 to exit
         for (int x = 17; x >= 0; x--)
             path.Add(new Point(x, 13));
+
+        return path;
+    }
+
+    private List<Point> GenerateSpiralPath()
+    {
+        var path = new List<Point>();
+
+        // Outer ring: top left-to-right
+        for (int x = 0; x < 19; x++)
+            path.Add(new Point(x, 0));
+        // Right side going down
+        for (int y = 1; y <= 13; y++)
+            path.Add(new Point(18, y));
+        // Bottom right-to-left
+        for (int x = 18; x >= 1; x--)
+            path.Add(new Point(x, 13));
+        // Left side going up
+        for (int y = 13; y >= 4; y--)
+            path.Add(new Point(1, y));
+
+        // Inner ring: top left-to-right
+        for (int x = 1; x < 17; x++)
+            path.Add(new Point(x, 4));
+        // Right side going down
+        for (int y = 5; y <= 10; y++)
+            path.Add(new Point(16, y));
+        // Bottom right-to-left
+        for (int x = 16; x >= 4; x--)
+            path.Add(new Point(x, 10));
+        // Left side going up to center
+        for (int y = 10; y >= 7; y--)
+            path.Add(new Point(4, y));
+        // Center: left-to-right
+        for (int x = 4; x <= 10; x++)
+            path.Add(new Point(x, 7));
+
+        return path;
+    }
+
+    private List<Point> GenerateZigZagPath()
+    {
+        var path = new List<Point>();
+
+        // Vertical zigzag: enter from top-left, exit bottom-right
+        // Column 1: top to bottom
+        for (int y = 0; y <= 13; y++)
+            path.Add(new Point(1, y));
+        // Cross to column 5
+        for (int x = 2; x <= 5; x++)
+            path.Add(new Point(x, 13));
+        // Column 5: bottom to top
+        for (int y = 13; y >= 1; y--)
+            path.Add(new Point(5, y));
+        // Cross to column 9
+        for (int x = 6; x <= 9; x++)
+            path.Add(new Point(x, 1));
+        // Column 9: top to bottom
+        for (int y = 1; y <= 13; y++)
+            path.Add(new Point(9, y));
+        // Cross to column 13
+        for (int x = 10; x <= 13; x++)
+            path.Add(new Point(x, 13));
+        // Column 13: bottom to top
+        for (int y = 13; y >= 1; y--)
+            path.Add(new Point(13, y));
+        // Cross to column 17
+        for (int x = 14; x <= 17; x++)
+            path.Add(new Point(x, 1));
+        // Column 17: top to bottom exit
+        for (int y = 1; y <= 14; y++)
+            path.Add(new Point(17, y));
 
         return path;
     }

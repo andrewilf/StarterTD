@@ -43,9 +43,9 @@ public class Game1 : Game
         // Initialize the texture manager (creates the 1x1 white pixel)
         TextureManager.Initialize(GraphicsDevice);
 
-        // Set up the scene manager and load the gameplay scene
+        // Set up the scene manager and load the map selection scene
         _sceneManager = new SceneManager();
-        _sceneManager.SetScene(new GameplayScene(this));
+        _sceneManager.SetScene(new MapSelectionScene(this, _sceneManager));
     }
 
     protected override void Update(GameTime gameTime)
