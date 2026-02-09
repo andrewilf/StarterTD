@@ -1,0 +1,24 @@
+namespace StarterTD.Engine;
+
+/// <summary>
+/// Central configuration constants for the game.
+/// Change values here to tweak the entire game at once.
+/// </summary>
+public static class GameSettings
+{
+    // --- Window ---
+    public const int ScreenWidth = 1024;
+    public const int ScreenHeight = 768;
+
+    // --- Grid / Map ---
+    public const int TileSize = 40;           // pixels per tile
+    public const int GridColumns = 20;        // number of columns
+    public const int GridRows = 15;           // number of rows
+
+    // --- Player ---
+    public const int StartingMoney = 200;
+    public const int StartingLives = 20;
+
+    // --- UI ---
+    public const int UIPanelWidth = 200;      // right-side panel width
+}

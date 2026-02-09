@@ -1,0 +1,240 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using StarterTD.Engine;
+using StarterTD.Entities;
+using StarterTD.Interfaces;
+using StarterTD.Managers;
+using StarterTD.UI;
+
+namespace StarterTD.Scenes;
+
+/// <summary>
+/// The main gameplay scene. This is where the tower defense game loop runs.
+/// Manages the map, towers, enemies, waves, and UI.
+/// </summary>
+public class GameplayScene : IScene
+{
+    private readonly Game1 _game;
+    private Map _map = null!;
+    private TowerManager _towerManager = null!;
+    private WaveManager _waveManager = null!;
+    private InputManager _inputManager = null!;
+    private UIPanel _uiPanel = null!;
+
+    private List<IEnemy> _enemies = new();
+    private int _money;
+    private int _lives;
+    private bool _gameOver;
+    private bool _gameWon;
+
+    // Track whether all enemies from the current wave are dead/gone
+    // so we know when the wave is truly finished
+    private bool _allEnemiesCleared;
+
+    public GameplayScene(Game1 game)
+    {
+        _game = game;
+    }
+
+    public void LoadContent()
+    {
+        _map = new Map();
+        _towerManager = new TowerManager(_map);
+        _waveManager = new WaveManager(_map.PathPoints);
+        _inputManager = new InputManager();
+        _uiPanel = new UIPanel(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
+
+        _money = GameSettings.StartingMoney;
+        _lives = GameSettings.StartingLives;
+        _gameOver = false;
+        _gameWon = false;
+        _allEnemiesCleared = true;
+
+        // Wire up enemy spawning
+        _waveManager.OnEnemySpawned = enemy => _enemies.Add(enemy);
+
+        // Try to load font if available
+        try
+        {
+            var font = _game.Content.Load<SpriteFont>("DefaultFont");
+            _uiPanel.SetFont(font);
+        }
+        catch
+        {
+            // Font not available — UI will use fallback rendering
+        }
+    }
+
+    public void Update(GameTime gameTime)
+    {
+        if (_gameOver || _gameWon) return;
+
+        _inputManager.Update();
+
+        // --- Handle ESC to deselect ---
+        if (_inputManager.IsKeyPressed(Keys.Escape))
+        {
+            _uiPanel.SelectedTowerType = null;
+            _towerManager.SelectedTower = null;
+        }
+
+        // --- Handle left click ---
+        if (_inputManager.IsLeftClick())
+        {
+            Point mousePos = _inputManager.MousePosition;
+
+            // Check if click is on UI panel first
+            if (_uiPanel.ContainsPoint(mousePos))
+            {
+                _uiPanel.HandleClick(mousePos, _money);
+
+                if (_uiPanel.StartWaveClicked && !_waveManager.WaveInProgress && _allEnemiesCleared)
+                {
+                    _waveManager.StartNextWave();
+                }
+            }
+            else
+            {
+                // Click on the game grid
+                Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
+
+                if (_uiPanel.SelectedTowerType.HasValue)
+                {
+                    // Try to place a tower
+                    var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value, 1);
+                    if (_money >= stats.Cost)
+                    {
+                        int cost = _towerManager.TryPlaceTower(_uiPanel.SelectedTowerType.Value, gridPos);
+                        if (cost > 0)
+                        {
+                            _money -= cost;
+                        }
+                    }
+                }
+                else
+                {
+                    // Select existing tower
+                    var tower = _towerManager.GetTowerAt(gridPos);
+                    _towerManager.SelectedTower = tower;
+                }
+            }
+        }
+
+        // --- Handle right click (upgrade) ---
+        if (_inputManager.IsRightClick())
+        {
+            Point mousePos = _inputManager.MousePosition;
+            if (!_uiPanel.ContainsPoint(mousePos))
+            {
+                Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
+                var tower = _towerManager.GetTowerAt(gridPos);
+                if (tower != null && tower.Level < 2 && _money >= tower.UpgradeCost)
+                {
+                    int cost = _towerManager.TryUpgradeTower(gridPos);
+                    if (cost > 0)
+                    {
+                        _money -= cost;
+                    }
+                }
+            }
+        }
+
+        // --- Update wave spawning ---
+        _waveManager.Update(gameTime);
+
+        // --- Update enemies ---
+        for (int i = _enemies.Count - 1; i >= 0; i--)
+        {
+            _enemies[i].Update(gameTime);
+
+            if (_enemies[i].IsDead)
+            {
+                _money += _enemies[i].Bounty;
+                _enemies.RemoveAt(i);
+            }
+            else if (_enemies[i].ReachedEnd)
+            {
+                _lives--;
+                _enemies.RemoveAt(i);
+
+                if (_lives <= 0)
+                {
+                    _gameOver = true;
+                    return;
+                }
+            }
+        }
+
+        // Check if all enemies are cleared (wave done spawning + no enemies alive)
+        _allEnemiesCleared = !_waveManager.WaveInProgress && _enemies.Count == 0;
+
+        // Check win condition
+        if (_waveManager.CurrentWave >= _waveManager.TotalWaves && _allEnemiesCleared)
+        {
+            _gameWon = true;
+        }
+
+        // --- Update towers ---
+        _towerManager.Update(gameTime, _enemies);
+    }
+
+    public void Draw(SpriteBatch spriteBatch)
+    {
+        // Draw map
+        _map.Draw(spriteBatch);
+
+        // Draw towers
+        _towerManager.Draw(spriteBatch);
+
+        // Draw enemies
+        foreach (var enemy in _enemies)
+        {
+            enemy.Draw(spriteBatch);
+        }
+
+        // Draw UI panel
+        bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
+        _uiPanel.Draw(spriteBatch, _money, _lives, _waveManager.CurrentWave, _waveManager.TotalWaves, waveActive);
+
+        // Draw hover indicator on grid
+        Point mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
+        if (mouseGrid.X >= 0 && mouseGrid.X < _map.Columns &&
+            mouseGrid.Y >= 0 && mouseGrid.Y < _map.Rows &&
+            !_uiPanel.ContainsPoint(_inputManager.MousePosition))
+        {
+            var hoverRect = new Rectangle(
+                mouseGrid.X * GameSettings.TileSize,
+                mouseGrid.Y * GameSettings.TileSize,
+                GameSettings.TileSize,
+                GameSettings.TileSize);
+
+            Color hoverColor = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue
+                ? new Color(255, 255, 255, 60)
+                : new Color(255, 0, 0, 40);
+
+            TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
+            TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);
+        }
+
+        // Draw game over / win overlay
+        if (_gameOver || _gameWon)
+        {
+            // Semi-transparent overlay
+            TextureManager.DrawRect(spriteBatch,
+                new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
+                new Color(0, 0, 0, 150));
+
+            // Colored indicator block in center
+            Color indicatorColor = _gameWon ? Color.Gold : Color.Red;
+            TextureManager.DrawRect(spriteBatch,
+                new Rectangle(
+                    GameSettings.ScreenWidth / 2 - 100,
+                    GameSettings.ScreenHeight / 2 - 30,
+                    200, 60),
+                indicatorColor);
+        }
+    }
+}
