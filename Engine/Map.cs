@@ -202,6 +202,19 @@ public class Map
     }
 
     /// <summary>
+    /// Compute a path from a custom start position to the exit (using the current heat map).
+    /// Like ExtractPath but from an arbitrary grid position instead of just the spawn point.
+    /// Used when enemies need to pathfind from their current location after the map changes.
+    /// </summary>
+    public List<Point>? ComputePathFromPosition(Point startPos)
+    {
+        if (HeatMap == null)
+            return null;
+
+        return Pathfinder.ExtractPath(startPos, HeatMap, Columns, Rows);
+    }
+
+    /// <summary>
     /// Dijkstra flood fill from exit, then extract optimal path from spawn.
     /// </summary>
     private bool RecomputeHeatMap()

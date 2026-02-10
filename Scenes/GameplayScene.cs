@@ -371,7 +371,7 @@ public class GameplayScene : IScene
         foreach (var enemy in _enemies)
         {
             if (enemy is Enemy concreteEnemy)
-                concreteEnemy.UpdatePath(_map.ActivePath);
+                concreteEnemy.UpdatePath(_map);
         }
     }
 
