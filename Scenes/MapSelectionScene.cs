@@ -166,7 +166,7 @@ public class MapSelectionScene : IScene
         // Metadata at bottom
         if (_font != null)
         {
-            string info = $"{mapData.PathPoints.Count} waypoints";
+            string info = $"{mapData.Columns}x{mapData.Rows}";
             Vector2 infoSize = _font.MeasureString(info);
             Vector2 infoPos = new Vector2(
                 bounds.X + (bounds.Width - infoSize.X) / 2,
@@ -189,31 +189,21 @@ public class MapSelectionScene : IScene
         int startX = bounds.X + (bounds.Width - gridWidth) / 2;
         int startY = bounds.Y + (bounds.Height - gridHeight) / 2;
 
-        // Create a set of path points for quick lookup
-        HashSet<Point> pathSet = new HashSet<Point>(mapData.PathPoints);
-
         // Render grid
         for (int x = 0; x < mapData.Columns; x++)
         {
             for (int y = 0; y < mapData.Rows; y++)
             {
-                Point gridPos = new Point(x, y);
                 Rectangle tileRect = new Rectangle(
                     startX + x * miniTileSize,
                     startY + y * miniTileSize,
                     miniTileSize,
                     miniTileSize);
 
-                // Determine tile color (same logic as Map.cs)
-                // Maze zone tiles are bright green regardless of being path or not
-                bool inMazeZone = mapData.MazeZones.Any(z => z.ContainsPoint(gridPos));
-                Color tileColor;
-                if (inMazeZone)
-                    tileColor = new Color(50, 180, 50);    // Maze zone (bright green)
-                else if (pathSet.Contains(gridPos))
-                    tileColor = new Color(194, 178, 128);  // Path (sandy)
-                else
-                    tileColor = new Color(34, 139, 34);    // Regular buildable
+                // Check if tile is inside any walkable area
+                Color tileColor = mapData.IsInWalkableArea(new Point(x, y))
+                    ? new Color(194, 178, 128)   // Path (sandy)
+                    : new Color(34, 139, 34);    // HighGround (dark green)
 
                 TextureManager.DrawRect(spriteBatch, tileRect, tileColor);
             }

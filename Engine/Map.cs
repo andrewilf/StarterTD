@@ -8,15 +8,14 @@ namespace StarterTD.Engine;
 
 /// <summary>
 /// Represents what a tile on the grid can be.
-/// Whether a tile is in a maze zone is determined by the Tile.MazeZone reference, not the type.
 /// </summary>
 public enum TileType
 {
-    /// <summary>Empty ground where towers can be placed.</summary>
-    Buildable,
-    /// <summary>Part of the enemy path. Buildable only if inside a maze zone.</summary>
+    /// <summary>High ground: towers can be placed, but enemies cannot walk through.</summary>
+    HighGround,
+    /// <summary>Walkable terrain. Enemies can traverse, towers can be placed.</summary>
     Path,
-    /// <summary>A tower has been placed on this tile.</summary>
+    /// <summary>A tower has been placed on this tile. Expensive for enemies to walk through.</summary>
     Occupied
 }
 
@@ -30,57 +29,28 @@ public class Tile
     public Point GridPosition { get; }
 
     /// <summary>
-    /// If this tile is part of a maze zone, reference it.
-    /// Null for non-maze-zone tiles. This determines visual styling and build rules,
-    /// NOT the TileType enum.
+    /// Movement cost for pathfinding, derived from tile type.
+    /// HighGround = impassable. Path = walkable. Occupied = very expensive (enemies avoid unless necessary).
+    /// Like a Python @property — recomputes from current state, no stored field.
     /// </summary>
-    public MazeZone? MazeZone { get; set; }
+    public int MovementCost => Type switch
+    {
+        TileType.HighGround => int.MaxValue,  // Impassable terrain (enemies can't walk here)
+        TileType.Path => 1,                   // Normal walkable path
+        TileType.Occupied => 500,             // Towers: very expensive, only used as last resort
+        _ => int.MaxValue
+    };
 
-    public Tile(Point gridPosition, TileType type, MazeZone? mazeZone = null)
+    public Tile(Point gridPosition, TileType type)
     {
         GridPosition = gridPosition;
         Type = type;
-        MazeZone = mazeZone;
     }
 }
 
 /// <summary>
-/// Cached info about how the fixed path passes through a maze zone.
-/// Used to know which segment of PathPoints to replace with A* results.
-///
-/// Python analogy: Like a namedtuple storing (zone, entry_index, exit_index)
-/// so you can do path[0:entry] + a_star_result + path[exit:] to build the full route.
-/// </summary>
-public class MazeZonePathInfo
-{
-    /// <summary>The maze zone this info describes.</summary>
-    public MazeZone Zone { get; }
-
-    /// <summary>Index into PathPoints where the path first enters this zone.</summary>
-    public int EntryPathIndex { get; }
-
-    /// <summary>Index into PathPoints where the path last exits this zone.</summary>
-    public int ExitPathIndex { get; }
-
-    /// <summary>The grid point where enemies enter the zone (= PathPoints[EntryPathIndex]).</summary>
-    public Point EntryPoint { get; }
-
-    /// <summary>The grid point where enemies exit the zone (= PathPoints[ExitPathIndex]).</summary>
-    public Point ExitPoint { get; }
-
-    public MazeZonePathInfo(MazeZone zone, int entryPathIndex, int exitPathIndex, List<Point> pathPoints)
-    {
-        Zone = zone;
-        EntryPathIndex = entryPathIndex;
-        ExitPathIndex = exitPathIndex;
-        EntryPoint = pathPoints[entryPathIndex];
-        ExitPoint = pathPoints[exitPathIndex];
-    }
-}
-
-/// <summary>
-/// The game map: a 2D grid of tiles with data-driven paths and maze zones.
-/// Think of this like a 2D array board in a board-game simulation.
+/// The game map: a 2D grid of tiles with Dijkstra-based pathfinding.
+/// Terrain is defined by WalkableAreas rectangles; enemies find their own route.
 /// </summary>
 public class Map
 {
@@ -88,27 +58,28 @@ public class Map
     public int Columns { get; }
     public int Rows { get; }
 
-    /// <summary>
-    /// The original fixed path from MapData. Never changes.
-    /// </summary>
-    public List<Point> PathPoints { get; }
+    /// <summary>Where enemies enter the map.</summary>
+    public Point SpawnPoint { get; }
+
+    /// <summary>Where enemies leave the map.</summary>
+    public Point ExitPoint { get; }
 
     /// <summary>
-    /// The active path enemies follow. Starts as PathPoints, but gets recomposed
-    /// when towers are placed in maze zones (fixed segments + A* segments stitched together).
+    /// The active path enemies follow. Extracted from the heat map via gradient descent.
+    /// Recomputed whenever towers change.
     /// </summary>
     public List<Point> ActivePath { get; private set; }
 
     /// <summary>
-    /// Cached info about how the path intersects each maze zone.
-    /// Sorted by EntryPathIndex so zones are processed in path order.
+    /// Cost-to-exit for every tile. Recomputed when towers are placed.
+    /// heatMap[x, y] = minimum total movement cost from (x,y) to the exit.
     /// </summary>
-    public List<MazeZonePathInfo> MazeZonePathInfos { get; private set; } = new();
+    public int[,]? HeatMap { get; private set; }
 
     /// <summary>
-    /// The map data used to create this map (null for legacy default).
+    /// The map data used to create this map.
     /// </summary>
-    public MapData? MapData { get; }
+    public MapData MapData { get; }
 
     /// <summary>
     /// BACKWARD COMPATIBLE: Default constructor uses classic S-path.
@@ -123,16 +94,17 @@ public class Map
     public Map(MapData mapData)
     {
         MapData = mapData;
-        mapData.Validate(); // Fail fast if invalid
+        mapData.Validate();
 
         Columns = mapData.Columns;
         Rows = mapData.Rows;
         Tiles = new Tile[Columns, Rows];
-        PathPoints = mapData.PathPoints;
-        ActivePath = new List<Point>(PathPoints); // Start as a copy of PathPoints
+        SpawnPoint = mapData.SpawnPoint;
+        ExitPoint = mapData.ExitPoint;
+        ActivePath = new List<Point>();
 
         InitializeTiles();
-        AnalyzeMazeZones();
+        RecomputeHeatMap();
     }
 
     /// <summary>
@@ -144,9 +116,7 @@ public class Map
     }
 
     /// <summary>
-    /// Initialize tiles in 2 phases:
-    /// 1. All tiles start as Buildable (with MazeZone reference set if inside a zone)
-    /// 2. Path tiles are marked as Path (keep MazeZone reference)
+    /// Initialize tiles: all start as HighGround, then WalkableAreas are marked as Path.
     /// </summary>
     private void InitializeTiles()
     {
@@ -154,30 +124,22 @@ public class Map
         {
             for (int y = 0; y < Rows; y++)
             {
-                Tiles[x, y] = new Tile(new Point(x, y), TileType.Buildable);
+                Tiles[x, y] = new Tile(new Point(x, y), TileType.HighGround);
             }
         }
 
-        if (MapData != null)
+        foreach (var area in MapData.WalkableAreas)
         {
-            foreach (var zone in MapData.MazeZones)
+            for (int x = area.Left; x < area.Right; x++)
             {
-                for (int x = zone.Bounds.Left; x < zone.Bounds.Right; x++)
+                for (int y = area.Top; y < area.Bottom; y++)
                 {
-                    for (int y = zone.Bounds.Top; y < zone.Bounds.Bottom; y++)
+                    if (x >= 0 && x < Columns && y >= 0 && y < Rows)
                     {
-                        if (x >= 0 && x < Columns && y >= 0 && y < Rows)
-                        {
-                            Tiles[x, y].MazeZone = zone;
-                        }
+                        Tiles[x, y].Type = TileType.Path;
                     }
                 }
             }
-        }
-
-        foreach (var point in PathPoints)
-        {
-            Tiles[point.X, point.Y].Type = TileType.Path;
         }
     }
 
@@ -201,115 +163,33 @@ public class Map
             (int)(worldPos.Y / GameSettings.TileSize));
     }
 
-    private void AnalyzeMazeZones()
-    {
-        if (MapData == null) return;
-
-        foreach (var zone in MapData.MazeZones)
-        {
-            int entryIndex = -1;
-            int exitIndex = -1;
-
-            for (int i = 0; i < PathPoints.Count; i++)
-            {
-                if (zone.ContainsPoint(PathPoints[i]))
-                {
-                    if (entryIndex == -1) entryIndex = i;
-                    exitIndex = i;
-                }
-            }
-
-            if (entryIndex != -1 && exitIndex != -1 && entryIndex != exitIndex)
-            {
-                MazeZonePathInfos.Add(new MazeZonePathInfo(zone, entryIndex, exitIndex, PathPoints));
-            }
-        }
-
-        MazeZonePathInfos.Sort((a, b) => a.EntryPathIndex.CompareTo(b.EntryPathIndex));
-    }
-
     /// <summary>
-    /// Recompute ActivePath by stitching fixed segments with A* segments through maze zones.
-    /// Returns true if a valid path exists, false if a zone is fully blocked.
+    /// Recompute the heat map from the exit and extract a new ActivePath.
+    /// Towers are expensive (cost 500) but passable, so this always succeeds.
     /// </summary>
     public bool RecomputeActivePath()
     {
-        if (MazeZonePathInfos.Count == 0)
-        {
-            ActivePath = new List<Point>(PathPoints);
-            return true;
-        }
-
-        var newPath = new List<Point>();
-        int currentIndex = 0;
-
-        foreach (var zoneInfo in MazeZonePathInfos)
-        {
-            for (int i = currentIndex; i < zoneInfo.EntryPathIndex; i++)
-                newPath.Add(PathPoints[i]);
-
-            bool hasTowersInZone = HasTowersInZone(zoneInfo.Zone);
-
-            if (hasTowersInZone)
-            {
-                var aStarPath = Pathfinder.FindPath(
-                    zoneInfo.EntryPoint,
-                    zoneInfo.ExitPoint,
-                    Columns,
-                    Rows,
-                    p => IsWalkableForMaze(p, zoneInfo.Zone));
-
-                if (aStarPath == null)
-                    return false;
-
-                newPath.AddRange(aStarPath);
-            }
-            else
-            {
-                for (int i = zoneInfo.EntryPathIndex; i <= zoneInfo.ExitPathIndex; i++)
-                    newPath.Add(PathPoints[i]);
-            }
-
-            currentIndex = zoneInfo.ExitPathIndex + 1;
-        }
-
-        for (int i = currentIndex; i < PathPoints.Count; i++)
-            newPath.Add(PathPoints[i]);
-
-        ActivePath = newPath;
-        return true;
+        return RecomputeHeatMap();
     }
 
-    private bool HasTowersInZone(MazeZone zone)
+    /// <summary>
+    /// Dijkstra flood fill from exit, then extract optimal path from spawn.
+    /// </summary>
+    private bool RecomputeHeatMap()
     {
-        for (int x = zone.Bounds.Left; x < zone.Bounds.Right; x++)
-        {
-            for (int y = zone.Bounds.Top; y < zone.Bounds.Bottom; y++)
-            {
-                if (x >= 0 && x < Columns && y >= 0 && y < Rows &&
-                    Tiles[x, y].Type == TileType.Occupied)
-                    return true;
-            }
-        }
-        return false;
-    }
+        HeatMap = Pathfinder.ComputeHeatMap(
+            ExitPoint, Columns, Rows,
+            p => Tiles[p.X, p.Y].MovementCost);
 
-    private bool IsWalkableForMaze(Point p, MazeZone zone)
-    {
-        if (p.X < 0 || p.X >= Columns || p.Y < 0 || p.Y >= Rows)
-            return false;
+        var extracted = Pathfinder.ExtractPath(SpawnPoint, HeatMap, Columns, Rows);
 
-        var type = Tiles[p.X, p.Y].Type;
-
-        if (zone.ContainsPoint(p))
-            return type == TileType.Buildable || type == TileType.Path;
-
-        return type == TileType.Path;
+        ActivePath = extracted ?? new List<Point>();
+        return extracted != null;
     }
 
     /// <summary>
     /// Check if a grid position is valid and buildable.
-    /// Buildable tiles always. Path tiles only inside maze zones.
+    /// HighGround and Path tiles are buildable. Occupied tiles are not (already has tower).
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
@@ -318,19 +198,11 @@ public class Map
 
         var tile = Tiles[gridPos.X, gridPos.Y];
 
-        if (tile.Type == TileType.Buildable)
-            return true;
-
-        // Path tiles inside a maze zone are buildable (this IS mazing)
-        if (tile.Type == TileType.Path && tile.MazeZone != null)
-            return true;
-
-        return false;
+        return tile.Type == TileType.HighGround || tile.Type == TileType.Path;
     }
 
     /// <summary>
     /// Draw the grid with colored tiles.
-    /// Maze zone membership is shown via the MazeZone reference, not TileType.
     /// </summary>
     public void Draw(SpriteBatch spriteBatch)
     {
@@ -346,36 +218,26 @@ public class Map
 
                 var tile = Tiles[x, y];
 
-                Color tileColor;
-                if (tile.MazeZone != null && tile.Type != TileType.Occupied)
-                    tileColor = new Color(50, 180, 50);
-                else
-                    tileColor = tile.Type switch
-                    {
-                        TileType.Buildable => new Color(34, 139, 34),
-                        TileType.Path => new Color(194, 178, 128),
-                        TileType.Occupied => new Color(100, 100, 100),
-                        _ => Color.Black
-                    };
+                Color tileColor = tile.Type switch
+                {
+                    TileType.HighGround => new Color(34, 139, 34),
+                    TileType.Path => new Color(194, 178, 128),
+                    TileType.Occupied => new Color(100, 100, 100),
+                    _ => Color.Black
+                };
 
                 TextureManager.DrawRect(spriteBatch, rect, tileColor);
                 TextureManager.DrawRectOutline(spriteBatch, rect, new Color(0, 0, 0, 60), 1);
-
-                if (tile.MazeZone != null && tile.Type != TileType.Occupied)
-                {
-                    TextureManager.DrawRectOutline(spriteBatch, rect,
-                        new Color(255, 255, 100, 100), 2);
-                }
             }
         }
 
-        DrawMazePathOverlay(spriteBatch);
+        DrawActivePathOverlay(spriteBatch);
     }
 
     /// <summary>
-    /// Debug visualization: draws the full ActivePath as a connected line.
+    /// Debug visualization: draws the ActivePath as a connected line.
     /// </summary>
-    private void DrawMazePathOverlay(SpriteBatch spriteBatch)
+    private void DrawActivePathOverlay(SpriteBatch spriteBatch)
     {
         if (ActivePath.Count == 0) return;
 
@@ -421,23 +283,10 @@ public class Map
     }
 
     /// <summary>
-    /// Check if placing a tower here would block all paths through its maze zone.
+    /// Towers are expensive (cost 500) but passable, so paths are never fully blocked.
     /// </summary>
     public bool WouldBlockPath(Point gridPos)
     {
-        if (gridPos.X < 0 || gridPos.X >= Columns || gridPos.Y < 0 || gridPos.Y >= Rows)
-            return false;
-
-        var tile = Tiles[gridPos.X, gridPos.Y];
-        if (tile.MazeZone == null || tile.Type == TileType.Occupied)
-            return false;
-
-        var originalType = tile.Type;
-        tile.Type = TileType.Occupied;
-        bool pathExists = RecomputeActivePath();
-        tile.Type = originalType;
-        RecomputeActivePath();
-
-        return !pathExists;
+        return false;
     }
 }

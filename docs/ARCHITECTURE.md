@@ -74,12 +74,12 @@ A fire-and-forget system for temporary UI (damage numbers, money changes).
 -   **Data-Driven**: Tower stats are defined in `TowerData` records, not hardcoded in classes.
 -   **Targeting**: Towers scan the `enemies` list passed during `Update()` to find targets.
 
-### Mazing System (Maze Zone Dynamic Pathfinding)
--   **Architecture**: `TileType` enum only has `Buildable`, `Path`, `Occupied`. Maze zone membership is determined by `Tile.MazeZone` reference (nullable), not the tile type.
--   **A* Pathfinding**: `Pathfinder.cs` is a static utility. `FindPath(start, goal, columns, rows, walkable)` returns `List<Point>?`.
--   **Path Composition**: `Map.ActivePath` is the path enemies follow. It starts as `PathPoints` (fixed), but `RecomputeActivePath()` stitches in A* segments through zones with towers.
--   **Zone Analysis**: `MazeZonePathInfo` caches entry/exit indices for each zone. Computed once at map load.
--   **Validation**: `TowerManager.OnValidateMazeZonePlacement` is a `Func<Point, bool>` callback. `GameplayScene` temporarily marks a tile Occupied, runs A* to check if path still exists, then reverts.
--   **Live Rerouting**: After successful placement in a maze zone, `OnTowerPlacedInMazeZone` fires. `GameplayScene` calls `RecomputeActivePath()` and then `Enemy.UpdatePath()` on all living enemies.
--   **Enemy Path Updates**: `Enemy.UpdatePath(newPath)` finds the closest point on the new path to the enemy's current position and continues from there.
+### Mazing System (Dynamic Pathfinding via Dijkstra)
+-   **Architecture**: `TileType` enum has three values: `HighGround` (impassable, buildable), `Path` (walkable cost 1, buildable), `Occupied` (expensive cost 500, passable).
+-   **Terrain Definition**: Maps define walkable terrain via `MapData.WalkableAreas` — a `List<Rectangle>`. No predefined path list needed.
+-   **Dijkstra Pathfinding**: `Pathfinder.cs` contains two functions: `ComputeHeatMap(target, columns, rows, movementCost)` and `ExtractPath(start, heatMap, columns, rows)`.
+-   **Heat Map**: Dijkstra flood-fill from the exit point computes cost-to-exit for every tile. Towers are cost 500 (expensive but passable), allowing dynamic rerouting.
+-   **Path Extraction**: Gradient descent on the heat map extracts the optimal path from spawn to exit. Recomputed whenever towers change.
+-   **Dynamic Rerouting**: `Map.RecomputeActivePath()` recalculates the heat map and extracts a new path. `Enemy.UpdatePath(newPath)` reroutes live enemies.
 -   **WaveManager Integration**: Takes `Func<List<Point>>` instead of a direct path list, so each spawned enemy gets the latest `ActivePath`.
+-   **Tower Placement**: When a tower is placed, `OnTowerPlaced` fires. `GameplayScene` calls `RecomputeActivePath()` and `Enemy.UpdatePath()` on all living enemies. Paths are never fully blocked since towers cost 500, not MaxValue.
