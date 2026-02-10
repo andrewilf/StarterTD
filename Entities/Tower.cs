@@ -60,7 +60,8 @@ public class Tower : ITower
 
     public void Upgrade()
     {
-        if (Level >= 2) return;
+        if (Level >= 2)
+            return;
         Level++;
         var stats = TowerData.GetStats(TowerType, Level);
         ApplyStats(stats);
@@ -78,7 +79,8 @@ public class Tower : ITower
 
         foreach (var enemy in enemies)
         {
-            if (enemy.IsDead || enemy.ReachedEnd) continue;
+            if (enemy.IsDead || enemy.ReachedEnd)
+                continue;
 
             float dist = Vector2.Distance(WorldPosition, enemy.Position);
             if (dist <= Range && dist < closestDist)
@@ -99,7 +101,8 @@ public class Tower : ITower
                 ProjectileSpeed,
                 IsAOE,
                 AOERadius,
-                Color.Yellow);
+                Color.Yellow
+            );
 
             Projectiles.Add(projectile);
         }
@@ -116,15 +119,22 @@ public class Tower : ITower
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
     {
         // Draw tower body (centered via DrawSprite)
-        TextureManager.DrawSprite(spriteBatch, WorldPosition, new Vector2(SpriteSize, SpriteSize), TowerColor);
+        TextureManager.DrawSprite(
+            spriteBatch,
+            WorldPosition,
+            new Vector2(SpriteSize, SpriteSize),
+            TowerColor
+        );
 
         // Draw level indicator (small dot on top)
         if (Level >= 2)
         {
-            TextureManager.DrawSprite(spriteBatch,
+            TextureManager.DrawSprite(
+                spriteBatch,
                 WorldPosition - new Vector2(0, SpriteSize / 2f - 3f),
                 new Vector2(6f, 6f),
-                Color.Gold);
+                Color.Gold
+            );
         }
 
         // Draw upgrade cost indicator (if not max level)
@@ -134,7 +144,8 @@ public class Tower : ITower
             Vector2 textSize = font.MeasureString(costText);
             Vector2 textPos = new Vector2(
                 WorldPosition.X - textSize.X / 2f,
-                WorldPosition.Y - SpriteSize / 2f - 20f);
+                WorldPosition.Y - SpriteSize / 2f - 20f
+            );
 
             // Shadow
             spriteBatch.DrawString(font, costText, textPos + new Vector2(1, 1), Color.Black);
@@ -156,8 +167,11 @@ public class Tower : ITower
     {
         // Draw a semi-transparent range indicator as a large square
         // (A real circle would require a generated texture)
-        TextureManager.DrawSprite(spriteBatch, WorldPosition,
+        TextureManager.DrawSprite(
+            spriteBatch,
+            WorldPosition,
             new Vector2(Range * 2, Range * 2),
-            new Color(255, 255, 255, 30));
+            new Color(255, 255, 255, 30)
+        );
     }
 }

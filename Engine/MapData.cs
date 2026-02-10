@@ -12,14 +12,14 @@ namespace StarterTD.Engine;
 /// that a Map class reads to build a 2D grid.
 /// </summary>
 public record MapData(
-    string Name,                        // Map display name
-    string Id,                          // Unique identifier
-    Point SpawnPoint,                   // Where enemies enter the map
-    Point ExitPoint,                    // Where enemies leave the map
-    List<Rectangle> WalkableAreas,      // Rectangles of Path tiles (walkable + buildable terrain)
-    int Columns = 20,                   // Grid width
-    int Rows = 15,                      // Grid height
-    List<Rectangle>? RockAreas = null   // Rectangles of Rock tiles (impassable + unbuildable)
+    string Name, // Map display name
+    string Id, // Unique identifier
+    Point SpawnPoint, // Where enemies enter the map
+    Point ExitPoint, // Where enemies leave the map
+    List<Rectangle> WalkableAreas, // Rectangles of Path tiles (walkable + buildable terrain)
+    int Columns = 20, // Grid width
+    int Rows = 15, // Grid height
+    List<Rectangle>? RockAreas = null // Rectangles of Rock tiles (impassable + unbuildable)
 )
 {
     /// <summary>
@@ -28,27 +28,38 @@ public record MapData(
     public void Validate()
     {
         if (SpawnPoint.X < 0 || SpawnPoint.X >= Columns || SpawnPoint.Y < 0 || SpawnPoint.Y >= Rows)
-            throw new ArgumentException($"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is out of bounds");
+            throw new ArgumentException(
+                $"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is out of bounds"
+            );
 
         if (ExitPoint.X < 0 || ExitPoint.X >= Columns || ExitPoint.Y < 0 || ExitPoint.Y >= Rows)
-            throw new ArgumentException($"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is out of bounds");
+            throw new ArgumentException(
+                $"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is out of bounds"
+            );
 
         if (SpawnPoint == ExitPoint)
-            throw new ArgumentException($"Map '{Name}': SpawnPoint and ExitPoint cannot be the same");
+            throw new ArgumentException(
+                $"Map '{Name}': SpawnPoint and ExitPoint cannot be the same"
+            );
 
         // Spawn and exit must be inside a walkable area
         if (!IsInWalkableArea(SpawnPoint))
-            throw new ArgumentException($"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is not inside any WalkableArea");
+            throw new ArgumentException(
+                $"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is not inside any WalkableArea"
+            );
 
         if (!IsInWalkableArea(ExitPoint))
-            throw new ArgumentException($"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is not inside any WalkableArea");
+            throw new ArgumentException(
+                $"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is not inside any WalkableArea"
+            );
 
         // All walkable areas must be in bounds
         foreach (var area in WalkableAreas)
         {
             if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
                 throw new ArgumentException(
-                    $"Map '{Name}': WalkableArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
+                    $"Map '{Name}': WalkableArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds"
+                );
         }
 
         // All rock areas must be in bounds (if present)
@@ -58,7 +69,8 @@ public record MapData(
             {
                 if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
                     throw new ArgumentException(
-                        $"Map '{Name}': RockArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
+                        $"Map '{Name}': RockArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds"
+                    );
             }
         }
     }
@@ -70,8 +82,7 @@ public record MapData(
     {
         foreach (var area in WalkableAreas)
         {
-            if (p.X >= area.Left && p.X < area.Right &&
-                p.Y >= area.Top && p.Y < area.Bottom)
+            if (p.X >= area.Left && p.X < area.Right && p.Y >= area.Top && p.Y < area.Bottom)
                 return true;
         }
         return false;
@@ -86,23 +97,19 @@ public static class MapDataRepository
     /// <summary>
     /// Gets a predefined map by ID. Throws if not found.
     /// </summary>
-    public static MapData GetMap(string mapId) => mapId switch
-    {
-        "classic_s" => CreateClassicSPath(),
-        "straight" => CreateStraightPath(),
-        "maze_test" => CreateMazeTestPath(),
-        _ => throw new ArgumentException($"Unknown map ID: {mapId}")
-    };
+    public static MapData GetMap(string mapId) =>
+        mapId switch
+        {
+            "classic_s" => CreateClassicSPath(),
+            "straight" => CreateStraightPath(),
+            "maze_test" => CreateMazeTestPath(),
+            _ => throw new ArgumentException($"Unknown map ID: {mapId}"),
+        };
 
     /// <summary>
     /// Lists all available map IDs.
     /// </summary>
-    public static List<string> GetAvailableMaps() => new()
-    {
-        "classic_s",
-        "straight",
-        "maze_test"
-    };
+    public static List<string> GetAvailableMaps() => new() { "classic_s", "straight", "maze_test" };
 
     /// <summary>
     /// Classic S-path: corridors forming a serpentine route.
@@ -119,19 +126,19 @@ public static class MapDataRepository
         //   Row 13: x=0-17  (right to left)
         var walkableAreas = new List<Rectangle>
         {
-            new Rectangle(0, 2, 18, 1),   // Row 2: x=0 to x=17
-            new Rectangle(17, 2, 1, 5),   // Col 17: y=2 to y=6
-            new Rectangle(2, 6, 16, 1),   // Row 6: x=2 to x=17
-            new Rectangle(2, 6, 1, 5),    // Col 2: y=6 to y=10
-            new Rectangle(2, 10, 16, 1),  // Row 10: x=2 to x=17
-            new Rectangle(17, 10, 1, 4),  // Col 17: y=10 to y=13
-            new Rectangle(0, 13, 18, 1),  // Row 13: x=0 to x=17
+            new Rectangle(0, 2, 18, 1), // Row 2: x=0 to x=17
+            new Rectangle(17, 2, 1, 5), // Col 17: y=2 to y=6
+            new Rectangle(2, 6, 16, 1), // Row 6: x=2 to x=17
+            new Rectangle(2, 6, 1, 5), // Col 2: y=6 to y=10
+            new Rectangle(2, 10, 16, 1), // Row 10: x=2 to x=17
+            new Rectangle(17, 10, 1, 4), // Col 17: y=10 to y=13
+            new Rectangle(0, 13, 18, 1), // Row 13: x=0 to x=17
         };
 
         var rockAreas = new List<Rectangle>
         {
-            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
         };
 
         var mapData = new MapData(
@@ -154,13 +161,13 @@ public static class MapDataRepository
     {
         var walkableAreas = new List<Rectangle>
         {
-            new Rectangle(0, 7, 20, 1)  // Full width horizontal line on row 7
+            new Rectangle(0, 7, 20, 1), // Full width horizontal line on row 7
         };
 
         var rockAreas = new List<Rectangle>
         {
-            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
         };
 
         var mapData = new MapData(
@@ -184,14 +191,14 @@ public static class MapDataRepository
     {
         var walkableAreas = new List<Rectangle>
         {
-            new Rectangle(0, 7, 20, 1),     // Horizontal path across row 7 (full width for spawn/exit)
-            new Rectangle(2, 1, 15, 13),     // Large buildable area (x=2-16, y=1-13)
+            new Rectangle(0, 7, 20, 1), // Horizontal path across row 7 (full width for spawn/exit)
+            new Rectangle(2, 1, 15, 13), // Large buildable area (x=2-16, y=1-13)
         };
 
         var rockAreas = new List<Rectangle>
         {
-            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
         };
 
         var mapData = new MapData(

@@ -13,12 +13,15 @@ public enum TileType
 {
     /// <summary>High ground: towers can be placed, but enemies cannot walk through.</summary>
     HighGround,
+
     /// <summary>Walkable terrain. Enemies can traverse, towers can be placed.</summary>
     Path,
+
     /// <summary>A tower has been placed on this tile. Expensive for enemies to walk through.</summary>
     Occupied,
+
     /// <summary>Impassable and unbuildable rock terrain.</summary>
-    Rock
+    Rock,
 }
 
 /// <summary>
@@ -36,16 +39,17 @@ public class Tile
     /// HighGround = impassable. Path = walkable. Occupied = very expensive (enemies avoid unless necessary).
     /// Like a Python @property — recomputes from current state, no stored field.
     /// </summary>
-    public int MovementCost => Type switch
-    {
-        TileType.HighGround => int.MaxValue,  // Impassable terrain (enemies can't walk here)
-        TileType.Path => 1,                   // Normal walkable path
-        TileType.Rock => int.MaxValue,        // Impassable rock terrain
-        TileType.Occupied => OccupyingTowerType.HasValue
-            ? TowerData.GetStats(OccupyingTowerType.Value, 1).MovementCost
-            : 500,  // Fallback for safety
-        _ => int.MaxValue
-    };
+    public int MovementCost =>
+        Type switch
+        {
+            TileType.HighGround => int.MaxValue, // Impassable terrain (enemies can't walk here)
+            TileType.Path => 1, // Normal walkable path
+            TileType.Rock => int.MaxValue, // Impassable rock terrain
+            TileType.Occupied => OccupyingTowerType.HasValue
+                ? TowerData.GetStats(OccupyingTowerType.Value, 1).MovementCost
+                : 500, // Fallback for safety
+            _ => int.MaxValue,
+        };
 
     public Tile(Point gridPosition, TileType type)
     {
@@ -90,9 +94,8 @@ public class Map
     /// <summary>
     /// BACKWARD COMPATIBLE: Default constructor uses classic S-path.
     /// </summary>
-    public Map() : this(MapDataRepository.GetMap("classic_s"))
-    {
-    }
+    public Map()
+        : this(MapDataRepository.GetMap("classic_s")) { }
 
     /// <summary>
     /// Primary constructor accepting MapData.
@@ -174,7 +177,8 @@ public class Map
     {
         return new Vector2(
             gridPos.X * GameSettings.TileSize + GameSettings.TileSize / 2f,
-            gridPos.Y * GameSettings.TileSize + GameSettings.TileSize / 2f);
+            gridPos.Y * GameSettings.TileSize + GameSettings.TileSize / 2f
+        );
     }
 
     /// <summary>
@@ -184,7 +188,8 @@ public class Map
     {
         return new Point(
             (int)(worldPos.X / GameSettings.TileSize),
-            (int)(worldPos.Y / GameSettings.TileSize));
+            (int)(worldPos.Y / GameSettings.TileSize)
+        );
     }
 
     /// <summary>
@@ -202,8 +207,11 @@ public class Map
     private bool RecomputeHeatMap()
     {
         HeatMap = Pathfinder.ComputeHeatMap(
-            ExitPoint, Columns, Rows,
-            p => Tiles[p.X, p.Y].MovementCost);
+            ExitPoint,
+            Columns,
+            Rows,
+            p => Tiles[p.X, p.Y].MovementCost
+        );
 
         var extracted = Pathfinder.ExtractPath(SpawnPoint, HeatMap, Columns, Rows);
 
@@ -238,7 +246,8 @@ public class Map
                     x * GameSettings.TileSize,
                     y * GameSettings.TileSize,
                     GameSettings.TileSize,
-                    GameSettings.TileSize);
+                    GameSettings.TileSize
+                );
 
                 var tile = Tiles[x, y];
 
@@ -248,7 +257,7 @@ public class Map
                     TileType.Path => new Color(194, 178, 128),
                     TileType.Rock => new Color(60, 60, 60),
                     TileType.Occupied => new Color(100, 100, 100),
-                    _ => Color.Black
+                    _ => Color.Black,
                 };
 
                 TextureManager.DrawRect(spriteBatch, rect, tileColor);
@@ -264,7 +273,8 @@ public class Map
     /// </summary>
     private void DrawActivePathOverlay(SpriteBatch spriteBatch)
     {
-        if (ActivePath.Count == 0) return;
+        if (ActivePath.Count == 0)
+            return;
 
         const int dotSize = 8;
         int halfDot = dotSize / 2;
@@ -279,9 +289,11 @@ public class Map
             int centerX = point.X * GameSettings.TileSize + GameSettings.TileSize / 2;
             int centerY = point.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
 
-            TextureManager.DrawRect(spriteBatch,
+            TextureManager.DrawRect(
+                spriteBatch,
                 new Rectangle(centerX - halfDot, centerY - halfDot, dotSize, dotSize),
-                pathColor);
+                pathColor
+            );
 
             if (i < ActivePath.Count - 1)
             {
@@ -292,26 +304,32 @@ public class Map
                 if (next.Y == point.Y && next.X != point.X)
                 {
                     int minX = Math.Min(centerX, nextCenterX);
-                    TextureManager.DrawRect(spriteBatch,
-                        new Rectangle(minX, centerY - halfDot / 2, Math.Abs(nextCenterX - centerX), halfDot),
-                        pathColor);
+                    TextureManager.DrawRect(
+                        spriteBatch,
+                        new Rectangle(
+                            minX,
+                            centerY - halfDot / 2,
+                            Math.Abs(nextCenterX - centerX),
+                            halfDot
+                        ),
+                        pathColor
+                    );
                 }
                 else if (next.X == point.X && next.Y != point.Y)
                 {
                     int minY = Math.Min(centerY, nextCenterY);
-                    TextureManager.DrawRect(spriteBatch,
-                        new Rectangle(centerX - halfDot / 2, minY, halfDot, Math.Abs(nextCenterY - centerY)),
-                        pathColor);
+                    TextureManager.DrawRect(
+                        spriteBatch,
+                        new Rectangle(
+                            centerX - halfDot / 2,
+                            minY,
+                            halfDot,
+                            Math.Abs(nextCenterY - centerY)
+                        ),
+                        pathColor
+                    );
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Towers are expensive (cost 500) but passable, so paths are never fully blocked.
-    /// </summary>
-    public bool WouldBlockPath(Point gridPos)
-    {
-        return false;
     }
 }

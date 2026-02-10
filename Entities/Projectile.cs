@@ -20,8 +20,7 @@ public class Projectile
     public Color ProjectileColor { get; }
     public bool IsActive { get; private set; } = true;
 
-    private IEnemy? _target;
-    private Vector2 _direction;
+    private readonly IEnemy? _target;
 
     /// <summary>Size of the projectile sprite in pixels.</summary>
     private const float Size = 6f;
@@ -36,7 +35,8 @@ public class Projectile
         float speed,
         bool isAOE,
         float aoeRadius,
-        Color color)
+        Color color
+    )
     {
         Position = startPosition;
         _target = target;
@@ -52,7 +52,8 @@ public class Projectile
     /// </summary>
     public bool Update(GameTime gameTime, List<IEnemy> allEnemies)
     {
-        if (!IsActive) return false;
+        if (!IsActive)
+            return false;
 
         // If target is dead or gone, deactivate
         if (_target == null || _target.IsDead || _target.ReachedEnd)
@@ -62,8 +63,8 @@ public class Projectile
         }
 
         // Move toward target
-        _direction = _target.Position - Position;
-        float distance = _direction.Length();
+        Vector2 direction = _target.Position - Position;
+        float distance = direction.Length();
 
         if (distance < HitDistance)
         {
@@ -89,16 +90,17 @@ public class Projectile
         }
 
         // Normalize and move
-        _direction.Normalize();
+        direction.Normalize();
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        Position += _direction * Speed * dt;
+        Position += direction * Speed * dt;
 
         return false;
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (!IsActive) return;
+        if (!IsActive)
+            return;
         TextureManager.DrawSprite(spriteBatch, Position, new Vector2(Size, Size), ProjectileColor);
     }
 }

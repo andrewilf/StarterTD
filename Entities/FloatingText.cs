@@ -27,8 +27,13 @@ public class FloatingText
     /// <param name="color">Text color</param>
     /// <param name="lifetime">Duration in seconds (default 1.5s)</param>
     /// <param name="velocity">Movement velocity (default: float upward)</param>
-    public FloatingText(Vector2 startPos, string text, Color color,
-                       float lifetime = 1.5f, Vector2? velocity = null)
+    public FloatingText(
+        Vector2 startPos,
+        string text,
+        Color color,
+        float lifetime = 1.5f,
+        Vector2? velocity = null
+    )
     {
         Position = startPos;
         Text = text;
@@ -53,15 +58,15 @@ public class FloatingText
     /// </summary>
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font)
     {
-        if (font == null || !IsActive) return;
+        if (font == null || !IsActive)
+            return;
 
         // Fade-out alpha during last 30% of lifetime
         float alpha = Math.Min(1f, _remainingTime / (_lifetime * 0.3f));
         Color fadeColor = Color * alpha;
 
         // Shadow for readability
-        spriteBatch.DrawString(font, Text, Position + new Vector2(1, 1),
-                              Color.Black * alpha);
+        spriteBatch.DrawString(font, Text, Position + new Vector2(1, 1), Color.Black * alpha);
         // Main text
         spriteBatch.DrawString(font, Text, Position, fadeColor);
     }

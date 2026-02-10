@@ -11,12 +11,12 @@ public static class GameSettings
     public const int ScreenHeight = 768;
 
     // --- Grid / Map ---
-    public const int TileSize = 40;           // pixels per tile
+    public const int TileSize = 40; // pixels per tile
 
     // --- Player ---
     public const int StartingMoney = 2000;
     public const int StartingLives = 5;
 
     // --- UI ---
-    public const int UIPanelWidth = 200;      // right-side panel width
+    public const int UIPanelWidth = 200; // right-side panel width
 }

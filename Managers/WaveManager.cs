@@ -13,7 +13,13 @@ namespace StarterTD.Managers;
 public class WaveManager
 {
     /// <summary>Definition of a single wave.</summary>
-    public record WaveDefinition(int EnemyCount, float EnemyHealth, float EnemySpeed, int EnemyBounty, float SpawnInterval);
+    public record WaveDefinition(
+        int EnemyCount,
+        float EnemyHealth,
+        float EnemySpeed,
+        int EnemyBounty,
+        float SpawnInterval
+    );
 
     public int CurrentWave { get; private set; }
     public int TotalWaves => _waves.Count;
@@ -44,16 +50,76 @@ public class WaveManager
         // Define 10 waves with increasing difficulty
         _waves = new List<WaveDefinition>
         {
-            new(EnemyCount: 5,  EnemyHealth: 30,  EnemySpeed: 90,  EnemyBounty: 5,  SpawnInterval: 1.0f),
-            new(EnemyCount: 8,  EnemyHealth: 40,  EnemySpeed: 95,  EnemyBounty: 5,  SpawnInterval: 0.9f),
-            new(EnemyCount: 10, EnemyHealth: 60,  EnemySpeed: 100,  EnemyBounty: 8,  SpawnInterval: 0.8f),
-            new(EnemyCount: 12, EnemyHealth: 80,  EnemySpeed: 110,  EnemyBounty: 8,  SpawnInterval: 0.8f),
-            new(EnemyCount: 15, EnemyHealth: 100, EnemySpeed: 120,  EnemyBounty: 10, SpawnInterval: 0.7f),
-            new(EnemyCount: 18, EnemyHealth: 130, EnemySpeed: 130,  EnemyBounty: 10, SpawnInterval: 0.7f),
-            new(EnemyCount: 20, EnemyHealth: 170, EnemySpeed: 135,  EnemyBounty: 12, SpawnInterval: 0.6f),
-            new(EnemyCount: 22, EnemyHealth: 220, EnemySpeed: 140,  EnemyBounty: 15, SpawnInterval: 0.6f),
-            new(EnemyCount: 25, EnemyHealth: 300, EnemySpeed: 145,  EnemyBounty: 18, SpawnInterval: 0.5f),
-            new(EnemyCount: 30, EnemyHealth: 400, EnemySpeed: 145,  EnemyBounty: 25, SpawnInterval: 0.4f),
+            new(
+                EnemyCount: 5,
+                EnemyHealth: 30,
+                EnemySpeed: 90,
+                EnemyBounty: 5,
+                SpawnInterval: 1.0f
+            ),
+            new(
+                EnemyCount: 8,
+                EnemyHealth: 40,
+                EnemySpeed: 95,
+                EnemyBounty: 5,
+                SpawnInterval: 0.9f
+            ),
+            new(
+                EnemyCount: 10,
+                EnemyHealth: 60,
+                EnemySpeed: 100,
+                EnemyBounty: 8,
+                SpawnInterval: 0.8f
+            ),
+            new(
+                EnemyCount: 12,
+                EnemyHealth: 80,
+                EnemySpeed: 110,
+                EnemyBounty: 8,
+                SpawnInterval: 0.8f
+            ),
+            new(
+                EnemyCount: 15,
+                EnemyHealth: 100,
+                EnemySpeed: 120,
+                EnemyBounty: 10,
+                SpawnInterval: 0.7f
+            ),
+            new(
+                EnemyCount: 18,
+                EnemyHealth: 130,
+                EnemySpeed: 130,
+                EnemyBounty: 10,
+                SpawnInterval: 0.7f
+            ),
+            new(
+                EnemyCount: 20,
+                EnemyHealth: 170,
+                EnemySpeed: 135,
+                EnemyBounty: 12,
+                SpawnInterval: 0.6f
+            ),
+            new(
+                EnemyCount: 22,
+                EnemyHealth: 220,
+                EnemySpeed: 140,
+                EnemyBounty: 15,
+                SpawnInterval: 0.6f
+            ),
+            new(
+                EnemyCount: 25,
+                EnemyHealth: 300,
+                EnemySpeed: 145,
+                EnemyBounty: 18,
+                SpawnInterval: 0.5f
+            ),
+            new(
+                EnemyCount: 30,
+                EnemyHealth: 400,
+                EnemySpeed: 145,
+                EnemyBounty: 25,
+                SpawnInterval: 0.4f
+            ),
         };
     }
 
@@ -81,7 +147,8 @@ public class WaveManager
     /// </summary>
     public void Update(GameTime gameTime)
     {
-        if (!WaveInProgress || _currentWaveDef == null) return;
+        if (!WaveInProgress || _currentWaveDef == null)
+            return;
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _spawnTimer -= dt;
@@ -95,7 +162,8 @@ public class WaveManager
                 _currentWaveDef.EnemySpeed,
                 _currentWaveDef.EnemyBounty,
                 _pathProvider(),
-                new Color(220, 50, 50));  // Red-ish enemies
+                new Color(220, 50, 50)
+            ); // Red-ish enemies
 
             OnEnemySpawned?.Invoke(enemy);
             _enemiesSpawned++;

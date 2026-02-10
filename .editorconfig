@@ -1,0 +1,25 @@
+root = true
+
+# --- SonarAnalyzer Customizations for MonoGame ---
+
+[*.cs]
+
+# S1075: URIs should not be hardcoded
+# (You often hardcode file paths for assets in MonoGame)
+dotnet_diagnostic.S1075.severity = none
+
+# S109: Magic numbers should not be used
+# (Gamedev uses magic numbers for offsets/UI constantly. This silences that noise.)
+dotnet_diagnostic.S109.severity = none
+
+# S1104: Fields should not have public accessibility
+# (In simple ECS or Game components, public fields are often preferred for performance/serialization)
+dotnet_diagnostic.S1104.severity = suggestion
+
+# S2933: Fields that are only assigned in the constructor should be 'readonly'
+# (Useful, but sometimes noisy if you reset state in an Init() method)
+dotnet_diagnostic.S2933.severity = warning
+
+# S3897: Classes that implement IEquatable<T> should be sealed
+# (MonoGame structs/classes often implement this for performance)
+dotnet_diagnostic.S3897.severity = warning
