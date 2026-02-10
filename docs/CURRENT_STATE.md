@@ -1,21 +1,21 @@
 # Project Manifest
 
 ## Active Systems (Implemented)
-- **Core Loop**: `Game1` → `SceneManager` → `GameplayScene` (Mediator).
+- **Core Loop**: `Game1` → `SceneManager` → `MapSelectionScene` → `GameplayScene` (Mediator).
 - **Rendering**: Colored rectangles (placeholder). `TextureManager` uses centered origins.
-- **Map**: Hardcoded static grid with S-shaped path.
+- **Map Selection**: Pre-game scene showing 3 maps (classic_s, straight, spiral) with visual previews. Supports hover and click selection.
+- **Map**: 3 map types with different path layouts. Maps defined in `MapDataRepository`.
 - **Towers**: 3 Types (Gun, Cannon, Sniper). Supports placement (L-Click) and Upgrading (R-Click).
 - **Enemies**: Base class only. Follows path.
 - **Waves**: 10 hardcoded waves.
 - **UI**: Side panel (Selection, Start Wave). Floating Text feedback (Money +/-).
-- **Game Flow**: Start → Play → Victory/Defeat Screens (Restart via 'R').
+- **Game Flow**: Map Selection → Play → Victory/Defeat Screens (Return to Map Selection via 'R').
 
 ## Backlog / To-Do
 
 ### High Priority
 - [ ] **Sprite Integration**: Replace rects with `Texture2D` assets.
 - [ ] **Sound**: Basic SFX (shoot, hit) and BGM manager.
-- [ ] **Main Menu**: Pre-game scene.
 
 ### Gameplay
 - [ ] **Enemy Variants**: Fast (Low HP) and Tank (High HP).

@@ -7,31 +7,39 @@ graph TD
     A[Program.cs] --> B[Game1.cs];
     B --> C{SceneManager};
     C --> D{Active Scene (IScene)};
-    D --> E[GameplayScene];
+    D --> E[MapSelectionScene];
+    D --> F[GameplayScene];
 
     subgraph Game Loop
         B -- Update() / Draw() --> C;
         C -- Update() / Draw() --> D;
     end
 
-    subgraph Scene Implementation
-        E -- Manages --> F[Map];
-        E -- Manages --> G[WaveManager];
-        E -- Manages --> H[TowerManager];
-        E -- Manages --> I[InputManager];
-        E -- Manages --> J[UIPanel];
-        E -- Manages --> K[FloatingTexts];
+    subgraph MapSelectionScene
+        E -- Reads --> L[MapDataRepository];
+        E -- Displays --> M[Map Previews];
+        E -- Transitions to --> F;
+    end
+
+    subgraph GameplayScene Implementation
+        F -- Manages --> G[Map];
+        F -- Manages --> H[WaveManager];
+        F -- Manages --> I[TowerManager];
+        F -- Manages --> J[InputManager];
+        F -- Manages --> K[UIPanel];
+        F -- Manages --> N[FloatingTexts];
+        F -- Transitions to --> E;
     end
 ```
 
-**Key Pattern:** `GameplayScene` is the root of the actual game logic. `Game1` is just a wrapper that ticks the `SceneManager`.
+**Key Pattern:** Multiple scenes implement `IScene`. `MapSelectionScene` is the entry point, `GameplayScene` is the main game logic. `Game1` is just a wrapper that ticks the `SceneManager`.
 
 ## Data Flow & Communication
 
-The `GameplayScene` acts as the **Mediator**. Sibling systems (e.g., Towers and Enemies) never talk directly.
+Each scene acts as a **Mediator** for its subsystems. In `GameplayScene`, sibling systems (e.g., Towers and Enemies) never talk directly.
 
 ### 1. Hierarchy (Top-Down)
-`Game1` → `SceneManager` → `GameplayScene` → `Managers`
+`Game1` → `SceneManager` → `[MapSelectionScene | GameplayScene]` → `Managers`
 
 -   **Update Loop:** `GameplayScene` calls `Update()` on all child managers (`WaveManager`, `TowerManager`, etc.).
 -   **Context Passing:** Global state (like the `_enemies` list) is passed down as an argument in the `Update()` call.
@@ -57,6 +65,10 @@ Rendering relies on dependency injection via the `Draw` call.
 A fire-and-forget system for temporary UI (damage numbers, money changes).
 -   **Lifecycle**: Objects update themselves (velocity, fade) and flag themselves for removal when finished.
 -   **Trigger**: Centralized in `GameplayScene`. Any logic (selling, killing) requests a popup via the scene.
+
+### Map System
+-   **Data-Driven**: Maps are defined in `MapDataRepository` as `MapData` records.
+-   **Selection**: `MapSelectionScene` reads map data for previews. `GameplayScene` receives `mapId` via constructor.
 
 ### Tower System
 -   **Data-Driven**: Tower stats are defined in `TowerData` records, not hardcoded in classes.
