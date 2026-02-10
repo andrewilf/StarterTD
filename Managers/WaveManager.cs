@@ -133,7 +133,7 @@ public class WaveManager
                 _currentWaveDef.EnemySpeed,
                 _currentWaveDef.EnemyBounty,
                 _pathProvider(),
-                new Color(220, 50, 50),
+                Color.Purple,
                 _currentWaveDef.AttackDamage
             );
 

@@ -111,18 +111,6 @@ public class TowerManager
     }
 
     /// <summary>
-    /// Debug: instantly remove all towers. Each triggers OnTowerDestroyed individually.
-    /// </summary>
-    public void KillAllTowers()
-    {
-        var towersToKill = new List<Tower>(_towers);
-        foreach (var tower in towersToKill)
-        {
-            RemoveTower(tower);
-        }
-    }
-
-    /// <summary>
     /// Update all towers (targeting, firing, projectiles).
     /// </summary>
     public void Update(GameTime gameTime, List<IEnemy> enemies)
