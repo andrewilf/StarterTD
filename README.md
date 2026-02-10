@@ -1,64 +1,53 @@
-# StarterTD — MonoGame Tower Defense Starter
+# StarterTD
 
-A complete, compile-ready MonoGame (DesktopGL) tower defense starter project built with .NET 9. Designed as a foundation for building tower defense games using AI-assisted development workflows.
+A lean, AI-assisted Tower Defense engine built with **MonoGame** and **.NET 9**.
+Designed for rapid iteration with LLMs (Claude/ChatGPT), focusing on clean architecture and readable patterns.
 
-## Features (MVP)
+## 🌟 Current Features
+* **Dynamic Mazing**: Implementation of A* Pathfinding (`Pathfinder.cs`) that allows for dynamic rerouting of enemies when towers are placed.
+* **Data-Driven Maps**: Includes 3 distinct map layouts (Classic, Straight, Maze Test) defined in repositories.
+* **Tower System**: 3 Tower types (Gun, Cannon, Sniper) with upgrade paths.
+* **Game Loop**: Fully functional flow from Map Selection → Gameplay → Victory/Defeat.
+* **Visual Debugging**: Current rendering uses color-coded primitives (Rectangles) for rapid prototyping before asset integration.
 
-- **3 Tower Types**: Gun (fast/low damage), Cannon (slow/AOE), Sniper (long range)
-- **10 Waves** of enemies with increasing difficulty
-- **Tower Upgrades**: Right-click to upgrade towers (Level 1 → Level 2)
-- **Placeholder Graphics**: All rendering uses code-generated colored rectangles (no external assets needed)
-- **Clean Architecture**: Interfaces, Managers, and Scenes for easy extensibility
-
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) or later
-- MonoGame 3.8.4.1 (automatically restored via NuGet)
+* .NET 9.0 SDK
+* MonoGame Framework
 
 ### Build & Run
+    # Restore dependencies
+    dotnet restore
 
-```bash
-dotnet restore
-dotnet build
-dotnet run
-```
+    # Build the project (Compiles logic and processes Content.mgcb)
+    dotnet build
 
-### Controls
+    # Run the game
+    dotnet run
 
-| Action | Input |
-|---|---|
-| Select tower type | Click tower button in right panel |
-| Place tower | Left-click on green (buildable) tile |
-| Upgrade tower | Right-click on placed tower |
-| Deselect | Press ESC |
-| Start wave | Click "Start Wave" button |
+## 🎮 Controls
 
-## Project Structure
+| Input | Context | Action |
+| :--- | :--- | :--- |
+| **Left Click** | Map Selection | Select Map |
+| **Left Click** | Gameplay | Place Tower |
+| **Right Click** | Gameplay | Upgrade Tower |
+| **Key 'R'** | Game Over | Restart / Return to Menu |
 
-```
-StarterTD/
-├── Engine/          # Core systems (TextureManager, SceneManager, Map, Settings)
-├── Entities/        # Game objects (Tower, Enemy, Projectile, TowerData)
-├── Interfaces/      # Contracts (ITower, IEnemy, IScene)
-├── Managers/        # Subsystem managers (WaveManager, TowerManager, InputManager)
-├── Scenes/          # Game scenes (GameplayScene)
-├── UI/              # UI components (UIPanel)
-├── docs/            # AI workflow documentation (Context Bank)
-├── Game1.cs         # MonoGame entry point
-└── Program.cs       # .NET entry point
-```
+## 🤖 AI Development Workflow
+This project is optimized for coding assistants. If you are using Claude or ChatGPT to contribute, specific context files are located in the root and `docs/` folder.
 
-## AI Workflow (Context Bank)
+* **`CLAUDE.md`**: The master prompt. Feed this to the AI at the start of a session to establish coding style (Python/TS analogies for C#), strict architectural rules, and known gotchas.
+* **`docs/ARCHITECTURE.md`**: The source of truth for the `SceneManager` → `Mediator` pattern and data flow.
+* **`docs/CURRENT_STATE.md`**: The live checklist. Always check this before starting new features to see what is implemented vs. backlog.
 
-This project includes a `docs/` folder designed to serve as long-term memory for AI coding assistants like Claude. See:
+## 🏗 Architecture Overview
+* **Pattern**: `Game1` acts as a wrapper. The core logic lives in `SceneManager`.
+* **Mediator**: `GameplayScene` owns all managers (`WaveManager`, `TowerManager`). Managers **never** reference each other directly; they communicate via `Action<T>` events bubbled up to the Scene.
+* **Rendering**: 
+    * `TextureManager.DrawSprite`: Uses **CENTERED** origin.
+    * `DrawRect`: Uses **TOP-LEFT** origin.
 
-- `docs/ARCHITECTURE.md` — Class structure and data flow
-- `docs/CONCEPTS.md` — C# concepts explained via TypeScript/Python analogies
-- `docs/CURRENT_STATE.md` — Implementation checklist
-- `docs/CLAUDE_WORKFLOW.md` — Prompt templates for AI sessions
-
-## License
-
+## 📝 License
 MIT

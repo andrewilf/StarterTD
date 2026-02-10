@@ -58,7 +58,7 @@ public class MapSelectionScene : IScene
         {
             MapDataRepository.GetMap("classic_s"),
             MapDataRepository.GetMap("straight"),
-            MapDataRepository.GetMap("spiral")
+            MapDataRepository.GetMap("maze_test")
         };
 
         // Try to load font (same pattern as GameplayScene)
@@ -91,7 +91,7 @@ public class MapSelectionScene : IScene
             {
                 0 => "classic_s",
                 1 => "straight",
-                2 => "spiral",
+                2 => "maze_test",
                 _ => null
             };
 
