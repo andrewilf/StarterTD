@@ -21,9 +21,9 @@ I am a Python/TypeScript engineer new to C#.
 - **NO BLOAT**: Updates to documentation files (CLAUDE.md, ARCHITECTURE.md, CURRENT_STATE.md) must be **essential only**. Document architectural patterns and relationships, NOT implementation details visible in code. Keep it minimal.
 
 ## Feature Implementation Rules
-1.  **Feature Briefs**: If I provide a structured brief (Data/Logic/Visuals), implement closely and only ask questions if there are major concerns with the implementation.
-2.  **Event Handling**: Use `Action<T>` for cross-system events. Avoid `EventHandler`.
-3.  **State**: Global state (Money, Lives) resides in `GameplayScene`.
+1.  **Event Handling**: Use `Action<T>` for cross-system events. Avoid `EventHandler`.
+2.  **State**: Global state (Money, Lives) resides in `GameplayScene`.
+3. **Clean-up**: If code is made redundant from changes, remove it.
 4.  **Verification**: Run `dotnet build` after generating code.
 
 ## Known Gotchas
