@@ -64,8 +64,7 @@ public class TowerManager
 
         var tower = new Tower(type, gridPos);
         _towers.Add(tower);
-        tile.Type = TileType.Occupied;
-        tile.OccupyingTowerType = type;
+        tile.OccupyingTower = tower;
 
         // Every placement changes the heat map — notify mediator to recompute
         OnTowerPlaced?.Invoke(gridPos);
@@ -97,13 +96,12 @@ public class TowerManager
     }
 
     /// <summary>
-    /// Remove a tower from the grid: restore tile to its original type, clear tower reference, notify scene.
+    /// Remove a tower from the grid: clear the tile's tower reference and notify scene.
     /// </summary>
     private void RemoveTower(Tower tower)
     {
         var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
-        tile.Type = tile.OriginalType;
-        tile.OccupyingTowerType = null;
+        tile.OccupyingTower = null;
         _towers.Remove(tower);
 
         if (SelectedTower == tower)
