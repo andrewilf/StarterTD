@@ -73,12 +73,21 @@ A fire-and-forget system for temporary UI (damage numbers, money changes).
 ### Tower System
 -   **Data-Driven**: Tower stats are defined in `TowerData` records, not hardcoded in classes.
 -   **Targeting**: Towers scan the `enemies` list passed during `Update()` to find targets.
+-   **Blocking Capacity**: Each tower has a `BlockCapacity` (configured per tower type: Gun 3, Cannon 2) limiting simultaneous enemy engagements. Enemies call `TryEngage()` before attacking — if tower is at capacity, the enemy continues moving through. Engagement is released on: tower death, enemy death, path update, or enemy reaching exit. Visual feedback via blue capacity bar (100% blue = full capacity, 0% = at limit).
+
+### Enemy State Machine
+-   **States**: `Moving` (following path) and `Attacking` (stationary, dealing damage to tower).
+-   **State Transitions**:
+    -   **Moving → Attacking**: When next waypoint has an alive tower AND `tower.TryEngage()` returns true (capacity available). If tower is at capacity, enemy continues moving through it.
+    -   **Attacking → Moving**: When tower is destroyed (checked via `IsDead`) or path changes via `UpdatePath()`.
+-   **Engagement Release**: Happens in four places: (1) tower dies in `UpdateAttackingState()`, (2) enemy dies in `GameplayScene` cleanup, (3) enemy reaches exit in `GameplayScene` cleanup, (4) path changes in `UpdatePath()`. All call `tower.ReleaseEngagement()` to decrement the engagement counter before state change.
+-   **Cleanup Hook**: `OnDestroy()` method called before enemy removal ensures engagement is released, preventing "ghost slots" where a tower remains blocked by a dead enemy.
 
 ### Mazing System (Dynamic Pathfinding via Dijkstra)
 -   **Architecture**: `TileType` enum has three values: `HighGround` (impassable, buildable), `Path` (walkable cost 1, buildable), `Rock` (impassable, unbuildable). Towers are overlays tracked via `Tile.OccupyingTower` (full Tower reference) — terrain type never changes after initialization.
 -   **Terrain Definition**: Maps define walkable terrain via `MapData.WalkableAreas` and impassable rock terrain via optional `MapData.RockAreas` — both are `List<Rectangle>`. Rock processing happens after WalkableAreas so rocks can override paths. No predefined path list needed.
 -   **Dijkstra Pathfinding**: `Pathfinder.cs` contains two functions: `ComputeHeatMap(target, columns, rows, movementCost)` and `ExtractPath(start, heatMap, columns, rows)`.
--   **Heat Map**: Dijkstra flood-fill from the exit point computes cost-to-exit for every tile. Towers have per-type movement costs (Gun: 300, Cannon: 500, Sniper: 700), creating strategic trade-offs between tower effectiveness and maze control. Enemies dynamically prefer cheaper paths (through Gun towers) over expensive ones (through Sniper towers).
+-   **Heat Map**: Dijkstra flood-fill from the exit point computes cost-to-exit for every tile. Towers have per-type movement costs (Gun: 300, Cannon: 500), creating strategic trade-offs between tower effectiveness and maze control. Enemies dynamically prefer cheaper paths (through Gun towers) over expensive ones (through Cannon towers).
 -   **Per-Tower Movement Costs**: Each tower type has a `MovementCost` property in `TowerData.TowerStats`. The `Tile.MovementCost` property checks `OccupyingTower` first; if occupied, it returns the tower's movement cost. Otherwise, it returns the terrain's cost based on `Type`.
 -   **Tower as Overlay**: When a tower is placed, `tile.OccupyingTower` is set to the Tower object. When destroyed, it's cleared to null. The underlying terrain `Type` never changes, keeping tile state simple and immutable.
 -   **Path Extraction**: Gradient descent on the heat map extracts the optimal path from spawn to exit. Recomputed whenever towers change. `Map.ActivePath` is the reference path shown to the player via the blue line overlay.

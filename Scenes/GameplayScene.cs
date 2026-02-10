@@ -179,11 +179,13 @@ public class GameplayScene : IScene
                 int bounty = _enemies[i].Bounty;
                 _money += bounty;
                 SpawnFloatingText(_enemies[i].Position, $"+${bounty}", Color.Gold);
+                _enemies[i].OnDestroy(); // Release tower engagement before removal
                 _enemies.RemoveAt(i);
             }
             else if (_enemies[i].ReachedEnd)
             {
                 _lives--;
+                _enemies[i].OnDestroy(); // Release tower engagement before removal
                 _enemies.RemoveAt(i);
 
                 if (_lives <= 0)

@@ -28,9 +28,16 @@ public class Tower : ITower
     public int CurrentHealth { get; private set; }
     public bool IsDead => CurrentHealth <= 0;
 
+    /// <summary>Maximum number of enemies that can simultaneously attack this tower.</summary>
+    public int BlockCapacity { get; private set; }
+
+    /// <summary>Number of enemies currently attacking this tower.</summary>
+    public int CurrentEngagedCount => _currentEngagedCount;
+
     public TowerType TowerType { get; }
 
     private float _fireCooldown;
+    private int _currentEngagedCount = 0;
     private const float SpriteSize = 30f;
     private const float ProjectileSpeed = 400f;
 
@@ -56,6 +63,57 @@ public class Tower : ITower
             CurrentHealth = 0;
     }
 
+    /// <summary>
+    /// Attempt to engage this tower. Returns true if the enemy can engage (capacity available).
+    /// </summary>
+    public bool TryEngage()
+    {
+        if (_currentEngagedCount < BlockCapacity)
+        {
+            _currentEngagedCount++;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Release an engagement slot when an enemy stops attacking.
+    /// </summary>
+    public void ReleaseEngagement()
+    {
+        if (_currentEngagedCount > 0)
+            _currentEngagedCount--;
+    }
+
+    private void DrawCapacityBar(SpriteBatch spriteBatch)
+    {
+        float capacityBarWidth = SpriteSize;
+        float capacityBarHeight = 3f; // Slightly thinner than health bar
+        float remainingPercent = (float)(BlockCapacity - CurrentEngagedCount) / BlockCapacity;
+
+        int capBarX = (int)(WorldPosition.X - capacityBarWidth / 2f);
+        int capBarY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f + 5f); // 5px below health bar
+
+        // Dark gray background (full bar)
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(capBarX, capBarY, (int)capacityBarWidth, (int)capacityBarHeight),
+            new Color(50, 50, 50) // Dark gray
+        );
+
+        // Blue foreground (remaining capacity)
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(
+                capBarX,
+                capBarY,
+                (int)(capacityBarWidth * remainingPercent),
+                (int)capacityBarHeight
+            ),
+            Color.CornflowerBlue
+        );
+    }
+
     private void ApplyStats(TowerData.TowerStats stats)
     {
         Name = stats.Name;
@@ -68,6 +126,7 @@ public class Tower : ITower
         TowerColor = stats.Color;
         MaxHealth = stats.MaxHealth;
         CurrentHealth = stats.MaxHealth;
+        BlockCapacity = stats.BlockCapacity;
     }
 
     public void Upgrade()
@@ -179,6 +238,9 @@ public class Tower : ITower
                 Color.LimeGreen
             );
         }
+
+        // Draw capacity bar below health bar (always visible)
+        DrawCapacityBar(spriteBatch);
 
         // Draw projectiles
         foreach (var proj in Projectiles)

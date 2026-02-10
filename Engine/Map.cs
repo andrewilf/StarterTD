@@ -44,12 +44,12 @@ public class Tile
         OccupyingTower != null
             ? TowerData.GetStats(OccupyingTower.TowerType, 1).MovementCost
             : Type switch
-              {
-                  TileType.HighGround => int.MaxValue,
-                  TileType.Path => 1,
-                  TileType.Rock => int.MaxValue,
-                  _ => int.MaxValue,
-              };
+            {
+                TileType.HighGround => int.MaxValue,
+                TileType.Path => 1,
+                TileType.Rock => int.MaxValue,
+                _ => int.MaxValue,
+            };
 
     public Tile(Point gridPosition, TileType type)
     {

@@ -10,7 +10,6 @@ public enum TowerType
 {
     Gun,
     Cannon,
-    Sniper,
 }
 
 /// <summary>
@@ -30,7 +29,8 @@ public static class TowerData
         bool IsAOE,
         float AOERadius,
         Color Color,
-        int MaxHealth
+        int MaxHealth,
+        int BlockCapacity
     );
 
     /// <summary>
@@ -53,7 +53,8 @@ public static class TowerData
                 IsAOE: false,
                 AOERadius: 0f,
                 Color: new Color(65, 105, 225),
-                MaxHealth: 100
+                MaxHealth: 100,
+                BlockCapacity: 3
             ), // Royal Blue
 
             (TowerType.Gun, 2) => new TowerStats(
@@ -67,7 +68,8 @@ public static class TowerData
                 IsAOE: false,
                 AOERadius: 0f,
                 Color: new Color(30, 60, 180),
-                MaxHealth: 120
+                MaxHealth: 120,
+                BlockCapacity: 3
             ),
 
             // Cannon Tower: Slow fire rate, AOE damage, medium range
@@ -82,7 +84,8 @@ public static class TowerData
                 IsAOE: true,
                 AOERadius: 50f,
                 Color: new Color(178, 34, 34),
-                MaxHealth: 150
+                MaxHealth: 150,
+                BlockCapacity: 2
             ), // Firebrick Red
 
             (TowerType.Cannon, 2) => new TowerStats(
@@ -96,36 +99,8 @@ public static class TowerData
                 IsAOE: true,
                 AOERadius: 70f,
                 Color: new Color(139, 0, 0),
-                MaxHealth: 180
-            ),
-
-            // Sniper Tower: Very slow, high damage, long range
-            (TowerType.Sniper, 1) => new TowerStats(
-                "Sniper Tower",
-                Range: 250f,
-                Damage: 10f,
-                FireRate: 2.0f,
-                Cost: 100,
-                UpgradeCost: 80,
-                MovementCost: 700,
-                IsAOE: false,
-                AOERadius: 0f,
-                Color: new Color(148, 0, 211),
-                MaxHealth: 80
-            ), // Dark Violet
-
-            (TowerType.Sniper, 2) => new TowerStats(
-                "Sniper Tower Mk2",
-                Range: 300f,
-                Damage: 25f,
-                FireRate: 1.5f,
-                Cost: 100,
-                UpgradeCost: 0,
-                MovementCost: 700,
-                IsAOE: false,
-                AOERadius: 0f,
-                Color: new Color(100, 0, 160),
-                MaxHealth: 100
+                MaxHealth: 180,
+                BlockCapacity: 2
             ),
 
             _ => throw new ArgumentException($"No stats for {type} level {level}"),

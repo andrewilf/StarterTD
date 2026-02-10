@@ -98,11 +98,26 @@ public class Enemy : IEnemy
             _path = freshPath;
             _currentPathIndex = 1; // Start at index 1 since 0 is the current cell
 
-            // When path updates, reset to Moving state
+            // When path updates, release engagement and reset to Moving state
             // The tower we were attacking might be gone, or a new path opens
+            if (_state == EnemyState.Attacking && _targetTower != null)
+            {
+                _targetTower.ReleaseEngagement();
+            }
             _state = EnemyState.Moving;
             _targetTower = null;
             _attackTimer = 0f;
+        }
+    }
+
+    /// <summary>
+    /// Called when enemy is about to be removed. Releases tower engagement if in Attacking state.
+    /// </summary>
+    public void OnDestroy()
+    {
+        if (_state == EnemyState.Attacking && _targetTower != null)
+        {
+            _targetTower.ReleaseEngagement();
         }
     }
 
@@ -144,14 +159,19 @@ public class Enemy : IEnemy
         {
             Tile nextTile = map.Tiles[nextWaypoint.X, nextWaypoint.Y];
 
-            if (nextTile.OccupyingTower != null && !nextTile.OccupyingTower.IsDead)
+            if (
+                nextTile.OccupyingTower != null
+                && !nextTile.OccupyingTower.IsDead
+                && nextTile.OccupyingTower.TryEngage()
+            )
             {
-                // Tower blocking path - switch to attacking
+                // Successfully engaged - switch to attacking
                 _state = EnemyState.Attacking;
                 _targetTower = nextTile.OccupyingTower;
                 _attackTimer = 0f;
                 return; // Stop moving this frame
             }
+            // Tower at capacity or no tower - continue moving
         }
 
         // Continue moving toward current waypoint
@@ -175,9 +195,10 @@ public class Enemy : IEnemy
     private void UpdateAttackingState(float dt)
     {
         // Validate target still exists and is alive
-        if (_targetTower == null || _targetTower.IsDead)
+        if (_targetTower?.IsDead ?? true)
         {
-            // Tower destroyed - resume movement
+            // Tower destroyed or null - release engagement and resume movement
+            _targetTower?.ReleaseEngagement();
             _state = EnemyState.Moving;
             _targetTower = null;
             _attackTimer = 0f;
