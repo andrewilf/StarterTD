@@ -28,12 +28,12 @@ public record MazeZone(
 /// Similar to TowerData pattern - can be hardcoded or loaded from JSON.
 /// </summary>
 public record MapData(
-    string Name,                  // Map display name (e.g., "Classic S-Path", "Spiral")
-    string Id,                    // Unique identifier (e.g., "classic_s", "spiral_01")
+    string Name,                  // Map display name
+    string Id,                    // Unique identifier
     List<Point> PathPoints,       // Ordered waypoints (grid coordinates)
     List<MazeZone> MazeZones,     // Buildable zones within/around path
-    int Columns = 20,             // Grid width (defaults to GameSettings)
-    int Rows = 15                 // Grid height (defaults to GameSettings)
+    int Columns = 20,             // Grid width
+    int Rows = 15                 // Grid height
 )
 {
     /// <summary>
@@ -93,7 +93,7 @@ public static class MapDataRepository
     {
         "classic_s" => CreateClassicSPath(),
         "straight" => CreateStraightPath(),
-        "spiral" => CreateSpiralPath(),
+        "maze_test" => CreateMazeTestPath(),
         _ => throw new ArgumentException($"Unknown map ID: {mapId}")
     };
 
@@ -104,7 +104,7 @@ public static class MapDataRepository
     {
         "classic_s",
         "straight",
-        "spiral"
+        "maze_test"
     };
 
     /// <summary>
@@ -183,7 +183,7 @@ public static class MapDataRepository
     /// The path goes left-to-right through the center. Players build towers
     /// within the zone to force enemies into longer detours.
     /// </summary>
-    private static MapData CreateSpiralPath()
+    private static MapData CreateMazeTestPath()
     {
         var path = new List<Point>();
 
@@ -202,7 +202,7 @@ public static class MapDataRepository
 
         var mapData = new MapData(
             Name: "Maze Test",
-            Id: "spiral",
+            Id: "maze_test",
             PathPoints: path,
             MazeZones: mazeZones
         );

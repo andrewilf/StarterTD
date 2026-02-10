@@ -12,8 +12,6 @@ public static class GameSettings
 
     // --- Grid / Map ---
     public const int TileSize = 40;           // pixels per tile
-    public const int GridColumns = 20;        // number of columns
-    public const int GridRows = 15;           // number of rows
 
     // --- Player ---
     public const int StartingMoney = 200;
