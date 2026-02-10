@@ -1,0 +1,42 @@
+# --- Build Artifacts (Crucial to ignore) ---
+# These are auto-generated and confuse the AI with duplicate/compiled code
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# --- MonoGame Compiled Content ---
+# The compiled assets that the game actually runs
+content/bin/
+content/obj/
+*.xnb
+
+# --- Heavy Binary Assets ---
+# Claude cannot "read" images or audio. Feeding these text representations 
+# of binary data is useless and wastes massive amounts of tokens.
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.tga
+*.dds
+*.gif
+*.wav
+*.mp3
+*.ogg
+*.wma
+*.fbx
+*.blend
+*.ttf
+*.spritefont
+
+# --- OS System Files ---
+.DS_Store
+Thumbs.db
+
+# --- Optional: Documentation usually not needed for coding ---
+# Uncomment if you want to exclude these
+# *.pdf
+# *.doc
