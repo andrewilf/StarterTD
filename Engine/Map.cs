@@ -150,7 +150,6 @@ public class Map
     /// </summary>
     private void InitializeTiles()
     {
-        // Phase 1: All tiles start as Buildable
         for (int x = 0; x < Columns; x++)
         {
             for (int y = 0; y < Rows; y++)
@@ -159,7 +158,6 @@ public class Map
             }
         }
 
-        // Tag maze zone membership (sets reference only, TileType stays Buildable)
         if (MapData != null)
         {
             foreach (var zone in MapData.MazeZones)
@@ -177,7 +175,6 @@ public class Map
             }
         }
 
-        // Phase 2: Mark path tiles as Path (MazeZone reference is preserved)
         foreach (var point in PathPoints)
         {
             Tiles[point.X, point.Y].Type = TileType.Path;
@@ -204,10 +201,6 @@ public class Map
             (int)(worldPos.Y / GameSettings.TileSize));
     }
 
-    /// <summary>
-    /// Analyze which maze zones the path passes through and cache entry/exit info.
-    /// Called once during construction.
-    /// </summary>
     private void AnalyzeMazeZones()
     {
         if (MapData == null) return;
@@ -301,10 +294,6 @@ public class Map
         return false;
     }
 
-    /// <summary>
-    /// Determines if a grid point is walkable for A* pathfinding within a maze zone.
-    /// Walkable = (inside zone AND not Occupied) OR (Path tile for entry/exit).
-    /// </summary>
     private bool IsWalkableForMaze(Point p, MazeZone zone)
     {
         if (p.X < 0 || p.X >= Columns || p.Y < 0 || p.Y >= Rows)
@@ -312,11 +301,9 @@ public class Map
 
         var type = Tiles[p.X, p.Y].Type;
 
-        // Within the zone: Buildable and Path tiles are walkable, Occupied is not
         if (zone.ContainsPoint(p))
             return type == TileType.Buildable || type == TileType.Path;
 
-        // Path tiles just outside the zone boundary are walkable (for entry/exit)
         return type == TileType.Path;
     }
 
@@ -359,7 +346,6 @@ public class Map
 
                 var tile = Tiles[x, y];
 
-                // Maze zone tiles get bright green regardless of Path vs Buildable
                 Color tileColor;
                 if (tile.MazeZone != null && tile.Type != TileType.Occupied)
                     tileColor = new Color(50, 180, 50);
@@ -375,7 +361,6 @@ public class Map
                 TextureManager.DrawRect(spriteBatch, rect, tileColor);
                 TextureManager.DrawRectOutline(spriteBatch, rect, new Color(0, 0, 0, 60), 1);
 
-                // Yellow border for maze zone tiles
                 if (tile.MazeZone != null && tile.Type != TileType.Occupied)
                 {
                     TextureManager.DrawRectOutline(spriteBatch, rect,

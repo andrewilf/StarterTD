@@ -36,8 +36,6 @@ public class Enemy : IEnemy
         _path = path;
         _currentPathIndex = 0;
         _color = color;
-
-        // Start at the first path point
         Position = Map.GridToWorld(_path[0]);
     }
 
@@ -58,11 +56,6 @@ public class Enemy : IEnemy
     {
         if (IsDead || ReachedEnd) return;
 
-        // Find where the enemy currently is on the grid
-        Point currentGrid = Map.WorldToGrid(Position);
-
-        // Search the new path for the closest matching point ahead of our position.
-        // We search forward from index 0 to find the best match.
         int bestIndex = -1;
         float bestDistance = float.MaxValue;
 
@@ -79,14 +72,10 @@ public class Enemy : IEnemy
         }
 
         if (bestIndex == -1)
-        {
-            // Shouldn't happen, but fallback: start from beginning
             bestIndex = 0;
-        }
 
         _path = newPath;
 
-        // If we're very close to the best match point, target the NEXT one
         if (bestDistance < GameSettings.TileSize / 2f && bestIndex < newPath.Count - 1)
             _currentPathIndex = bestIndex + 1;
         else
@@ -97,7 +86,6 @@ public class Enemy : IEnemy
     {
         if (IsDead || ReachedEnd) return;
 
-        // Move toward the next path point
         if (_currentPathIndex >= _path.Count)
         {
             ReachedEnd = true;
@@ -112,7 +100,6 @@ public class Enemy : IEnemy
 
         if (distance <= moveAmount)
         {
-            // Arrived at waypoint, move to next
             Position = target;
             _currentPathIndex++;
         }
@@ -127,10 +114,8 @@ public class Enemy : IEnemy
     {
         if (IsDead) return;
 
-        // Draw enemy body (centered origin via DrawSprite)
         TextureManager.DrawSprite(spriteBatch, Position, new Vector2(SpriteSize, SpriteSize), _color);
 
-        // Draw health bar above enemy
         float healthBarWidth = SpriteSize;
         float healthBarHeight = 4f;
         float healthPercent = Health / MaxHealth;
@@ -138,12 +123,10 @@ public class Enemy : IEnemy
             Position.X - healthBarWidth / 2f,
             Position.Y - SpriteSize / 2f - 8f);
 
-        // Background (red)
         TextureManager.DrawRect(spriteBatch,
             new Rectangle((int)barPos.X, (int)barPos.Y, (int)healthBarWidth, (int)healthBarHeight),
             Color.Red);
 
-        // Foreground (green)
         TextureManager.DrawRect(spriteBatch,
             new Rectangle((int)barPos.X, (int)barPos.Y, (int)(healthBarWidth * healthPercent), (int)healthBarHeight),
             Color.LimeGreen);

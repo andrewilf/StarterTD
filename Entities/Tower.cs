@@ -60,7 +60,7 @@ public class Tower : ITower
 
     public void Upgrade()
     {
-        if (Level >= 2) return; // Max level
+        if (Level >= 2) return;
         Level++;
         var stats = TowerData.GetStats(TowerType, Level);
         ApplyStats(stats);
@@ -70,11 +70,9 @@ public class Tower : ITower
     {
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        // Update cooldown
         if (_fireCooldown > 0)
             _fireCooldown -= dt;
 
-        // Find nearest enemy in range
         IEnemy? target = null;
         float closestDist = float.MaxValue;
 
@@ -90,7 +88,6 @@ public class Tower : ITower
             }
         }
 
-        // Fire at target
         if (target != null && _fireCooldown <= 0)
         {
             _fireCooldown = FireRate;

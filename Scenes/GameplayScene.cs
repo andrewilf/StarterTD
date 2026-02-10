@@ -30,12 +30,7 @@ public class GameplayScene : IScene
     private int _lives;
     private bool _gameOver;
     private bool _gameWon;
-
-    // Track whether all enemies from the current wave are dead/gone
-    // so we know when the wave is truly finished
     private bool _allEnemiesCleared;
-
-    // The selected map ID for this gameplay session
     private readonly string _selectedMapId;
 
     public GameplayScene(Game1 game, string mapId)
@@ -111,10 +106,8 @@ public class GameplayScene : IScene
 
     public void Update(GameTime gameTime)
     {
-        // Update input first so we can detect restart key
         _inputManager.Update();
 
-        // Handle restart - return to map selection
         if ((_gameOver || _gameWon) && _inputManager.IsKeyPressed(Keys.R))
         {
             _game.SetScene(new MapSelectionScene(_game));
@@ -123,14 +116,12 @@ public class GameplayScene : IScene
 
         if (_gameOver || _gameWon) return;
 
-        // --- Handle ESC to deselect ---
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
             _uiPanel.SelectedTowerType = null;
             _towerManager.SelectedTower = null;
         }
 
-        // --- Handle left click ---
         if (_inputManager.IsLeftClick())
         {
             Point mousePos = _inputManager.MousePosition;

@@ -31,15 +31,12 @@ public static class Pathfinder
         int rows,
         Func<Point, bool> walkable)
     {
-        // Edge case: start or goal is not walkable
         if (!walkable(start) || !walkable(goal))
             return null;
 
-        // Edge case: already there
         if (start == goal)
             return new List<Point> { start };
 
-        // The 4 cardinal directions (no diagonals — matches the grid's orthogonal movement)
         Point[] directions = {
             new Point(0, -1),  // up
             new Point(0, 1),   // down
@@ -47,22 +44,15 @@ public static class Pathfinder
             new Point(1, 0)    // right
         };
 
-        // gScore[point] = cheapest known cost from start to point
         var gScore = new Dictionary<Point, float>();
         gScore[start] = 0;
 
-        // cameFrom[point] = the point we arrived from on the cheapest path
         var cameFrom = new Dictionary<Point, Point>();
 
-        // Open set as a priority queue, ordered by fScore (gScore + heuristic)
-        // PriorityQueue is built into .NET 6+ — dequeues lowest priority first
         var openSet = new PriorityQueue<Point, float>();
         openSet.Enqueue(start, Heuristic(start, goal));
 
-        // Track what's in the open set (PriorityQueue doesn't have Contains)
         var inOpenSet = new HashSet<Point> { start };
-
-        // Closed set — points we've already fully evaluated
         var closedSet = new HashSet<Point>();
 
         while (openSet.Count > 0)
@@ -79,16 +69,13 @@ public static class Pathfinder
             {
                 var neighbor = new Point(current.X + dir.X, current.Y + dir.Y);
 
-                // Skip if out of bounds
                 if (neighbor.X < 0 || neighbor.X >= columns ||
                     neighbor.Y < 0 || neighbor.Y >= rows)
                     continue;
 
-                // Skip if already evaluated or not walkable
                 if (closedSet.Contains(neighbor) || !walkable(neighbor))
                     continue;
 
-                // All edges cost 1 (uniform grid)
                 float tentativeG = gScore[current] + 1;
 
                 if (!gScore.ContainsKey(neighbor) || tentativeG < gScore[neighbor])
@@ -106,7 +93,6 @@ public static class Pathfinder
             }
         }
 
-        // No path found — goal is unreachable
         return null;
     }
 
