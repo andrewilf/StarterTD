@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
+using StarterTD.Interfaces;
 using StarterTD.Scenes;
 
 namespace StarterTD;
@@ -36,6 +37,14 @@ public class Game1 : Game
         base.Initialize();
     }
 
+    /// <summary>
+    /// Public method to allow scenes to transition to other scenes.
+    /// </summary>
+    public void SetScene(IScene scene)
+    {
+        _sceneManager.SetScene(scene);
+    }
+
     protected override void LoadContent()
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -43,9 +52,9 @@ public class Game1 : Game
         // Initialize the texture manager (creates the 1x1 white pixel)
         TextureManager.Initialize(GraphicsDevice);
 
-        // Set up the scene manager and load the gameplay scene
+        // Set up the scene manager and load the map selection scene
         _sceneManager = new SceneManager();
-        _sceneManager.SetScene(new GameplayScene(this));
+        _sceneManager.SetScene(new MapSelectionScene(this));
     }
 
     protected override void Update(GameTime gameTime)
