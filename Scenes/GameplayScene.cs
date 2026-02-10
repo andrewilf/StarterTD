@@ -56,35 +56,14 @@ public class GameplayScene : IScene
         // Wire up enemy spawning
         _waveManager.OnEnemySpawned = enemy => _enemies.Add(enemy);
 
-        // Wire up maze zone placement validation:
-        // Temporarily marks tile Occupied, checks A* still finds a path, then reverts.
-        _towerManager.OnValidateMazeZonePlacement = (gridPos) =>
-        {
-            // Tile is still Buildable or Path at this point (not yet Occupied).
-            // Temporarily mark it Occupied to simulate the placement.
-            var tile = _map.Tiles[gridPos.X, gridPos.Y];
-            var originalType = tile.Type;
-            tile.Type = TileType.Occupied;
+        // With movement costs, placement never blocks the path — always valid
+        _towerManager.OnValidatePlacement = (gridPos) => true;
 
-            bool pathExists = _map.RecomputeActivePath();
-
-            // Revert — TryPlaceTower will mark it Occupied if we return true
-            tile.Type = originalType;
-            if (!pathExists)
-            {
-                // Restore the original ActivePath since we corrupted it
-                _map.RecomputeActivePath();
-            }
-
-            return pathExists;
-        };
-
-        // Wire up post-placement path recomputation and enemy rerouting
-        _towerManager.OnTowerPlacedInMazeZone = (gridPos) =>
+        // Recompute heat map and reroute all enemies after any tower placement
+        _towerManager.OnTowerPlaced = (gridPos) =>
         {
             _map.RecomputeActivePath();
 
-            // Reroute all living enemies to the new path
             foreach (var enemy in _enemies)
             {
                 if (enemy is Enemy concreteEnemy)

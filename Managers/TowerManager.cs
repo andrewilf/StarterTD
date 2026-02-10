@@ -23,19 +23,19 @@ public class TowerManager
     public IReadOnlyList<Tower> Towers => _towers;
 
     /// <summary>
-    /// Callback to validate placement in a maze zone. Set by GameplayScene (mediator).
-    /// Returns true if the path is still valid after placing here, false if it would block.
+    /// Callback to validate placement. Set by GameplayScene (mediator).
+    /// With movement costs, always returns true (path is never blocked).
     ///
     /// C# analogy to Python/TS: Like setting `tower_manager.on_validate = lambda pos: check_path(pos)`.
     /// Func&lt;Point, bool&gt; is a function that takes a Point and returns a bool.
     /// </summary>
-    public Func<Point, bool>? OnValidateMazeZonePlacement;
+    public Func<Point, bool>? OnValidatePlacement;
 
     /// <summary>
-    /// Callback fired after a tower is successfully placed in a maze zone.
-    /// GameplayScene uses this to trigger path recomputation and enemy rerouting.
+    /// Callback fired after any tower is successfully placed.
+    /// GameplayScene uses this to recompute the heat map and reroute enemies.
     /// </summary>
-    public Action<Point>? OnTowerPlacedInMazeZone;
+    public Action<Point>? OnTowerPlaced;
 
     public TowerManager(Map map)
     {
@@ -45,7 +45,6 @@ public class TowerManager
     /// <summary>
     /// Try to place a tower at the given grid position.
     /// Returns the cost if successful, or -1 if placement failed.
-    /// For maze zone tiles, validates that the path isn't fully blocked before allowing.
     /// </summary>
     public int TryPlaceTower(TowerType type, Point gridPos)
     {
@@ -54,20 +53,16 @@ public class TowerManager
 
         var tile = _map.Tiles[gridPos.X, gridPos.Y];
 
-        // Maze zone validation: check that placing here won't fully block the path
-        if (tile.MazeZone != null && OnValidateMazeZonePlacement != null)
-        {
-            if (!OnValidateMazeZonePlacement(gridPos))
-                return -1; // Would block the path — placement denied
-        }
+        if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
+            return -1;
 
         var tower = new Tower(type, gridPos);
         _towers.Add(tower);
         tile.Type = TileType.Occupied;
+        tile.OccupyingTowerType = type;
 
-        // Notify mediator if placed in a maze zone (triggers path recomputation)
-        if (tile.MazeZone != null)
-            OnTowerPlacedInMazeZone?.Invoke(gridPos);
+        // Every placement changes the heat map — notify mediator to recompute
+        OnTowerPlaced?.Invoke(gridPos);
 
         return tower.Cost;
     }

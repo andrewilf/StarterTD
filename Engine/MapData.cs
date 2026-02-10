@@ -5,79 +5,76 @@ using Microsoft.Xna.Framework;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// Represents a rectangular zone where players can build towers to create mazes.
-/// Enemies follow the predefined path through these zones, but players can
-/// place towers within zones to force dynamic pathfinding (future feature).
-/// </summary>
-public record MazeZone(
-    Rectangle Bounds,         // Grid-based rectangle (e.g., X=5, Y=3, Width=6, Height=4)
-    string Name = "Maze Zone" // Optional name for debugging/UI
-)
-{
-    /// <summary>
-    /// Check if a grid point is inside this zone's bounds.
-    /// Think of it like Python's `point in rect` — checks X in [Left, Right) and Y in [Top, Bottom).
-    /// </summary>
-    public bool ContainsPoint(Point p) =>
-        p.X >= Bounds.Left && p.X < Bounds.Right &&
-        p.Y >= Bounds.Top && p.Y < Bounds.Bottom;
-};
-
-/// <summary>
-/// Data-driven map configuration. Defines path, maze zones, and metadata.
-/// Similar to TowerData pattern - can be hardcoded or loaded from JSON.
+/// Data-driven map configuration. Defines terrain layout via rectangles.
+/// Dijkstra computes the actual enemy route at runtime from tile costs.
+///
+/// Python/TS analogy: Like a config dict { spawn, exit, walkable_rects, ... }
+/// that a Map class reads to build a 2D grid.
 /// </summary>
 public record MapData(
-    string Name,                  // Map display name
-    string Id,                    // Unique identifier
-    List<Point> PathPoints,       // Ordered waypoints (grid coordinates)
-    List<MazeZone> MazeZones,     // Buildable zones within/around path
-    int Columns = 20,             // Grid width
-    int Rows = 15                 // Grid height
+    string Name,                        // Map display name
+    string Id,                          // Unique identifier
+    Point SpawnPoint,                   // Where enemies enter the map
+    Point ExitPoint,                    // Where enemies leave the map
+    List<Rectangle> WalkableAreas,      // Rectangles of Path tiles (walkable + buildable terrain)
+    int Columns = 20,                   // Grid width
+    int Rows = 15,                      // Grid height
+    List<Rectangle>? RockAreas = null   // Rectangles of Rock tiles (impassable + unbuildable)
 )
 {
     /// <summary>
     /// Validates map data. Throws ArgumentException if invalid.
-    /// Call this in MapData constructor or factory methods.
     /// </summary>
     public void Validate()
     {
-        // 1. Path must have at least 2 points
-        if (PathPoints.Count < 2)
-            throw new ArgumentException($"Map '{Name}': Path must have at least 2 points");
+        if (SpawnPoint.X < 0 || SpawnPoint.X >= Columns || SpawnPoint.Y < 0 || SpawnPoint.Y >= Rows)
+            throw new ArgumentException($"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is out of bounds");
 
-        // 2. All path points must be in bounds
-        foreach (var point in PathPoints)
+        if (ExitPoint.X < 0 || ExitPoint.X >= Columns || ExitPoint.Y < 0 || ExitPoint.Y >= Rows)
+            throw new ArgumentException($"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is out of bounds");
+
+        if (SpawnPoint == ExitPoint)
+            throw new ArgumentException($"Map '{Name}': SpawnPoint and ExitPoint cannot be the same");
+
+        // Spawn and exit must be inside a walkable area
+        if (!IsInWalkableArea(SpawnPoint))
+            throw new ArgumentException($"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is not inside any WalkableArea");
+
+        if (!IsInWalkableArea(ExitPoint))
+            throw new ArgumentException($"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is not inside any WalkableArea");
+
+        // All walkable areas must be in bounds
+        foreach (var area in WalkableAreas)
         {
-            if (point.X < 0 || point.X >= Columns || point.Y < 0 || point.Y >= Rows)
+            if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
                 throw new ArgumentException(
-                    $"Map '{Name}': Path point ({point.X}, {point.Y}) is out of bounds");
+                    $"Map '{Name}': WalkableArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
         }
 
-        // 3. Path must be contiguous (adjacent tiles only, no gaps)
-        for (int i = 0; i < PathPoints.Count - 1; i++)
+        // All rock areas must be in bounds (if present)
+        if (RockAreas != null)
         {
-            var current = PathPoints[i];
-            var next = PathPoints[i + 1];
-            int dx = Math.Abs(next.X - current.X);
-            int dy = Math.Abs(next.Y - current.Y);
-
-            // Must be adjacent or same (orthogonal only - no diagonals)
-            // Allow same point (dx=0, dy=0) for turning corners
-            bool isAdjacent = (dx == 1 && dy == 0) || (dx == 0 && dy == 1) || (dx == 0 && dy == 0);
-            if (!isAdjacent)
-                throw new ArgumentException(
-                    $"Map '{Name}': Gap in path between ({current.X},{current.Y}) and ({next.X},{next.Y})");
+            foreach (var area in RockAreas)
+            {
+                if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
+                    throw new ArgumentException(
+                        $"Map '{Name}': RockArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
+            }
         }
+    }
 
-        // 4. Maze zones must be in bounds
-        foreach (var zone in MazeZones)
+    /// <summary>
+    /// Check if a point falls inside any walkable area rectangle.
+    /// </summary>
+    public bool IsInWalkableArea(Point p)
+    {
+        foreach (var area in WalkableAreas)
         {
-            if (zone.Bounds.Left < 0 || zone.Bounds.Right > Columns ||
-                zone.Bounds.Top < 0 || zone.Bounds.Bottom > Rows)
-                throw new ArgumentException(
-                    $"Map '{Name}': Maze zone '{zone.Name}' is out of bounds");
+            if (p.X >= area.Left && p.X < area.Right &&
+                p.Y >= area.Top && p.Y < area.Bottom)
+                return true;
         }
+        return false;
     }
 };
 
@@ -108,47 +105,42 @@ public static class MapDataRepository
     };
 
     /// <summary>
-    /// The original hardcoded S-path for backward compatibility.
-    /// No maze zones - classic tower defense map.
+    /// Classic S-path: corridors forming a serpentine route.
     /// </summary>
     private static MapData CreateClassicSPath()
     {
-        var path = new List<Point>();
+        // S-path defined as corridor rectangles:
+        //   Row 2: x=0-17   (left to right)
+        //   Col 17: y=2-6   (down)
+        //   Row 6: x=2-17   (right to left)
+        //   Col 2: y=6-10   (down)
+        //   Row 10: x=2-17  (left to right)
+        //   Col 17: y=10-13 (down)
+        //   Row 13: x=0-17  (right to left)
+        var walkableAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 2, 18, 1),   // Row 2: x=0 to x=17
+            new Rectangle(17, 2, 1, 5),   // Col 17: y=2 to y=6
+            new Rectangle(2, 6, 16, 1),   // Row 6: x=2 to x=17
+            new Rectangle(2, 6, 1, 5),    // Col 2: y=6 to y=10
+            new Rectangle(2, 10, 16, 1),  // Row 10: x=2 to x=17
+            new Rectangle(17, 10, 1, 4),  // Col 17: y=10 to y=13
+            new Rectangle(0, 13, 18, 1),  // Row 13: x=0 to x=17
+        };
 
-        // Segment 1: Left to right on row 2
-        for (int x = 0; x < 18; x++)
-            path.Add(new Point(x, 2));
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+        };
 
-        // Segment 2: Down from row 2 to row 6 at column 17
-        for (int y = 3; y <= 6; y++)
-            path.Add(new Point(17, y));
-
-        // Segment 3: Right to left on row 6
-        for (int x = 17; x >= 2; x--)
-            path.Add(new Point(x, 6));
-
-        // Segment 4: Down from row 6 to row 10 at column 2
-        for (int y = 7; y <= 10; y++)
-            path.Add(new Point(2, y));
-
-        // Segment 5: Left to right on row 10
-        for (int x = 2; x < 18; x++)
-            path.Add(new Point(x, 10));
-
-        // Segment 6: Down from row 10 to row 13 at column 17
-        for (int y = 11; y <= 13; y++)
-            path.Add(new Point(17, y));
-
-        // Segment 7: Right to left on row 13 to exit
-        for (int x = 17; x >= 0; x--)
-            path.Add(new Point(x, 13));
-
-        // No maze zones in classic map (can build anywhere except path)
         var mapData = new MapData(
             Name: "Classic S-Path",
             Id: "classic_s",
-            PathPoints: path,
-            MazeZones: new List<MazeZone>()
+            SpawnPoint: new Point(0, 2),
+            ExitPoint: new Point(0, 13),
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();
@@ -157,21 +149,27 @@ public static class MapDataRepository
 
     /// <summary>
     /// Simple straight horizontal path for testing.
-    /// No maze zones - useful for debugging tower mechanics.
     /// </summary>
     private static MapData CreateStraightPath()
     {
-        var path = new List<Point>();
+        var walkableAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 7, 20, 1)  // Full width horizontal line on row 7
+        };
 
-        // Simple horizontal line across the middle
-        for (int x = 0; x < 20; x++)
-            path.Add(new Point(x, 7));
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+        };
 
         var mapData = new MapData(
             Name: "Straight Path",
             Id: "straight",
-            PathPoints: path,
-            MazeZones: new List<MazeZone>()
+            SpawnPoint: new Point(0, 7),
+            ExitPoint: new Point(19, 7),
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();
@@ -179,32 +177,30 @@ public static class MapDataRepository
     }
 
     /// <summary>
-    /// Mazing test map: straight path through a large open maze zone.
-    /// The path goes left-to-right through the center. Players build towers
-    /// within the zone to force enemies into longer detours.
+    /// Maze test map: straight path through a large open buildable area.
+    /// Players build towers anywhere in the area to force enemies into detours.
     /// </summary>
     private static MapData CreateMazeTestPath()
     {
-        var path = new List<Point>();
-
-        // Simple horizontal path across the middle (row 7)
-        for (int x = 0; x < 19; x++)
-            path.Add(new Point(x, 7));
-
-        // One large maze zone covering most of the map
-        var mazeZones = new List<MazeZone>
+        var walkableAreas = new List<Rectangle>
         {
-            new MazeZone(
-                Bounds: new Rectangle(2, 1, 15, 13),
-                Name: "Main Maze"
-            )
+            new Rectangle(0, 7, 20, 1),     // Horizontal path across row 7 (full width for spawn/exit)
+            new Rectangle(2, 1, 15, 13),     // Large buildable area (x=2-16, y=1-13)
+        };
+
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
         };
 
         var mapData = new MapData(
             Name: "Maze Test",
             Id: "maze_test",
-            PathPoints: path,
-            MazeZones: mazeZones
+            SpawnPoint: new Point(0, 7),
+            ExitPoint: new Point(19, 7),
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();

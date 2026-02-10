@@ -5,120 +5,142 @@ using Microsoft.Xna.Framework;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// A* pathfinding on a 2D grid. Static utility — no state, just a pure function.
+/// Dijkstra-based pathfinding on a 2D grid. Static utility — no state, just pure functions.
 ///
-/// Python/TS analogy: Like a standalone `def find_path(start, end, is_walkable)`.
-/// The Func&lt;Point, bool&gt; parameter is like passing `(point) => boolean` in TypeScript —
-/// it lets the caller define what "walkable" means without the pathfinder knowing
-/// about tiles, towers, or zones.
+/// Python/TS analogy: Like standalone functions `compute_heat_map(target, cost_fn)`
+/// and `extract_path(start, heat_map)`. The Func parameter is like passing
+/// `(point) => number` in TypeScript — lets the caller define movement costs
+/// without the pathfinder knowing about tiles or towers.
 /// </summary>
 public static class Pathfinder
 {
     /// <summary>
-    /// Finds the shortest path from start to goal on a grid using A*.
-    /// Returns an ordered list of grid points (inclusive of start and goal),
-    /// or null if no path exists.
+    /// Dijkstra flood fill from a target point outward across the entire grid.
+    /// Returns an int[columns, rows] where each cell holds the minimum movement
+    /// cost to reach the target. Unreachable cells remain int.MaxValue.
+    ///
+    /// Python analogy: Like running BFS with heapq so lower-cost tiles expand first.
     /// </summary>
-    /// <param name="start">Starting grid position.</param>
-    /// <param name="goal">Target grid position.</param>
+    /// <param name="target">The destination (enemies' exit point). Gets cost 0.</param>
     /// <param name="columns">Grid width.</param>
     /// <param name="rows">Grid height.</param>
-    /// <param name="walkable">Function that returns true if a grid cell can be traversed.</param>
-    public static List<Point>? FindPath(
-        Point start,
-        Point goal,
+    /// <param name="movementCost">Returns the cost to enter a tile. int.MaxValue = impassable.</param>
+    public static int[,] ComputeHeatMap(
+        Point target,
         int columns,
         int rows,
-        Func<Point, bool> walkable)
+        Func<Point, int> movementCost)
     {
-        if (!walkable(start) || !walkable(goal))
-            return null;
+        var cost = new int[columns, rows];
+        for (int x = 0; x < columns; x++)
+            for (int y = 0; y < rows; y++)
+                cost[x, y] = int.MaxValue;
 
-        if (start == goal)
-            return new List<Point> { start };
+        cost[target.X, target.Y] = 0;
 
         Point[] directions = {
-            new Point(0, -1),  // up
-            new Point(0, 1),   // down
-            new Point(-1, 0),  // left
-            new Point(1, 0)    // right
+            new Point(0, -1),
+            new Point(0, 1),
+            new Point(-1, 0),
+            new Point(1, 0)
         };
 
-        var gScore = new Dictionary<Point, float>();
-        gScore[start] = 0;
+        var queue = new PriorityQueue<Point, int>();
+        queue.Enqueue(target, 0);
 
-        var cameFrom = new Dictionary<Point, Point>();
-
-        var openSet = new PriorityQueue<Point, float>();
-        openSet.Enqueue(start, Heuristic(start, goal));
-
-        var inOpenSet = new HashSet<Point> { start };
-        var closedSet = new HashSet<Point>();
-
-        while (openSet.Count > 0)
+        while (queue.Count > 0)
         {
-            var current = openSet.Dequeue();
-            inOpenSet.Remove(current);
-
-            if (current == goal)
-                return ReconstructPath(cameFrom, current);
-
-            closedSet.Add(current);
+            var current = queue.Dequeue();
+            int currentCost = cost[current.X, current.Y];
 
             foreach (var dir in directions)
             {
-                var neighbor = new Point(current.X + dir.X, current.Y + dir.Y);
+                int nx = current.X + dir.X;
+                int ny = current.Y + dir.Y;
 
-                if (neighbor.X < 0 || neighbor.X >= columns ||
-                    neighbor.Y < 0 || neighbor.Y >= rows)
+                if (nx < 0 || nx >= columns || ny < 0 || ny >= rows)
                     continue;
 
-                if (closedSet.Contains(neighbor) || !walkable(neighbor))
+                var neighbor = new Point(nx, ny);
+                int tileCost = movementCost(neighbor);
+
+                if (tileCost == int.MaxValue)
                     continue;
 
-                float tentativeG = gScore[current] + 1;
+                // Overflow guard: currentCost + tileCost could wrap around
+                long newCostLong = (long)currentCost + tileCost;
+                if (newCostLong >= int.MaxValue)
+                    continue;
 
-                if (!gScore.ContainsKey(neighbor) || tentativeG < gScore[neighbor])
+                int newCost = (int)newCostLong;
+                if (newCost < cost[nx, ny])
                 {
-                    cameFrom[neighbor] = current;
-                    gScore[neighbor] = tentativeG;
-                    float fScore = tentativeG + Heuristic(neighbor, goal);
-
-                    if (!inOpenSet.Contains(neighbor))
-                    {
-                        openSet.Enqueue(neighbor, fScore);
-                        inOpenSet.Add(neighbor);
-                    }
+                    cost[nx, ny] = newCost;
+                    queue.Enqueue(neighbor, newCost);
                 }
             }
         }
 
-        return null;
+        return cost;
     }
 
     /// <summary>
-    /// Manhattan distance heuristic. Admissible for 4-directional grids
-    /// (never overestimates), so A* is guaranteed to find the shortest path.
+    /// Extracts a path by following steepest descent (lowest-cost neighbor) on the heat map.
+    /// Like gradient descent on a 2D surface — always step toward the smallest value until 0.
     /// </summary>
-    private static float Heuristic(Point a, Point b)
+    /// <param name="start">Starting grid position (enemies' spawn point).</param>
+    /// <param name="heatMap">Cost-to-target for every tile, from ComputeHeatMap.</param>
+    /// <param name="columns">Grid width.</param>
+    /// <param name="rows">Grid height.</param>
+    /// <returns>Ordered path from start to target, or null if start is unreachable.</returns>
+    public static List<Point>? ExtractPath(
+        Point start,
+        int[,] heatMap,
+        int columns,
+        int rows)
     {
-        return Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
-    }
+        if (heatMap[start.X, start.Y] == int.MaxValue)
+            return null;
 
-    /// <summary>
-    /// Walks backward through cameFrom to build the path from start to goal.
-    /// </summary>
-    private static List<Point> ReconstructPath(Dictionary<Point, Point> cameFrom, Point current)
-    {
-        var path = new List<Point> { current };
+        Point[] directions = {
+            new Point(0, -1),
+            new Point(0, 1),
+            new Point(-1, 0),
+            new Point(1, 0)
+        };
 
-        while (cameFrom.ContainsKey(current))
+        var path = new List<Point> { start };
+        var current = start;
+        int maxSteps = columns * rows; // Safety cap to prevent infinite loops
+
+        while (heatMap[current.X, current.Y] > 0 && maxSteps-- > 0)
         {
-            current = cameFrom[current];
-            path.Add(current);
+            Point best = current;
+            int bestCost = heatMap[current.X, current.Y];
+
+            foreach (var dir in directions)
+            {
+                int nx = current.X + dir.X;
+                int ny = current.Y + dir.Y;
+
+                if (nx < 0 || nx >= columns || ny < 0 || ny >= rows)
+                    continue;
+
+                if (heatMap[nx, ny] < bestCost)
+                {
+                    bestCost = heatMap[nx, ny];
+                    best = new Point(nx, ny);
+                }
+            }
+
+            // No progress — shouldn't happen if heat map is valid
+            if (best == current)
+                break;
+
+            path.Add(best);
+            current = best;
         }
 
-        path.Reverse();
         return path;
     }
 }
