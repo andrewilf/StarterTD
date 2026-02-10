@@ -27,7 +27,6 @@ public class UIPanel
     // Button rectangles for tower selection
     private readonly Rectangle _gunButton;
     private readonly Rectangle _cannonButton;
-    private readonly Rectangle _sniperButton;
     private readonly Rectangle _startWaveButton;
 
     /// <summary>Whether the "Start Wave" button was clicked this frame.</summary>
@@ -50,12 +49,6 @@ public class UIPanel
         _cannonButton = new Rectangle(
             _x + 10,
             startY + buttonHeight + gap,
-            buttonWidth,
-            buttonHeight
-        );
-        _sniperButton = new Rectangle(
-            _x + 10,
-            startY + (buttonHeight + gap) * 2,
             buttonWidth,
             buttonHeight
         );
@@ -95,12 +88,6 @@ public class UIPanel
         {
             var stats = TowerData.GetStats(TowerType.Cannon, 1);
             SelectedTowerType = playerMoney >= stats.Cost ? TowerType.Cannon : null;
-            return true;
-        }
-        if (_sniperButton.Contains(mousePos))
-        {
-            var stats = TowerData.GetStats(TowerType.Sniper, 1);
-            SelectedTowerType = playerMoney >= stats.Cost ? TowerType.Sniper : null;
             return true;
         }
         if (_startWaveButton.Contains(mousePos))
@@ -159,25 +146,24 @@ public class UIPanel
             // --- Tower buttons ---
             DrawButton(spriteBatch, _gunButton, "Gun ($50)", TowerType.Gun, money >= 50);
             DrawButton(spriteBatch, _cannonButton, "Cannon ($80)", TowerType.Cannon, money >= 80);
-            DrawButton(spriteBatch, _sniperButton, "Sniper ($100)", TowerType.Sniper, money >= 100);
 
             // --- Info text ---
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _sniperButton.Bottom + 20),
+                new Vector2(_x + 10, _cannonButton.Bottom + 20),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "R-Click: Upgrade",
-                new Vector2(_x + 10, _sniperButton.Bottom + 45),
+                new Vector2(_x + 10, _cannonButton.Bottom + 45),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _sniperButton.Bottom + 70),
+                new Vector2(_x + 10, _cannonButton.Bottom + 70),
                 Color.LightGray
             );
 
@@ -202,7 +188,6 @@ public class UIPanel
             // Fallback: no font loaded — draw colored blocks as indicators
             DrawButtonNoFont(spriteBatch, _gunButton, TowerType.Gun);
             DrawButtonNoFont(spriteBatch, _cannonButton, TowerType.Cannon);
-            DrawButtonNoFont(spriteBatch, _sniperButton, TowerType.Sniper);
 
             TextureManager.DrawRect(
                 spriteBatch,

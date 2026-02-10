@@ -39,6 +39,9 @@ public interface IEnemy
     /// <summary>Apply damage to this enemy.</summary>
     void TakeDamage(float amount);
 
+    /// <summary>Called when enemy is about to be removed. Cleanup hook.</summary>
+    void OnDestroy();
+
     /// <summary>Update enemy movement along the path.</summary>
     void Update(GameTime gameTime, Map map);
 
