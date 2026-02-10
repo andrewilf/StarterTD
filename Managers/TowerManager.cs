@@ -59,6 +59,7 @@ public class TowerManager
         var tower = new Tower(type, gridPos);
         _towers.Add(tower);
         tile.Type = TileType.Occupied;
+        tile.OccupyingTowerType = type;
 
         // Every placement changes the heat map — notify mediator to recompute
         OnTowerPlaced?.Invoke(gridPos);

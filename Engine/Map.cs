@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using StarterTD.Entities;
 
 namespace StarterTD.Engine;
 
@@ -16,7 +16,9 @@ public enum TileType
     /// <summary>Walkable terrain. Enemies can traverse, towers can be placed.</summary>
     Path,
     /// <summary>A tower has been placed on this tile. Expensive for enemies to walk through.</summary>
-    Occupied
+    Occupied,
+    /// <summary>Impassable and unbuildable rock terrain.</summary>
+    Rock
 }
 
 /// <summary>
@@ -27,6 +29,7 @@ public class Tile
 {
     public TileType Type { get; set; }
     public Point GridPosition { get; }
+    public TowerType? OccupyingTowerType { get; set; }
 
     /// <summary>
     /// Movement cost for pathfinding, derived from tile type.
@@ -37,7 +40,10 @@ public class Tile
     {
         TileType.HighGround => int.MaxValue,  // Impassable terrain (enemies can't walk here)
         TileType.Path => 1,                   // Normal walkable path
-        TileType.Occupied => 500,             // Towers: very expensive, only used as last resort
+        TileType.Rock => int.MaxValue,        // Impassable rock terrain
+        TileType.Occupied => OccupyingTowerType.HasValue
+            ? TowerData.GetStats(OccupyingTowerType.Value, 1).MovementCost
+            : 500,  // Fallback for safety
         _ => int.MaxValue
     };
 
@@ -141,6 +147,24 @@ public class Map
                 }
             }
         }
+
+        // Mark rock areas as Rock (overrides previous types)
+        if (MapData.RockAreas != null)
+        {
+            foreach (var area in MapData.RockAreas)
+            {
+                for (int x = area.Left; x < area.Right; x++)
+                {
+                    for (int y = area.Top; y < area.Bottom; y++)
+                    {
+                        if (x >= 0 && x < Columns && y >= 0 && y < Rows)
+                        {
+                            Tiles[x, y].Type = TileType.Rock;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -189,7 +213,7 @@ public class Map
 
     /// <summary>
     /// Check if a grid position is valid and buildable.
-    /// HighGround and Path tiles are buildable. Occupied tiles are not (already has tower).
+    /// HighGround and Path tiles are buildable. Rock and Occupied tiles are not.
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
@@ -222,6 +246,7 @@ public class Map
                 {
                     TileType.HighGround => new Color(34, 139, 34),
                     TileType.Path => new Color(194, 178, 128),
+                    TileType.Rock => new Color(60, 60, 60),
                     TileType.Occupied => new Color(100, 100, 100),
                     _ => Color.Black
                 };

@@ -18,7 +18,8 @@ public record MapData(
     Point ExitPoint,                    // Where enemies leave the map
     List<Rectangle> WalkableAreas,      // Rectangles of Path tiles (walkable + buildable terrain)
     int Columns = 20,                   // Grid width
-    int Rows = 15                       // Grid height
+    int Rows = 15,                      // Grid height
+    List<Rectangle>? RockAreas = null   // Rectangles of Rock tiles (impassable + unbuildable)
 )
 {
     /// <summary>
@@ -48,6 +49,17 @@ public record MapData(
             if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
                 throw new ArgumentException(
                     $"Map '{Name}': WalkableArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
+        }
+
+        // All rock areas must be in bounds (if present)
+        if (RockAreas != null)
+        {
+            foreach (var area in RockAreas)
+            {
+                if (area.Left < 0 || area.Right > Columns || area.Top < 0 || area.Bottom > Rows)
+                    throw new ArgumentException(
+                        $"Map '{Name}': RockArea ({area.X},{area.Y},{area.Width},{area.Height}) is out of bounds");
+            }
         }
     }
 
@@ -116,12 +128,19 @@ public static class MapDataRepository
             new Rectangle(0, 13, 18, 1),  // Row 13: x=0 to x=17
         };
 
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+        };
+
         var mapData = new MapData(
             Name: "Classic S-Path",
             Id: "classic_s",
             SpawnPoint: new Point(0, 2),
             ExitPoint: new Point(0, 13),
-            WalkableAreas: walkableAreas
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();
@@ -138,12 +157,19 @@ public static class MapDataRepository
             new Rectangle(0, 7, 20, 1)  // Full width horizontal line on row 7
         };
 
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+        };
+
         var mapData = new MapData(
             Name: "Straight Path",
             Id: "straight",
             SpawnPoint: new Point(0, 7),
             ExitPoint: new Point(19, 7),
-            WalkableAreas: walkableAreas
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();
@@ -162,12 +188,19 @@ public static class MapDataRepository
             new Rectangle(2, 1, 15, 13),     // Large buildable area (x=2-16, y=1-13)
         };
 
+        var rockAreas = new List<Rectangle>
+        {
+            new Rectangle(0, 0, 20, 1),   // Top strip: full width, row 0
+            new Rectangle(0, 14, 20, 1),  // Bottom strip: full width, row 14
+        };
+
         var mapData = new MapData(
             Name: "Maze Test",
             Id: "maze_test",
             SpawnPoint: new Point(0, 7),
             ExitPoint: new Point(19, 7),
-            WalkableAreas: walkableAreas
+            WalkableAreas: walkableAreas,
+            RockAreas: rockAreas
         );
 
         mapData.Validate();

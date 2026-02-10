@@ -75,11 +75,12 @@ A fire-and-forget system for temporary UI (damage numbers, money changes).
 -   **Targeting**: Towers scan the `enemies` list passed during `Update()` to find targets.
 
 ### Mazing System (Dynamic Pathfinding via Dijkstra)
--   **Architecture**: `TileType` enum has three values: `HighGround` (impassable, buildable), `Path` (walkable cost 1, buildable), `Occupied` (expensive cost 500, passable).
--   **Terrain Definition**: Maps define walkable terrain via `MapData.WalkableAreas` — a `List<Rectangle>`. No predefined path list needed.
+-   **Architecture**: `TileType` enum has four values: `HighGround` (impassable, buildable), `Path` (walkable cost 1, buildable), `Rock` (impassable, unbuildable), `Occupied` (expensive but passable, cost varies by tower type).
+-   **Terrain Definition**: Maps define walkable terrain via `MapData.WalkableAreas` and impassable rock terrain via optional `MapData.RockAreas` — both are `List<Rectangle>`. Rock processing happens after WalkableAreas so rocks can override paths. No predefined path list needed.
 -   **Dijkstra Pathfinding**: `Pathfinder.cs` contains two functions: `ComputeHeatMap(target, columns, rows, movementCost)` and `ExtractPath(start, heatMap, columns, rows)`.
--   **Heat Map**: Dijkstra flood-fill from the exit point computes cost-to-exit for every tile. Towers are cost 500 (expensive but passable), allowing dynamic rerouting.
+-   **Heat Map**: Dijkstra flood-fill from the exit point computes cost-to-exit for every tile. Towers have per-type movement costs (Gun: 300, Cannon: 500, Sniper: 700), creating strategic trade-offs between tower effectiveness and maze control. Enemies dynamically prefer cheaper paths (through Gun towers) over expensive ones (through Sniper towers).
+-   **Per-Tower Movement Costs**: Each tower type has a `MovementCost` property in `TowerData.TowerStats`. When placed, tiles store `OccupyingTowerType` to compute the correct cost via `Tile.MovementCost` property.
 -   **Path Extraction**: Gradient descent on the heat map extracts the optimal path from spawn to exit. Recomputed whenever towers change.
 -   **Dynamic Rerouting**: `Map.RecomputeActivePath()` recalculates the heat map and extracts a new path. `Enemy.UpdatePath(newPath)` reroutes live enemies.
 -   **WaveManager Integration**: Takes `Func<List<Point>>` instead of a direct path list, so each spawned enemy gets the latest `ActivePath`.
--   **Tower Placement**: When a tower is placed, `OnTowerPlaced` fires. `GameplayScene` calls `RecomputeActivePath()` and `Enemy.UpdatePath()` on all living enemies. Paths are never fully blocked since towers cost 500, not MaxValue.
+-   **Tower Placement**: When a tower is placed, `OnTowerPlaced` fires. `GameplayScene` calls `RecomputeActivePath()` and `Enemy.UpdatePath()` on all living enemies. Paths are never fully blocked since towers are expensive (300-700) not impassable (MaxValue).
