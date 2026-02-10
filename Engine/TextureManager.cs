@@ -37,7 +37,8 @@ public static class TextureManager
         Vector2 position,
         Vector2 size,
         Color color,
-        float rotation = 0f)
+        float rotation = 0f
+    )
     {
         // Origin is at the center of the 1x1 pixel (0.5, 0.5).
         // Scale is the desired size since the source texture is 1x1.
@@ -51,7 +52,8 @@ public static class TextureManager
             origin,
             scale: size,
             SpriteEffects.None,
-            layerDepth: 0f);
+            layerDepth: 0f
+        );
     }
 
     /// <summary>
@@ -61,25 +63,31 @@ public static class TextureManager
         SpriteBatch spriteBatch,
         Rectangle rect,
         Color color,
-        int thickness = 1)
+        int thickness = 1
+    )
     {
         // Top
         spriteBatch.Draw(Pixel, new Rectangle(rect.X, rect.Y, rect.Width, thickness), color);
         // Bottom
-        spriteBatch.Draw(Pixel, new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness), color);
+        spriteBatch.Draw(
+            Pixel,
+            new Rectangle(rect.X, rect.Bottom - thickness, rect.Width, thickness),
+            color
+        );
         // Left
         spriteBatch.Draw(Pixel, new Rectangle(rect.X, rect.Y, thickness, rect.Height), color);
         // Right
-        spriteBatch.Draw(Pixel, new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height), color);
+        spriteBatch.Draw(
+            Pixel,
+            new Rectangle(rect.Right - thickness, rect.Y, thickness, rect.Height),
+            color
+        );
     }
 
     /// <summary>
     /// Draw a filled rectangle (non-centered, top-left origin).
     /// </summary>
-    public static void DrawRect(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        Color color)
+    public static void DrawRect(SpriteBatch spriteBatch, Rectangle rect, Color color)
     {
         spriteBatch.Draw(Pixel, rect, color);
     }
@@ -93,7 +101,8 @@ public static class TextureManager
         SpriteBatch spriteBatch,
         Vector2 center,
         float radius,
-        Color color)
+        Color color
+    )
     {
         DrawSprite(spriteBatch, center, new Vector2(radius * 2, radius * 2), color);
     }

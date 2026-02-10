@@ -9,7 +9,7 @@ namespace StarterTD.Managers;
 /// Note: Projectiles are currently managed per-tower inside Tower.cs.
 /// This manager exists as a future extension point if you want to
 /// centralize projectile management (e.g., for global effects, pooling).
-/// 
+///
 /// For now, tower.Update() and tower.Draw() handle their own projectiles.
 /// </summary>
 public class ProjectileManager

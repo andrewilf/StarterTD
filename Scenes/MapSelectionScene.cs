@@ -58,7 +58,7 @@ public class MapSelectionScene : IScene
         {
             MapDataRepository.GetMap("classic_s"),
             MapDataRepository.GetMap("straight"),
-            MapDataRepository.GetMap("maze_test")
+            MapDataRepository.GetMap("maze_test"),
         };
 
         // Try to load font (same pattern as GameplayScene)
@@ -80,9 +80,12 @@ public class MapSelectionScene : IScene
 
         // Update hover state
         _hoveredCardIndex = -1;
-        if (_card1Bounds.Contains(mousePos)) _hoveredCardIndex = 0;
-        else if (_card2Bounds.Contains(mousePos)) _hoveredCardIndex = 1;
-        else if (_card3Bounds.Contains(mousePos)) _hoveredCardIndex = 2;
+        if (_card1Bounds.Contains(mousePos))
+            _hoveredCardIndex = 0;
+        else if (_card2Bounds.Contains(mousePos))
+            _hoveredCardIndex = 1;
+        else if (_card3Bounds.Contains(mousePos))
+            _hoveredCardIndex = 2;
 
         // Handle click to select map
         if (_inputManager.IsLeftClick())
@@ -92,7 +95,7 @@ public class MapSelectionScene : IScene
                 0 => "classic_s",
                 1 => "straight",
                 2 => "maze_test",
-                _ => null
+                _ => null,
             };
 
             if (selectedMapId != null)
@@ -111,9 +114,7 @@ public class MapSelectionScene : IScene
         {
             string title = "Select Your Map";
             Vector2 titleSize = _font.MeasureString(title);
-            Vector2 titlePos = new Vector2(
-                (GameSettings.ScreenWidth - titleSize.X) / 2,
-                50);
+            Vector2 titlePos = new Vector2((GameSettings.ScreenWidth - titleSize.X) / 2, 50);
 
             // Draw title with shadow
             spriteBatch.DrawString(_font, title, titlePos + new Vector2(2, 2), Color.Black);
@@ -129,7 +130,12 @@ public class MapSelectionScene : IScene
     /// <summary>
     /// Draws a single map selection card with background, border, title, preview, and metadata.
     /// </summary>
-    private void DrawMapCard(SpriteBatch spriteBatch, Rectangle bounds, MapData mapData, bool isHovered)
+    private void DrawMapCard(
+        SpriteBatch spriteBatch,
+        Rectangle bounds,
+        MapData mapData,
+        bool isHovered
+    )
     {
         // Card background (lighter when hovered)
         Color bgColor = isHovered ? new Color(70, 70, 80) : new Color(50, 50, 60);
@@ -145,14 +151,13 @@ public class MapSelectionScene : IScene
             Vector2 titleSize = _font.MeasureString(mapData.Name);
             Vector2 titlePos = new Vector2(
                 bounds.X + (bounds.Width - titleSize.X) / 2,
-                bounds.Y + 15);
+                bounds.Y + 15
+            );
 
             // Shadow
-            spriteBatch.DrawString(_font, mapData.Name,
-                titlePos + new Vector2(2, 2), Color.Black);
+            spriteBatch.DrawString(_font, mapData.Name, titlePos + new Vector2(2, 2), Color.Black);
             // Main text
-            spriteBatch.DrawString(_font, mapData.Name,
-                titlePos, Color.White);
+            spriteBatch.DrawString(_font, mapData.Name, titlePos, Color.White);
         }
 
         // Map preview area (offset from top to leave room for title)
@@ -160,7 +165,8 @@ public class MapSelectionScene : IScene
             bounds.X + 10,
             bounds.Y + 60,
             bounds.Width - 20,
-            200);
+            200
+        );
         DrawMapPreview(spriteBatch, mapData, previewBounds);
 
         // Metadata at bottom
@@ -170,7 +176,8 @@ public class MapSelectionScene : IScene
             Vector2 infoSize = _font.MeasureString(info);
             Vector2 infoPos = new Vector2(
                 bounds.X + (bounds.Width - infoSize.X) / 2,
-                bounds.Bottom - 40);
+                bounds.Bottom - 40
+            );
             spriteBatch.DrawString(_font, info, infoPos, Color.LightGray);
         }
     }
@@ -198,12 +205,13 @@ public class MapSelectionScene : IScene
                     startX + x * miniTileSize,
                     startY + y * miniTileSize,
                     miniTileSize,
-                    miniTileSize);
+                    miniTileSize
+                );
 
                 // Check if tile is inside any walkable area
                 Color tileColor = mapData.IsInWalkableArea(new Point(x, y))
-                    ? new Color(194, 178, 128)   // Path (sandy)
-                    : new Color(34, 139, 34);    // HighGround (dark green)
+                    ? new Color(194, 178, 128) // Path (sandy)
+                    : new Color(34, 139, 34); // HighGround (dark green)
 
                 TextureManager.DrawRect(spriteBatch, tileRect, tileColor);
             }

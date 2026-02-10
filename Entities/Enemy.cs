@@ -42,7 +42,8 @@ public class Enemy : IEnemy
     public void TakeDamage(float amount)
     {
         Health -= amount;
-        if (Health < 0) Health = 0;
+        if (Health < 0)
+            Health = 0;
     }
 
     /// <summary>
@@ -54,7 +55,8 @@ public class Enemy : IEnemy
     /// </summary>
     public void UpdatePath(List<Point> newPath)
     {
-        if (IsDead || ReachedEnd) return;
+        if (IsDead || ReachedEnd)
+            return;
 
         int bestIndex = -1;
         float bestDistance = float.MaxValue;
@@ -84,7 +86,8 @@ public class Enemy : IEnemy
 
     public void Update(GameTime gameTime)
     {
-        if (IsDead || ReachedEnd) return;
+        if (IsDead || ReachedEnd)
+            return;
 
         if (_currentPathIndex >= _path.Count)
         {
@@ -112,23 +115,39 @@ public class Enemy : IEnemy
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (IsDead) return;
+        if (IsDead)
+            return;
 
-        TextureManager.DrawSprite(spriteBatch, Position, new Vector2(SpriteSize, SpriteSize), _color);
+        TextureManager.DrawSprite(
+            spriteBatch,
+            Position,
+            new Vector2(SpriteSize, SpriteSize),
+            _color
+        );
 
         float healthBarWidth = SpriteSize;
         float healthBarHeight = 4f;
         float healthPercent = Health / MaxHealth;
         Vector2 barPos = new Vector2(
             Position.X - healthBarWidth / 2f,
-            Position.Y - SpriteSize / 2f - 8f);
+            Position.Y - SpriteSize / 2f - 8f
+        );
 
-        TextureManager.DrawRect(spriteBatch,
+        TextureManager.DrawRect(
+            spriteBatch,
             new Rectangle((int)barPos.X, (int)barPos.Y, (int)healthBarWidth, (int)healthBarHeight),
-            Color.Red);
+            Color.Red
+        );
 
-        TextureManager.DrawRect(spriteBatch,
-            new Rectangle((int)barPos.X, (int)barPos.Y, (int)(healthBarWidth * healthPercent), (int)healthBarHeight),
-            Color.LimeGreen);
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(
+                (int)barPos.X,
+                (int)barPos.Y,
+                (int)(healthBarWidth * healthPercent),
+                (int)healthBarHeight
+            ),
+            Color.LimeGreen
+        );
     }
 }

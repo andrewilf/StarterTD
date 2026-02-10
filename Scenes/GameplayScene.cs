@@ -93,7 +93,8 @@ public class GameplayScene : IScene
             return;
         }
 
-        if (_gameOver || _gameWon) return;
+        if (_gameOver || _gameWon)
+            return;
 
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
@@ -126,7 +127,10 @@ public class GameplayScene : IScene
                     var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value, 1);
                     if (_money >= stats.Cost)
                     {
-                        int cost = _towerManager.TryPlaceTower(_uiPanel.SelectedTowerType.Value, gridPos);
+                        int cost = _towerManager.TryPlaceTower(
+                            _uiPanel.SelectedTowerType.Value,
+                            gridPos
+                        );
                         if (cost > 0)
                         {
                             _money -= cost;
@@ -160,7 +164,11 @@ public class GameplayScene : IScene
                         _money -= cost;
                         var upgradedTower = _towerManager.GetTowerAt(gridPos);
                         if (upgradedTower != null)
-                            SpawnFloatingText(upgradedTower.WorldPosition, $"-${cost}", Color.Orange);
+                            SpawnFloatingText(
+                                upgradedTower.WorldPosition,
+                                $"-${cost}",
+                                Color.Orange
+                            );
                     }
                 }
             }
@@ -237,26 +245,39 @@ public class GameplayScene : IScene
 
         // Draw UI panel
         bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
-        _uiPanel.Draw(spriteBatch, _money, _lives, _waveManager.CurrentWave, _waveManager.TotalWaves, waveActive);
+        _uiPanel.Draw(
+            spriteBatch,
+            _money,
+            _lives,
+            _waveManager.CurrentWave,
+            _waveManager.TotalWaves,
+            waveActive
+        );
 
         // Draw hover indicator on grid
         Point mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
-        if (mouseGrid.X >= 0 && mouseGrid.X < _map.Columns &&
-            mouseGrid.Y >= 0 && mouseGrid.Y < _map.Rows &&
-            !_uiPanel.ContainsPoint(_inputManager.MousePosition))
+        if (
+            mouseGrid.X >= 0
+            && mouseGrid.X < _map.Columns
+            && mouseGrid.Y >= 0
+            && mouseGrid.Y < _map.Rows
+            && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
+        )
         {
             var hoverRect = new Rectangle(
                 mouseGrid.X * GameSettings.TileSize,
                 mouseGrid.Y * GameSettings.TileSize,
                 GameSettings.TileSize,
-                GameSettings.TileSize);
+                GameSettings.TileSize
+            );
 
             bool canPlace = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
             bool wouldBlock = canPlace && _map.WouldBlockPath(mouseGrid);
 
-            Color hoverColor = canPlace && !wouldBlock
-                ? new Color(255, 255, 255, 60)   // White — valid placement
-                : new Color(255, 0, 0, 40);       // Red — invalid or would block path
+            Color hoverColor =
+                canPlace && !wouldBlock
+                    ? new Color(255, 255, 255, 60) // White — valid placement
+                    : new Color(255, 0, 0, 40); // Red — invalid or would block path
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
             TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);
@@ -272,9 +293,11 @@ public class GameplayScene : IScene
     private void DrawGameOverOverlay(SpriteBatch spriteBatch, SpriteFont? font)
     {
         // Semi-transparent dark overlay
-        TextureManager.DrawRect(spriteBatch,
+        TextureManager.DrawRect(
+            spriteBatch,
             new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-            new Color(0, 0, 0, 180));
+            new Color(0, 0, 0, 180)
+        );
 
         int centerX = GameSettings.ScreenWidth / 2;
         int centerY = GameSettings.ScreenHeight / 2;
@@ -303,7 +326,7 @@ public class GameplayScene : IScene
                     $"Final Money: ${_money}",
                     $"Lives Remaining: {_lives}",
                     "",
-                    "Press R to return to map selection"
+                    "Press R to return to map selection",
                 };
             }
             else
@@ -314,7 +337,7 @@ public class GameplayScene : IScene
                     $"Money: ${_money}",
                     $"Lives: {_lives}",
                     "",
-                    "Press R to return to map selection"
+                    "Press R to return to map selection",
                 };
             }
 
@@ -333,9 +356,11 @@ public class GameplayScene : IScene
         {
             // Fallback: colored indicator (existing code)
             Color indicatorColor = _gameWon ? Color.Gold : Color.Red;
-            TextureManager.DrawRect(spriteBatch,
+            TextureManager.DrawRect(
+                spriteBatch,
                 new Rectangle(centerX - 100, centerY - 30, 200, 60),
-                indicatorColor);
+                indicatorColor
+            );
         }
     }
 

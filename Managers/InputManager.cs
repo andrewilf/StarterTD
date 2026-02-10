@@ -47,8 +47,7 @@ public class InputManager
     /// <summary>True on the single frame a key is pressed.</summary>
     public bool IsKeyPressed(Keys key)
     {
-        return _currentKeyboard.IsKeyDown(key)
-            && _previousKeyboard.IsKeyUp(key);
+        return _currentKeyboard.IsKeyDown(key) && _previousKeyboard.IsKeyUp(key);
     }
 
     /// <summary>True while a key is held down.</summary>

@@ -36,7 +36,8 @@ public class Projectile
         float speed,
         bool isAOE,
         float aoeRadius,
-        Color color)
+        Color color
+    )
     {
         Position = startPosition;
         _target = target;
@@ -52,7 +53,8 @@ public class Projectile
     /// </summary>
     public bool Update(GameTime gameTime, List<IEnemy> allEnemies)
     {
-        if (!IsActive) return false;
+        if (!IsActive)
+            return false;
 
         // If target is dead or gone, deactivate
         if (_target == null || _target.IsDead || _target.ReachedEnd)
@@ -98,7 +100,8 @@ public class Projectile
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        if (!IsActive) return;
+        if (!IsActive)
+            return;
         TextureManager.DrawSprite(spriteBatch, Position, new Vector2(Size, Size), ProjectileColor);
     }
 }

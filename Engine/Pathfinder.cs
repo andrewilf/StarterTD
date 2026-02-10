@@ -29,20 +29,22 @@ public static class Pathfinder
         Point target,
         int columns,
         int rows,
-        Func<Point, int> movementCost)
+        Func<Point, int> movementCost
+    )
     {
         var cost = new int[columns, rows];
         for (int x = 0; x < columns; x++)
-            for (int y = 0; y < rows; y++)
-                cost[x, y] = int.MaxValue;
+        for (int y = 0; y < rows; y++)
+            cost[x, y] = int.MaxValue;
 
         cost[target.X, target.Y] = 0;
 
-        Point[] directions = {
+        Point[] directions =
+        {
             new Point(0, -1),
             new Point(0, 1),
             new Point(-1, 0),
-            new Point(1, 0)
+            new Point(1, 0),
         };
 
         var queue = new PriorityQueue<Point, int>();
@@ -93,20 +95,17 @@ public static class Pathfinder
     /// <param name="columns">Grid width.</param>
     /// <param name="rows">Grid height.</param>
     /// <returns>Ordered path from start to target, or null if start is unreachable.</returns>
-    public static List<Point>? ExtractPath(
-        Point start,
-        int[,] heatMap,
-        int columns,
-        int rows)
+    public static List<Point>? ExtractPath(Point start, int[,] heatMap, int columns, int rows)
     {
         if (heatMap[start.X, start.Y] == int.MaxValue)
             return null;
 
-        Point[] directions = {
+        Point[] directions =
+        {
             new Point(0, -1),
             new Point(0, 1),
             new Point(-1, 0),
-            new Point(1, 0)
+            new Point(1, 0),
         };
 
         var path = new List<Point> { start };

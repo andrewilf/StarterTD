@@ -59,8 +59,10 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
-            || Keyboard.GetState().IsKeyDown(Keys.Escape))
+        if (
+            GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
+            || Keyboard.GetState().IsKeyDown(Keys.Escape)
+        )
         {
             // Note: ESC is also used in-game to deselect towers.
             // Only exit if no scene is active or you add a menu scene.
@@ -81,7 +83,11 @@ public class Game1 : Game
             SpriteSortMode.Deferred,
             BlendState.AlphaBlend,
             SamplerState.PointClamp,
-            null, null, null, null);
+            null,
+            null,
+            null,
+            null
+        );
 
         _sceneManager.Draw(_spriteBatch);
 
