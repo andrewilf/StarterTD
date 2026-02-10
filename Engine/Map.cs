@@ -14,7 +14,13 @@ public enum TileType
     /// <summary>Part of the enemy path — cannot build here.</summary>
     Path,
     /// <summary>A tower has been placed on this tile.</summary>
-    Occupied
+    Occupied,
+    /// <summary>
+    /// Within a maze zone - can build here to create mazes.
+    /// Path goes through this zone, but it's buildable.
+    /// Future: Building here may trigger dynamic pathfinding.
+    /// </summary>
+    MazeZoneBuildable
 }
 
 /// <summary>
@@ -26,15 +32,22 @@ public class Tile
     public TileType Type { get; set; }
     public Point GridPosition { get; }
 
-    public Tile(Point gridPosition, TileType type)
+    /// <summary>
+    /// If this tile is part of a maze zone, reference it.
+    /// Null for non-maze-zone tiles.
+    /// </summary>
+    public MazeZone? MazeZone { get; set; }
+
+    public Tile(Point gridPosition, TileType type, MazeZone? mazeZone = null)
     {
         GridPosition = gridPosition;
         Type = type;
+        MazeZone = mazeZone;
     }
 }
 
 /// <summary>
-/// The game map: a 2D grid of tiles with a hardcoded enemy path.
+/// The game map: a 2D grid of tiles with data-driven paths and maze zones.
 /// Think of this like a 2D array board in a board-game simulation.
 /// </summary>
 public class Map
@@ -48,13 +61,48 @@ public class Map
     /// </summary>
     public List<Point> PathPoints { get; }
 
-    public Map()
-    {
-        Columns = GameSettings.GridColumns;
-        Rows = GameSettings.GridRows;
-        Tiles = new Tile[Columns, Rows];
+    /// <summary>
+    /// The map data used to create this map (null for legacy default).
+    /// </summary>
+    public MapData? MapData { get; }
 
-        // Initialize all tiles as buildable
+    /// <summary>
+    /// BACKWARD COMPATIBLE: Default constructor uses classic S-path.
+    /// </summary>
+    public Map() : this(MapDataRepository.GetMap("classic_s"))
+    {
+    }
+
+    /// <summary>
+    /// NEW: Primary constructor accepting MapData.
+    /// </summary>
+    public Map(MapData mapData)
+    {
+        MapData = mapData;
+        mapData.Validate(); // Fail fast if invalid
+
+        Columns = mapData.Columns;
+        Rows = mapData.Rows;
+        Tiles = new Tile[Columns, Rows];
+        PathPoints = mapData.PathPoints;
+
+        InitializeTiles();
+    }
+
+    /// <summary>
+    /// ALTERNATIVE: Static factory for map ID.
+    /// </summary>
+    public static Map FromId(string mapId)
+    {
+        return new Map(MapDataRepository.GetMap(mapId));
+    }
+
+    /// <summary>
+    /// Initialize tiles with 3-phase logic: buildable → maze zones → path.
+    /// </summary>
+    private void InitializeTiles()
+    {
+        // Phase 1: Initialize all tiles as buildable
         for (int x = 0; x < Columns; x++)
         {
             for (int y = 0; y < Rows; y++)
@@ -63,54 +111,31 @@ public class Map
             }
         }
 
-        // Define a hardcoded path (an S-shaped path across the map)
-        PathPoints = GeneratePath();
+        // Phase 2: Mark maze zone tiles (BEFORE path, so path overrides)
+        if (MapData != null)
+        {
+            foreach (var zone in MapData.MazeZones)
+            {
+                for (int x = zone.Bounds.Left; x < zone.Bounds.Right; x++)
+                {
+                    for (int y = zone.Bounds.Top; y < zone.Bounds.Bottom; y++)
+                    {
+                        if (x >= 0 && x < Columns && y >= 0 && y < Rows)
+                        {
+                            Tiles[x, y].Type = TileType.MazeZoneBuildable;
+                            Tiles[x, y].MazeZone = zone;
+                        }
+                    }
+                }
+            }
+        }
 
-        // Mark path tiles
+        // Phase 3: Mark path tiles (OVERRIDES maze zones if path goes through)
         foreach (var point in PathPoints)
         {
             Tiles[point.X, point.Y].Type = TileType.Path;
+            // Keep MazeZone reference even if it's a path tile (for future pathfinding)
         }
-    }
-
-    /// <summary>
-    /// Generates an S-shaped path from left to right across the map.
-    /// The path goes: left-to-right on row 2, down, right-to-left on row 6,
-    /// down, left-to-right on row 10, down, right-to-left on row 13.
-    /// </summary>
-    private List<Point> GeneratePath()
-    {
-        var path = new List<Point>();
-
-        // Segment 1: Left to right on row 2
-        for (int x = 0; x < 18; x++)
-            path.Add(new Point(x, 2));
-
-        // Segment 2: Down from row 2 to row 6 at column 17
-        for (int y = 3; y <= 6; y++)
-            path.Add(new Point(17, y));
-
-        // Segment 3: Right to left on row 6
-        for (int x = 17; x >= 2; x--)
-            path.Add(new Point(x, 6));
-
-        // Segment 4: Down from row 6 to row 10 at column 2
-        for (int y = 7; y <= 10; y++)
-            path.Add(new Point(2, y));
-
-        // Segment 5: Left to right on row 10
-        for (int x = 2; x < 18; x++)
-            path.Add(new Point(x, 10));
-
-        // Segment 6: Down from row 10 to row 13 at column 17
-        for (int y = 11; y <= 13; y++)
-            path.Add(new Point(17, y));
-
-        // Segment 7: Right to left on row 13 to exit
-        for (int x = 17; x >= 0; x--)
-            path.Add(new Point(x, 13));
-
-        return path;
     }
 
     /// <summary>
@@ -135,16 +160,20 @@ public class Map
 
     /// <summary>
     /// Check if a grid position is valid and buildable.
+    /// ENHANCED: Now allows maze zone tiles.
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
         if (gridPos.X < 0 || gridPos.X >= Columns || gridPos.Y < 0 || gridPos.Y >= Rows)
             return false;
-        return Tiles[gridPos.X, gridPos.Y].Type == TileType.Buildable;
+
+        var tileType = Tiles[gridPos.X, gridPos.Y].Type;
+        return tileType == TileType.Buildable || tileType == TileType.MazeZoneBuildable;
     }
 
     /// <summary>
     /// Draw the grid with colored tiles.
+    /// ENHANCED: Maze zone visualization with brighter green and yellow border.
     /// </summary>
     public void Draw(SpriteBatch spriteBatch)
     {
@@ -160,9 +189,10 @@ public class Map
 
                 Color tileColor = Tiles[x, y].Type switch
                 {
-                    TileType.Buildable => new Color(34, 139, 34),   // Forest green
-                    TileType.Path => new Color(194, 178, 128),       // Sandy path
-                    TileType.Occupied => new Color(100, 100, 100),   // Gray (tower placed)
+                    TileType.Buildable => new Color(34, 139, 34),         // Forest green
+                    TileType.MazeZoneBuildable => new Color(50, 180, 50), // Brighter green
+                    TileType.Path => new Color(194, 178, 128),             // Sandy path
+                    TileType.Occupied => new Color(100, 100, 100),         // Gray (tower placed)
                     _ => Color.Black
                 };
 
@@ -170,6 +200,13 @@ public class Map
 
                 // Draw grid lines
                 TextureManager.DrawRectOutline(spriteBatch, rect, new Color(0, 0, 0, 60), 1);
+
+                // Draw maze zone border highlight (optional visual feedback)
+                if (Tiles[x, y].Type == TileType.MazeZoneBuildable)
+                {
+                    TextureManager.DrawRectOutline(spriteBatch, rect,
+                        new Color(255, 255, 100, 100), 2);
+                }
             }
         }
     }
