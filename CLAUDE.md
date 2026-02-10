@@ -26,6 +26,7 @@ I am a Python/TypeScript engineer new to C#.
 3. **Clean-up**: If code is made redundant from changes, remove it.
 4.  **Verification**: Run `dotnet build` after generating code.
 5. **Formatting**: csharpier is automatically run once at the end of all code changes.
+6. **Linting**: SonarAnalyzer.CSharp enforces code quality rules. Resolve warnings before committing.
 
 ## Known Gotchas
 - **Positioning**: `TextureManager.DrawSprite` uses **CENTERED** origin. `DrawRect` uses **TOP-LEFT**.

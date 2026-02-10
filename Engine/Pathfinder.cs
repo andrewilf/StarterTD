@@ -34,8 +34,12 @@ public static class Pathfinder
     {
         var cost = new int[columns, rows];
         for (int x = 0; x < columns; x++)
-        for (int y = 0; y < rows; y++)
-            cost[x, y] = int.MaxValue;
+        {
+            for (int y = 0; y < rows; y++)
+            {
+                cost[x, y] = int.MaxValue;
+            }
+        }
 
         cost[target.X, target.Y] = 0;
 
@@ -95,7 +99,7 @@ public static class Pathfinder
     /// <param name="columns">Grid width.</param>
     /// <param name="rows">Grid height.</param>
     /// <returns>Ordered path from start to target, or null if start is unreachable.</returns>
-    public static List<Point>? ExtractPath(Point start, int[,] heatMap, int columns, int rows)
+    internal static List<Point>? ExtractPath(Point start, int[,] heatMap, int columns, int rows)
     {
         if (heatMap[start.X, start.Y] == int.MaxValue)
             return null;

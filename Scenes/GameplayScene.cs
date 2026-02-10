@@ -24,8 +24,8 @@ public class GameplayScene : IScene
     private InputManager _inputManager = null!;
     private UIPanel _uiPanel = null!;
 
-    private List<IEnemy> _enemies = new();
-    private List<FloatingText> _floatingTexts = new();
+    private readonly List<IEnemy> _enemies = new();
+    private readonly List<FloatingText> _floatingTexts = new();
     private int _money;
     private int _lives;
     private bool _gameOver;
@@ -272,12 +272,10 @@ public class GameplayScene : IScene
             );
 
             bool canPlace = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
-            bool wouldBlock = canPlace && _map.WouldBlockPath(mouseGrid);
 
-            Color hoverColor =
-                canPlace && !wouldBlock
-                    ? new Color(255, 255, 255, 60) // White — valid placement
-                    : new Color(255, 0, 0, 40); // Red — invalid or would block path
+            Color hoverColor = canPlace
+                ? new Color(255, 255, 255, 60) // White — valid placement
+                : new Color(255, 0, 0, 40); // Red — invalid placement
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
             TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);

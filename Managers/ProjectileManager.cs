@@ -12,6 +12,7 @@ namespace StarterTD.Managers;
 ///
 /// For now, tower.Update() and tower.Draw() handle their own projectiles.
 /// </summary>
+# pragma warning disable S2094 // Reserved for the future
 public class ProjectileManager
 {
     // Reserved for future use.
@@ -19,3 +20,4 @@ public class ProjectileManager
     // If you need global projectile effects (e.g., chain lightning),
     // move projectile ownership here.
 }
+# pragma warning restore S2094

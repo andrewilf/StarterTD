@@ -14,7 +14,7 @@ namespace StarterTD;
 /// </summary>
 public class Game1 : Game
 {
-    private GraphicsDeviceManager _graphics;
+    private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
 
@@ -64,11 +64,7 @@ public class Game1 : Game
             || Keyboard.GetState().IsKeyDown(Keys.Escape)
         )
         {
-            // Note: ESC is also used in-game to deselect towers.
-            // Only exit if no scene is active or you add a menu scene.
-            // For MVP, we let ESC deselect in GameplayScene and
-            // don't exit the game via ESC (comment out Exit() below).
-            // Exit();
+            // ESC is used in-game to deselect towers, so we don't exit here
         }
 
         _sceneManager.Update(gameTime);

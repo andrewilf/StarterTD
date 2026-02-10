@@ -186,7 +186,7 @@ public class MapSelectionScene : IScene
     /// Renders a miniature version of the map grid showing paths, buildable areas, and maze zones.
     /// Uses the same color scheme as the full Map class.
     /// </summary>
-    private void DrawMapPreview(SpriteBatch spriteBatch, MapData mapData, Rectangle bounds)
+    private static void DrawMapPreview(SpriteBatch spriteBatch, MapData mapData, Rectangle bounds)
     {
         const int miniTileSize = 13;
 

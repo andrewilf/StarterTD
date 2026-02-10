@@ -333,11 +333,4 @@ public class Map
         }
     }
 
-    /// <summary>
-    /// Towers are expensive (cost 500) but passable, so paths are never fully blocked.
-    /// </summary>
-    public bool WouldBlockPath(Point gridPos)
-    {
-        return false;
-    }
 }
