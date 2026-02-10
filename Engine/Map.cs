@@ -17,9 +17,6 @@ public enum TileType
     /// <summary>Walkable terrain. Enemies can traverse, towers can be placed.</summary>
     Path,
 
-    /// <summary>A tower has been placed on this tile. Expensive for enemies to walk through.</summary>
-    Occupied,
-
     /// <summary>Impassable and unbuildable rock terrain.</summary>
     Rock,
 }
@@ -31,25 +28,28 @@ public enum TileType
 public class Tile
 {
     public TileType Type { get; set; }
+
     public Point GridPosition { get; }
-    public TowerType? OccupyingTowerType { get; set; }
+
+    /// <summary>The tower occupying this tile, or null if unoccupied.</summary>
+    public Tower? OccupyingTower { get; set; }
 
     /// <summary>
-    /// Movement cost for pathfinding, derived from tile type.
-    /// HighGround = impassable. Path = walkable. Occupied = very expensive (enemies avoid unless necessary).
+    /// Movement cost for pathfinding. Towers add a cost penalty based on type.
+    /// HighGround and Rock are impassable (int.MaxValue). Path is walkable (cost 1).
+    /// If a tower occupies this tile, use its tower type's movement cost.
     /// Like a Python @property — recomputes from current state, no stored field.
     /// </summary>
     public int MovementCost =>
-        Type switch
-        {
-            TileType.HighGround => int.MaxValue, // Impassable terrain (enemies can't walk here)
-            TileType.Path => 1, // Normal walkable path
-            TileType.Rock => int.MaxValue, // Impassable rock terrain
-            TileType.Occupied => OccupyingTowerType.HasValue
-                ? TowerData.GetStats(OccupyingTowerType.Value, 1).MovementCost
-                : 500, // Fallback for safety
-            _ => int.MaxValue,
-        };
+        OccupyingTower != null
+            ? TowerData.GetStats(OccupyingTower.TowerType, 1).MovementCost
+            : Type switch
+              {
+                  TileType.HighGround => int.MaxValue,
+                  TileType.Path => 1,
+                  TileType.Rock => int.MaxValue,
+                  _ => int.MaxValue,
+              };
 
     public Tile(Point gridPosition, TileType type)
     {
@@ -202,6 +202,19 @@ public class Map
     }
 
     /// <summary>
+    /// Compute a path from a custom start position to the exit (using the current heat map).
+    /// Like ExtractPath but from an arbitrary grid position instead of just the spawn point.
+    /// Used when enemies need to pathfind from their current location after the map changes.
+    /// </summary>
+    public List<Point>? ComputePathFromPosition(Point startPos)
+    {
+        if (HeatMap == null)
+            return null;
+
+        return Pathfinder.ExtractPath(startPos, HeatMap, Columns, Rows);
+    }
+
+    /// <summary>
     /// Dijkstra flood fill from exit, then extract optimal path from spawn.
     /// </summary>
     private bool RecomputeHeatMap()
@@ -221,7 +234,7 @@ public class Map
 
     /// <summary>
     /// Check if a grid position is valid and buildable.
-    /// HighGround and Path tiles are buildable. Rock and Occupied tiles are not.
+    /// HighGround and Path tiles are buildable if not occupied by a tower. Rock tiles are never buildable.
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
@@ -229,8 +242,10 @@ public class Map
             return false;
 
         var tile = Tiles[gridPos.X, gridPos.Y];
+        bool isBuildableTerrain = tile.Type == TileType.HighGround || tile.Type == TileType.Path;
+        bool notOccupied = tile.OccupyingTower == null;
 
-        return tile.Type == TileType.HighGround || tile.Type == TileType.Path;
+        return isBuildableTerrain && notOccupied;
     }
 
     /// <summary>
@@ -256,7 +271,6 @@ public class Map
                     TileType.HighGround => new Color(34, 139, 34),
                     TileType.Path => new Color(194, 178, 128),
                     TileType.Rock => new Color(60, 60, 60),
-                    TileType.Occupied => new Color(100, 100, 100),
                     _ => Color.Black,
                 };
 

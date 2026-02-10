@@ -18,7 +18,8 @@ public class WaveManager
         float EnemyHealth,
         float EnemySpeed,
         int EnemyBounty,
-        float SpawnInterval
+        float SpawnInterval,
+        int AttackDamage
     );
 
     public int CurrentWave { get; private set; }
@@ -52,73 +53,43 @@ public class WaveManager
         {
             new(
                 EnemyCount: 5,
-                EnemyHealth: 30,
+                EnemyHealth: 300,
                 EnemySpeed: 90,
                 EnemyBounty: 5,
-                SpawnInterval: 1.0f
+                SpawnInterval: 1.0f,
+                AttackDamage: 5
             ),
             new(
                 EnemyCount: 8,
-                EnemyHealth: 40,
+                EnemyHealth: 400,
                 EnemySpeed: 95,
                 EnemyBounty: 5,
-                SpawnInterval: 0.9f
+                SpawnInterval: 0.9f,
+                AttackDamage: 5
             ),
             new(
                 EnemyCount: 10,
-                EnemyHealth: 60,
+                EnemyHealth: 600,
                 EnemySpeed: 100,
                 EnemyBounty: 8,
-                SpawnInterval: 0.8f
+                SpawnInterval: 0.8f,
+                AttackDamage: 8
             ),
             new(
                 EnemyCount: 12,
-                EnemyHealth: 80,
+                EnemyHealth: 800,
                 EnemySpeed: 110,
                 EnemyBounty: 8,
-                SpawnInterval: 0.8f
+                SpawnInterval: 0.8f,
+                AttackDamage: 8
             ),
             new(
                 EnemyCount: 15,
-                EnemyHealth: 100,
+                EnemyHealth: 1000,
                 EnemySpeed: 120,
                 EnemyBounty: 10,
-                SpawnInterval: 0.7f
-            ),
-            new(
-                EnemyCount: 18,
-                EnemyHealth: 130,
-                EnemySpeed: 130,
-                EnemyBounty: 10,
-                SpawnInterval: 0.7f
-            ),
-            new(
-                EnemyCount: 20,
-                EnemyHealth: 170,
-                EnemySpeed: 135,
-                EnemyBounty: 12,
-                SpawnInterval: 0.6f
-            ),
-            new(
-                EnemyCount: 22,
-                EnemyHealth: 220,
-                EnemySpeed: 140,
-                EnemyBounty: 15,
-                SpawnInterval: 0.6f
-            ),
-            new(
-                EnemyCount: 25,
-                EnemyHealth: 300,
-                EnemySpeed: 145,
-                EnemyBounty: 18,
-                SpawnInterval: 0.5f
-            ),
-            new(
-                EnemyCount: 30,
-                EnemyHealth: 400,
-                EnemySpeed: 145,
-                EnemyBounty: 25,
-                SpawnInterval: 0.4f
+                SpawnInterval: 0.7f,
+                AttackDamage: 12
             ),
         };
     }
@@ -162,8 +133,9 @@ public class WaveManager
                 _currentWaveDef.EnemySpeed,
                 _currentWaveDef.EnemyBounty,
                 _pathProvider(),
-                new Color(220, 50, 50)
-            ); // Red-ish enemies
+                new Color(220, 50, 50),
+                _currentWaveDef.AttackDamage
+            );
 
             OnEnemySpawned?.Invoke(enemy);
             _enemiesSpawned++;

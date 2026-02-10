@@ -20,13 +20,22 @@ public class Enemy : IEnemy
     public Vector2 Position { get; private set; }
     public bool IsDead => Health <= 0;
     public bool ReachedEnd { get; private set; }
+    public int AttackDamage { get; }
 
     private List<Point> _path;
     private int _currentPathIndex;
     private readonly Color _color;
     private const float SpriteSize = 20f;
 
-    public Enemy(string name, float health, float speed, int bounty, List<Point> path, Color color)
+    public Enemy(
+        string name,
+        float health,
+        float speed,
+        int bounty,
+        List<Point> path,
+        Color color,
+        int attackDamage
+    )
     {
         Name = name;
         Health = health;
@@ -36,6 +45,7 @@ public class Enemy : IEnemy
         _path = path;
         _currentPathIndex = 0;
         _color = color;
+        AttackDamage = attackDamage;
         Position = Map.GridToWorld(_path[0]);
     }
 
@@ -48,40 +58,28 @@ public class Enemy : IEnemy
 
     /// <summary>
     /// Update the path this enemy follows (called when towers change in maze zones).
-    /// Finds the enemy's current grid cell in the new path and continues from there.
+    /// Snaps the enemy to the closest waypoint on the new path to prevent diagonal cuts
+    /// across obstacles, then continues from there.
     ///
-    /// Think of it like: "You're on tile (5,4). The new path also goes through (5,4)
-    /// at index 12. So set your next waypoint to index 12 and keep going."
+    /// Think of it like: "You're between tiles on the old path. The new path goes
+    /// a different way. Snap to your closest point on the new path and resume."
     /// </summary>
-    public void UpdatePath(List<Point> newPath)
+    public void UpdatePath(Map map)
     {
         if (IsDead || ReachedEnd)
             return;
 
-        int bestIndex = -1;
-        float bestDistance = float.MaxValue;
+        // Convert current world position to grid cell
+        Point currentGridPos = Map.WorldToGrid(Position);
 
-        for (int i = 0; i < newPath.Count; i++)
+        // Compute a fresh path from the enemy's current grid position to the exit
+        var freshPath = map.ComputePathFromPosition(currentGridPos);
+
+        if (freshPath != null && freshPath.Count > 0)
         {
-            Vector2 pointWorld = Map.GridToWorld(newPath[i]);
-            float dist = Vector2.Distance(Position, pointWorld);
-
-            if (dist < bestDistance)
-            {
-                bestDistance = dist;
-                bestIndex = i;
-            }
+            _path = freshPath;
+            _currentPathIndex = 1; // Start at index 1 since 0 is the current cell
         }
-
-        if (bestIndex == -1)
-            bestIndex = 0;
-
-        _path = newPath;
-
-        if (bestDistance < GameSettings.TileSize / 2f && bestIndex < newPath.Count - 1)
-            _currentPathIndex = bestIndex + 1;
-        else
-            _currentPathIndex = bestIndex;
     }
 
     public void Update(GameTime gameTime)

@@ -45,6 +45,18 @@ public interface ITower
     /// <summary>Color used to render the placeholder sprite.</summary>
     Color TowerColor { get; }
 
+    /// <summary>Maximum health points for this tower.</summary>
+    int MaxHealth { get; }
+
+    /// <summary>Current health points.</summary>
+    int CurrentHealth { get; }
+
+    /// <summary>Whether this tower has been destroyed (health &lt;= 0).</summary>
+    bool IsDead { get; }
+
+    /// <summary>Apply damage to this tower.</summary>
+    void TakeDamage(int amount);
+
     /// <summary>Upgrade the tower to the next level.</summary>
     void Upgrade();
 

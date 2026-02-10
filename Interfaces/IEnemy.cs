@@ -32,6 +32,9 @@ public interface IEnemy
     /// <summary>Whether this enemy has reached the end of the path.</summary>
     bool ReachedEnd { get; }
 
+    /// <summary>Damage this enemy deals to towers (data only, no attack AI yet).</summary>
+    int AttackDamage { get; }
+
     /// <summary>Apply damage to this enemy.</summary>
     void TakeDamage(float amount);
 

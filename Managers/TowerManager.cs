@@ -37,6 +37,12 @@ public class TowerManager
     /// </summary>
     public Action<Point>? OnTowerPlaced;
 
+    /// <summary>
+    /// Callback fired when a tower is destroyed (health reaches 0).
+    /// GameplayScene uses this to recompute the heat map and reroute enemies.
+    /// </summary>
+    public Action<Point>? OnTowerDestroyed;
+
     public TowerManager(Map map)
     {
         _map = map;
@@ -58,8 +64,7 @@ public class TowerManager
 
         var tower = new Tower(type, gridPos);
         _towers.Add(tower);
-        tile.Type = TileType.Occupied;
-        tile.OccupyingTowerType = type;
+        tile.OccupyingTower = tower;
 
         // Every placement changes the heat map — notify mediator to recompute
         OnTowerPlaced?.Invoke(gridPos);
@@ -91,6 +96,33 @@ public class TowerManager
     }
 
     /// <summary>
+    /// Remove a tower from the grid: clear the tile's tower reference and notify scene.
+    /// </summary>
+    private void RemoveTower(Tower tower)
+    {
+        var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
+        tile.OccupyingTower = null;
+        _towers.Remove(tower);
+
+        if (SelectedTower == tower)
+            SelectedTower = null;
+
+        OnTowerDestroyed?.Invoke(tower.GridPosition);
+    }
+
+    /// <summary>
+    /// Debug: instantly remove all towers. Each triggers OnTowerDestroyed individually.
+    /// </summary>
+    public void KillAllTowers()
+    {
+        var towersToKill = new List<Tower>(_towers);
+        foreach (var tower in towersToKill)
+        {
+            RemoveTower(tower);
+        }
+    }
+
+    /// <summary>
     /// Update all towers (targeting, firing, projectiles).
     /// </summary>
     public void Update(GameTime gameTime, List<IEnemy> enemies)
@@ -98,6 +130,15 @@ public class TowerManager
         foreach (var tower in _towers)
         {
             tower.Update(gameTime, enemies);
+        }
+
+        // Remove destroyed towers (iterate backwards to safely remove during iteration)
+        for (int i = _towers.Count - 1; i >= 0; i--)
+        {
+            if (_towers[i].IsDead)
+            {
+                RemoveTower(_towers[i]);
+            }
         }
     }
 
