@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
@@ -21,6 +22,21 @@ public class TowerManager
 
     public IReadOnlyList<Tower> Towers => _towers;
 
+    /// <summary>
+    /// Callback to validate placement in a maze zone. Set by GameplayScene (mediator).
+    /// Returns true if the path is still valid after placing here, false if it would block.
+    ///
+    /// C# analogy to Python/TS: Like setting `tower_manager.on_validate = lambda pos: check_path(pos)`.
+    /// Func&lt;Point, bool&gt; is a function that takes a Point and returns a bool.
+    /// </summary>
+    public Func<Point, bool>? OnValidateMazeZonePlacement;
+
+    /// <summary>
+    /// Callback fired after a tower is successfully placed in a maze zone.
+    /// GameplayScene uses this to trigger path recomputation and enemy rerouting.
+    /// </summary>
+    public Action<Point>? OnTowerPlacedInMazeZone;
+
     public TowerManager(Map map)
     {
         _map = map;
@@ -29,15 +45,30 @@ public class TowerManager
     /// <summary>
     /// Try to place a tower at the given grid position.
     /// Returns the cost if successful, or -1 if placement failed.
+    /// For maze zone tiles, validates that the path isn't fully blocked before allowing.
     /// </summary>
     public int TryPlaceTower(TowerType type, Point gridPos)
     {
         if (!_map.CanBuild(gridPos))
             return -1;
 
+        var tile = _map.Tiles[gridPos.X, gridPos.Y];
+
+        // Maze zone validation: check that placing here won't fully block the path
+        if (tile.MazeZone != null && OnValidateMazeZonePlacement != null)
+        {
+            if (!OnValidateMazeZonePlacement(gridPos))
+                return -1; // Would block the path — placement denied
+        }
+
         var tower = new Tower(type, gridPos);
         _towers.Add(tower);
-        _map.Tiles[gridPos.X, gridPos.Y].Type = TileType.Occupied;
+        tile.Type = TileType.Occupied;
+
+        // Notify mediator if placed in a maze zone (triggers path recomputation)
+        if (tile.MazeZone != null)
+            OnTowerPlacedInMazeZone?.Invoke(gridPos);
+
         return tower.Cost;
     }
 

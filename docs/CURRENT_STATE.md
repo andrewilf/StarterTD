@@ -4,7 +4,8 @@
 - **Core Loop**: `Game1` → `SceneManager` → `MapSelectionScene` → `GameplayScene` (Mediator).
 - **Rendering**: Colored rectangles (placeholder). `TextureManager` uses centered origins.
 - **Map Selection**: Pre-game scene showing 3 maps (classic_s, straight, spiral) with visual previews. Supports hover and click selection.
-- **Map**: 3 map types with different path layouts. Maps defined in `MapDataRepository`.
+- **Map**: 3 map types with different path layouts. Maps defined in `MapDataRepository`. TileType: `Buildable`, `Path`, `Occupied` only. Maze zones tracked via `Tile.MazeZone` reference.
+- **Mazing**: Fully implemented. A* pathfinding (`Pathfinder.cs`). Maze test map has large buildable zone with path running through. Tower placement triggers A* rerouting around obstacles. Path block prevention (validation callback), live enemy rerouting (`Enemy.UpdatePath`), and visual debug path line (light blue dots).
 - **Towers**: 3 Types (Gun, Cannon, Sniper). Supports placement (L-Click) and Upgrading (R-Click).
 - **Enemies**: Base class only. Follows path.
 - **Waves**: 10 hardcoded waves.

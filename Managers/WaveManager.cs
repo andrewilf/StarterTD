@@ -21,7 +21,7 @@ public class WaveManager
     public bool WaveInProgress { get; private set; }
 
     private readonly List<WaveDefinition> _waves;
-    private readonly List<Point> _path;
+    private readonly Func<List<Point>> _pathProvider;
     private float _spawnTimer;
     private int _enemiesSpawned;
     private WaveDefinition? _currentWaveDef;
@@ -29,9 +29,16 @@ public class WaveManager
     /// <summary>Callback invoked when an enemy is spawned.</summary>
     public Action<IEnemy>? OnEnemySpawned;
 
-    public WaveManager(List<Point> path)
+    /// <summary>
+    /// Constructor takes a Func that returns the current path.
+    /// This way each spawned enemy gets the latest ActivePath (including maze reroutes).
+    ///
+    /// TypeScript analogy: Like passing `() => map.activePath` instead of `map.activePath` directly.
+    /// The function is called each time we need the path, so we always get the current one.
+    /// </summary>
+    public WaveManager(Func<List<Point>> pathProvider)
     {
-        _path = path;
+        _pathProvider = pathProvider;
         CurrentWave = 0;
 
         // Define 10 waves with increasing difficulty
@@ -87,7 +94,7 @@ public class WaveManager
                 _currentWaveDef.EnemyHealth,
                 _currentWaveDef.EnemySpeed,
                 _currentWaveDef.EnemyBounty,
-                _path,
+                _pathProvider(),
                 new Color(220, 50, 50));  // Red-ish enemies
 
             OnEnemySpawned?.Invoke(enemy);

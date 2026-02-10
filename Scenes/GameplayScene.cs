@@ -48,7 +48,7 @@ public class GameplayScene : IScene
     {
         _map = new Map(MapDataRepository.GetMap(_selectedMapId));
         _towerManager = new TowerManager(_map);
-        _waveManager = new WaveManager(_map.PathPoints);
+        _waveManager = new WaveManager(() => _map.ActivePath);
         _inputManager = new InputManager();
         _uiPanel = new UIPanel(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
 
@@ -60,6 +60,42 @@ public class GameplayScene : IScene
 
         // Wire up enemy spawning
         _waveManager.OnEnemySpawned = enemy => _enemies.Add(enemy);
+
+        // Wire up maze zone placement validation:
+        // Temporarily marks tile Occupied, checks A* still finds a path, then reverts.
+        _towerManager.OnValidateMazeZonePlacement = (gridPos) =>
+        {
+            // Tile is still Buildable or Path at this point (not yet Occupied).
+            // Temporarily mark it Occupied to simulate the placement.
+            var tile = _map.Tiles[gridPos.X, gridPos.Y];
+            var originalType = tile.Type;
+            tile.Type = TileType.Occupied;
+
+            bool pathExists = _map.RecomputeActivePath();
+
+            // Revert — TryPlaceTower will mark it Occupied if we return true
+            tile.Type = originalType;
+            if (!pathExists)
+            {
+                // Restore the original ActivePath since we corrupted it
+                _map.RecomputeActivePath();
+            }
+
+            return pathExists;
+        };
+
+        // Wire up post-placement path recomputation and enemy rerouting
+        _towerManager.OnTowerPlacedInMazeZone = (gridPos) =>
+        {
+            _map.RecomputeActivePath();
+
+            // Reroute all living enemies to the new path
+            foreach (var enemy in _enemies)
+            {
+                if (enemy is Enemy concreteEnemy)
+                    concreteEnemy.UpdatePath(_map.ActivePath);
+            }
+        };
 
         // Try to load font if available
         try
@@ -245,9 +281,12 @@ public class GameplayScene : IScene
                 GameSettings.TileSize,
                 GameSettings.TileSize);
 
-            Color hoverColor = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue
-                ? new Color(255, 255, 255, 60)
-                : new Color(255, 0, 0, 40);
+            bool canPlace = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
+            bool wouldBlock = canPlace && _map.WouldBlockPath(mouseGrid);
+
+            Color hoverColor = canPlace && !wouldBlock
+                ? new Color(255, 255, 255, 60)   // White — valid placement
+                : new Color(255, 0, 0, 40);       // Red — invalid or would block path
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
             TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);

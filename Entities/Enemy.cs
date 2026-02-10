@@ -21,7 +21,7 @@ public class Enemy : IEnemy
     public bool IsDead => Health <= 0;
     public bool ReachedEnd { get; private set; }
 
-    private readonly List<Point> _path;
+    private List<Point> _path;
     private int _currentPathIndex;
     private readonly Color _color;
     private const float SpriteSize = 20f;
@@ -45,6 +45,52 @@ public class Enemy : IEnemy
     {
         Health -= amount;
         if (Health < 0) Health = 0;
+    }
+
+    /// <summary>
+    /// Update the path this enemy follows (called when towers change in maze zones).
+    /// Finds the enemy's current grid cell in the new path and continues from there.
+    ///
+    /// Think of it like: "You're on tile (5,4). The new path also goes through (5,4)
+    /// at index 12. So set your next waypoint to index 12 and keep going."
+    /// </summary>
+    public void UpdatePath(List<Point> newPath)
+    {
+        if (IsDead || ReachedEnd) return;
+
+        // Find where the enemy currently is on the grid
+        Point currentGrid = Map.WorldToGrid(Position);
+
+        // Search the new path for the closest matching point ahead of our position.
+        // We search forward from index 0 to find the best match.
+        int bestIndex = -1;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < newPath.Count; i++)
+        {
+            Vector2 pointWorld = Map.GridToWorld(newPath[i]);
+            float dist = Vector2.Distance(Position, pointWorld);
+
+            if (dist < bestDistance)
+            {
+                bestDistance = dist;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex == -1)
+        {
+            // Shouldn't happen, but fallback: start from beginning
+            bestIndex = 0;
+        }
+
+        _path = newPath;
+
+        // If we're very close to the best match point, target the NEXT one
+        if (bestDistance < GameSettings.TileSize / 2f && bestIndex < newPath.Count - 1)
+            _currentPathIndex = bestIndex + 1;
+        else
+            _currentPathIndex = bestIndex;
     }
 
     public void Update(GameTime gameTime)

@@ -205,19 +205,15 @@ public class MapSelectionScene : IScene
                     miniTileSize);
 
                 // Determine tile color (same logic as Map.cs)
+                // Maze zone tiles are bright green regardless of being path or not
+                bool inMazeZone = mapData.MazeZones.Any(z => z.ContainsPoint(gridPos));
                 Color tileColor;
-                if (pathSet.Contains(gridPos))
-                {
-                    tileColor = new Color(194, 178, 128); // Path
-                }
+                if (inMazeZone)
+                    tileColor = new Color(50, 180, 50);    // Maze zone (bright green)
+                else if (pathSet.Contains(gridPos))
+                    tileColor = new Color(194, 178, 128);  // Path (sandy)
                 else
-                {
-                    // Check if in maze zone
-                    bool inMazeZone = mapData.MazeZones.Any(z => z.Bounds.Contains(gridPos));
-                    tileColor = inMazeZone
-                        ? new Color(50, 180, 50)  // Maze zone buildable
-                        : new Color(34, 139, 34); // Regular buildable
-                }
+                    tileColor = new Color(34, 139, 34);    // Regular buildable
 
                 TextureManager.DrawRect(spriteBatch, tileRect, tileColor);
             }

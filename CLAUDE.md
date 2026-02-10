@@ -4,6 +4,7 @@
 I am a Python/TypeScript engineer new to C#.
 - **Tone**: Educational. Explain C# patterns (Delegates, LINQ, Structs) using Python/TS analogies.
 - **Code Style**: Readable over clever. Prioritize clear, explicit logic.
+- **Comments**: Explain "Why", not "What". Avoid conversational notes or redundant narration. Focus on non-obvious logic.
 
 ## Project Architecture (Source of Truth: `docs/ARCHITECTURE.md`)
 - **Pattern**: `Game1` → `SceneManager` → `[MapSelectionScene | GameplayScene]`.

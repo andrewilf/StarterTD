@@ -12,7 +12,16 @@ namespace StarterTD.Engine;
 public record MazeZone(
     Rectangle Bounds,         // Grid-based rectangle (e.g., X=5, Y=3, Width=6, Height=4)
     string Name = "Maze Zone" // Optional name for debugging/UI
-);
+)
+{
+    /// <summary>
+    /// Check if a grid point is inside this zone's bounds.
+    /// Think of it like Python's `point in rect` — checks X in [Left, Right) and Y in [Top, Bottom).
+    /// </summary>
+    public bool ContainsPoint(Point p) =>
+        p.X >= Bounds.Left && p.X < Bounds.Right &&
+        p.Y >= Bounds.Top && p.Y < Bounds.Bottom;
+};
 
 /// <summary>
 /// Data-driven map configuration. Defines path, maze zones, and metadata.
@@ -170,62 +179,29 @@ public static class MapDataRepository
     }
 
     /// <summary>
-    /// Example map with maze zones - a spiral path with buildable zones.
-    /// Demonstrates maze zone functionality for future mazing mechanics.
+    /// Mazing test map: straight path through a large open maze zone.
+    /// The path goes left-to-right through the center. Players build towers
+    /// within the zone to force enemies into longer detours.
     /// </summary>
     private static MapData CreateSpiralPath()
     {
         var path = new List<Point>();
 
-        // Outer ring: top edge
+        // Simple horizontal path across the middle (row 7)
         for (int x = 0; x < 19; x++)
-            path.Add(new Point(x, 1));
+            path.Add(new Point(x, 7));
 
-        // Right edge down
-        for (int y = 2; y < 13; y++)
-            path.Add(new Point(18, y));
-
-        // Bottom edge left
-        for (int x = 18; x >= 1; x--)
-            path.Add(new Point(x, 12));
-
-        // Left edge up (partial)
-        for (int y = 11; y >= 4; y--)
-            path.Add(new Point(1, y));
-
-        // Inner horizontal right
-        for (int x = 2; x <= 16; x++)
-            path.Add(new Point(x, 4));
-
-        // Inner vertical down
-        for (int y = 5; y <= 10; y++)
-            path.Add(new Point(16, y));
-
-        // Inner horizontal left
-        for (int x = 15; x >= 3; x--)
-            path.Add(new Point(x, 10));
-
-        // Center endpoint
-        for (int y = 9; y >= 7; y--)
-            path.Add(new Point(3, y));
-
-        // Define maze zones - areas where path goes through and players can build
+        // One large maze zone covering most of the map
         var mazeZones = new List<MazeZone>
         {
-            // Top-left maze zone
             new MazeZone(
-                Bounds: new Rectangle(4, 2, 6, 3),
-                Name: "Northwest Maze"
-            ),
-            // Bottom-right maze zone
-            new MazeZone(
-                Bounds: new Rectangle(10, 8, 5, 3),
-                Name: "Southeast Maze"
+                Bounds: new Rectangle(2, 1, 15, 13),
+                Name: "Main Maze"
             )
         };
 
         var mapData = new MapData(
-            Name: "Spiral with Maze Zones",
+            Name: "Maze Test",
             Id: "spiral",
             PathPoints: path,
             MazeZones: mazeZones
