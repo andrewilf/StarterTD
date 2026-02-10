@@ -7,6 +7,18 @@ using StarterTD.Interfaces;
 namespace StarterTD.Entities;
 
 /// <summary>
+/// Represents the current behavior state of an enemy.
+/// </summary>
+public enum EnemyState
+{
+    /// <summary>Enemy is moving along the path toward the exit.</summary>
+    Moving,
+
+    /// <summary>Enemy has encountered a tower and is attacking it.</summary>
+    Attacking,
+}
+
+/// <summary>
 /// Base enemy class that follows the path from start to end.
 /// New enemy types can inherit from this or implement IEnemy directly.
 /// </summary>
@@ -26,6 +38,10 @@ public class Enemy : IEnemy
     private int _currentPathIndex;
     private readonly Color _color;
     private const float SpriteSize = 20f;
+    private EnemyState _state;
+    private Tower? _targetTower;
+    private float _attackTimer;
+    private const float AttackInterval = 1.0f;
 
     public Enemy(
         string name,
@@ -46,6 +62,8 @@ public class Enemy : IEnemy
         _currentPathIndex = 0;
         _color = color;
         AttackDamage = attackDamage;
+        _state = EnemyState.Moving;
+        _attackTimer = 0f;
         Position = Map.GridToWorld(_path[0]);
     }
 
@@ -79,24 +97,67 @@ public class Enemy : IEnemy
         {
             _path = freshPath;
             _currentPathIndex = 1; // Start at index 1 since 0 is the current cell
+
+            // When path updates, reset to Moving state
+            // The tower we were attacking might be gone, or a new path opens
+            _state = EnemyState.Moving;
+            _targetTower = null;
+            _attackTimer = 0f;
         }
     }
 
-    public void Update(GameTime gameTime)
+    public void Update(GameTime gameTime, Map map)
     {
         if (IsDead || ReachedEnd)
             return;
 
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        switch (_state)
+        {
+            case EnemyState.Moving:
+                UpdateMovingState(dt, map);
+                break;
+            case EnemyState.Attacking:
+                UpdateAttackingState(dt);
+                break;
+        }
+    }
+
+    private void UpdateMovingState(float dt, Map map)
+    {
         if (_currentPathIndex >= _path.Count)
         {
             ReachedEnd = true;
             return;
         }
 
+        // Check if next waypoint has a tower blocking the path
+        Point nextWaypoint = _path[_currentPathIndex];
+
+        if (
+            nextWaypoint.X >= 0
+            && nextWaypoint.X < map.Columns
+            && nextWaypoint.Y >= 0
+            && nextWaypoint.Y < map.Rows
+        )
+        {
+            Tile nextTile = map.Tiles[nextWaypoint.X, nextWaypoint.Y];
+
+            if (nextTile.OccupyingTower != null && !nextTile.OccupyingTower.IsDead)
+            {
+                // Tower blocking path - switch to attacking
+                _state = EnemyState.Attacking;
+                _targetTower = nextTile.OccupyingTower;
+                _attackTimer = 0f;
+                return; // Stop moving this frame
+            }
+        }
+
+        // Continue moving toward current waypoint
         Vector2 target = Map.GridToWorld(_path[_currentPathIndex]);
         Vector2 direction = target - Position;
         float distance = direction.Length();
-        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         float moveAmount = Speed * dt;
 
         if (distance <= moveAmount)
@@ -111,16 +172,42 @@ public class Enemy : IEnemy
         }
     }
 
+    private void UpdateAttackingState(float dt)
+    {
+        // Validate target still exists and is alive
+        if (_targetTower == null || _targetTower.IsDead)
+        {
+            // Tower destroyed - resume movement
+            _state = EnemyState.Moving;
+            _targetTower = null;
+            _attackTimer = 0f;
+            return;
+        }
+
+        // Increment attack timer
+        _attackTimer += dt;
+
+        // Deal damage at fixed intervals
+        if (_attackTimer >= AttackInterval)
+        {
+            _targetTower.TakeDamage(AttackDamage);
+            _attackTimer -= AttackInterval; // Preserve overflow for consistent timing
+        }
+    }
+
     public void Draw(SpriteBatch spriteBatch)
     {
         if (IsDead)
             return;
 
+        // Use red tint when attacking, original color when moving
+        Color spriteColor = _state == EnemyState.Attacking ? Color.Red : _color;
+
         TextureManager.DrawSprite(
             spriteBatch,
             Position,
             new Vector2(SpriteSize, SpriteSize),
-            _color
+            spriteColor
         );
 
         float healthBarWidth = SpriteSize;

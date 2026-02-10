@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using StarterTD.Engine;
 
 namespace StarterTD.Interfaces;
 
@@ -39,7 +40,7 @@ public interface IEnemy
     void TakeDamage(float amount);
 
     /// <summary>Update enemy movement along the path.</summary>
-    void Update(GameTime gameTime);
+    void Update(GameTime gameTime, Map map);
 
     /// <summary>Draw the enemy.</summary>
     void Draw(SpriteBatch spriteBatch);

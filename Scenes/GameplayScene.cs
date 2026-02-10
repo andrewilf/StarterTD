@@ -94,12 +94,6 @@ public class GameplayScene : IScene
             _towerManager.SelectedTower = null;
         }
 
-        // Debug: kill all towers to verify pathfinding recomputation
-        if (_inputManager.IsKeyPressed(Keys.K))
-        {
-            _towerManager.KillAllTowers();
-        }
-
         if (_inputManager.IsLeftClick())
         {
             Point mousePos = _inputManager.MousePosition;
@@ -178,7 +172,7 @@ public class GameplayScene : IScene
         // --- Update enemies ---
         for (int i = _enemies.Count - 1; i >= 0; i--)
         {
-            _enemies[i].Update(gameTime);
+            _enemies[i].Update(gameTime, _map);
 
             if (_enemies[i].IsDead)
             {
