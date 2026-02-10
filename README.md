@@ -26,6 +26,9 @@ Designed for rapid iteration with LLMs (Claude/ChatGPT), focusing on clean archi
     # Run the game
     dotnet run
 
+    # Lint the code with CSharpier
+    dotnet csharpier format .
+
 ## 🎮 Controls
 
 | Input | Context | Action |

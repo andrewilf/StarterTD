@@ -59,17 +59,9 @@ public class GameplayScene : IScene
         // With movement costs, placement never blocks the path — always valid
         _towerManager.OnValidatePlacement = (gridPos) => true;
 
-        // Recompute heat map and reroute all enemies after any tower placement
-        _towerManager.OnTowerPlaced = (gridPos) =>
-        {
-            _map.RecomputeActivePath();
-
-            foreach (var enemy in _enemies)
-            {
-                if (enemy is Enemy concreteEnemy)
-                    concreteEnemy.UpdatePath(_map.ActivePath);
-            }
-        };
+        // Recompute heat map and reroute all enemies after any tower placement or destruction
+        _towerManager.OnTowerPlaced = (gridPos) => RecomputePathAndReroute();
+        _towerManager.OnTowerDestroyed = (gridPos) => RecomputePathAndReroute();
 
         // Try to load font if available
         try
@@ -100,6 +92,12 @@ public class GameplayScene : IScene
         {
             _uiPanel.SelectedTowerType = null;
             _towerManager.SelectedTower = null;
+        }
+
+        // Debug: kill all towers to verify pathfinding recomputation
+        if (_inputManager.IsKeyPressed(Keys.K))
+        {
+            _towerManager.KillAllTowers();
         }
 
         if (_inputManager.IsLeftClick())
@@ -359,6 +357,21 @@ public class GameplayScene : IScene
                 new Rectangle(centerX - 100, centerY - 30, 200, 60),
                 indicatorColor
             );
+        }
+    }
+
+    /// <summary>
+    /// Recomputes the Dijkstra heat map and reroutes all live enemies to the new path.
+    /// Called after tower placement or destruction changes the grid costs.
+    /// </summary>
+    private void RecomputePathAndReroute()
+    {
+        _map.RecomputeActivePath();
+
+        foreach (var enemy in _enemies)
+        {
+            if (enemy is Enemy concreteEnemy)
+                concreteEnemy.UpdatePath(_map.ActivePath);
         }
     }
 

@@ -31,6 +31,10 @@ public enum TileType
 public class Tile
 {
     public TileType Type { get; set; }
+
+    /// <summary>The tile's terrain type before any tower was placed. Used to restore tiles when towers are destroyed.</summary>
+    public TileType OriginalType { get; set; }
+
     public Point GridPosition { get; }
     public TowerType? OccupyingTowerType { get; set; }
 
@@ -55,6 +59,7 @@ public class Tile
     {
         GridPosition = gridPosition;
         Type = type;
+        OriginalType = type;
     }
 }
 
@@ -145,7 +150,9 @@ public class Map
                 {
                     if (x >= 0 && x < Columns && y >= 0 && y < Rows)
                     {
-                        Tiles[x, y].Type = TileType.Path;
+                        var tile = Tiles[x, y];
+                        tile.Type = TileType.Path;
+                        tile.OriginalType = TileType.Path;
                     }
                 }
             }
@@ -162,7 +169,9 @@ public class Map
                     {
                         if (x >= 0 && x < Columns && y >= 0 && y < Rows)
                         {
-                            Tiles[x, y].Type = TileType.Rock;
+                            var tile = Tiles[x, y];
+                            tile.Type = TileType.Rock;
+                            tile.OriginalType = TileType.Rock;
                         }
                     }
                 }

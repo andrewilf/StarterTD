@@ -24,6 +24,9 @@ public class Tower : ITower
     public bool IsAOE { get; private set; }
     public float AOERadius { get; private set; }
     public Color TowerColor { get; private set; }
+    public int MaxHealth { get; private set; }
+    public int CurrentHealth { get; private set; }
+    public bool IsDead => CurrentHealth <= 0;
 
     public TowerType TowerType { get; }
 
@@ -46,6 +49,13 @@ public class Tower : ITower
         Cost = stats.Cost;
     }
 
+    public void TakeDamage(int amount)
+    {
+        CurrentHealth -= amount;
+        if (CurrentHealth < 0)
+            CurrentHealth = 0;
+    }
+
     private void ApplyStats(TowerData.TowerStats stats)
     {
         Name = stats.Name;
@@ -56,6 +66,8 @@ public class Tower : ITower
         IsAOE = stats.IsAOE;
         AOERadius = stats.AOERadius;
         TowerColor = stats.Color;
+        MaxHealth = stats.MaxHealth;
+        CurrentHealth = stats.MaxHealth;
     }
 
     public void Upgrade()
@@ -137,20 +149,35 @@ public class Tower : ITower
             );
         }
 
-        // Draw upgrade cost indicator (if not max level)
-        if (Level < 2 && font != null && UpgradeCost > 0)
+        // Draw health bar above tower (always visible for now)
+        if ((CurrentHealth < MaxHealth))
         {
-            string costText = $"${UpgradeCost}";
-            Vector2 textSize = font.MeasureString(costText);
-            Vector2 textPos = new Vector2(
-                WorldPosition.X - textSize.X / 2f,
-                WorldPosition.Y - SpriteSize / 2f - 20f
+            float healthBarWidth = SpriteSize;
+            float healthBarHeight = 4f;
+            float healthPercent = (float)CurrentHealth / MaxHealth;
+
+            // DrawRect uses top-left origin
+            int barX = (int)(WorldPosition.X - healthBarWidth / 2f);
+            int barY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f);
+
+            // Red background (full bar)
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(barX, barY, (int)healthBarWidth, (int)healthBarHeight),
+                Color.Red
             );
 
-            // Shadow
-            spriteBatch.DrawString(font, costText, textPos + new Vector2(1, 1), Color.Black);
-            // Main text (cyan for visibility)
-            spriteBatch.DrawString(font, costText, textPos, Color.Cyan);
+            // Green foreground (current health)
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(
+                    barX,
+                    barY,
+                    (int)(healthBarWidth * healthPercent),
+                    (int)healthBarHeight
+                ),
+                Color.LimeGreen
+            );
         }
 
         // Draw projectiles

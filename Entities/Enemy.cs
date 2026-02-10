@@ -20,13 +20,22 @@ public class Enemy : IEnemy
     public Vector2 Position { get; private set; }
     public bool IsDead => Health <= 0;
     public bool ReachedEnd { get; private set; }
+    public int AttackDamage { get; }
 
     private List<Point> _path;
     private int _currentPathIndex;
     private readonly Color _color;
     private const float SpriteSize = 20f;
 
-    public Enemy(string name, float health, float speed, int bounty, List<Point> path, Color color)
+    public Enemy(
+        string name,
+        float health,
+        float speed,
+        int bounty,
+        List<Point> path,
+        Color color,
+        int attackDamage
+    )
     {
         Name = name;
         Health = health;
@@ -36,6 +45,7 @@ public class Enemy : IEnemy
         _path = path;
         _currentPathIndex = 0;
         _color = color;
+        AttackDamage = attackDamage;
         Position = Map.GridToWorld(_path[0]);
     }
 
