@@ -11,6 +11,7 @@
 - **Waves**: 10 hardcoded waves.
 - **UI**: Side panel (Selection, Start Wave). Floating Text feedback (Money +/-).
 - **Game Flow**: Map Selection → Play → Victory/Defeat Screens (Return to Map Selection via 'R').
+- **Code Formatting**: csharpier linter for consistent C# formatting.
 
 ## Backlog / To-Do
 
