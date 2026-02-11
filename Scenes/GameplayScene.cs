@@ -53,7 +53,11 @@ public class GameplayScene : IScene
         _towerManager = new TowerManager(_map, _championManager);
         _waveManager = new WaveManager(() => _map.ActivePath);
         _inputManager = new InputManager();
-        _uiPanel = new UIPanel(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
+        _uiPanel = new UIPanel(
+            GameSettings.ScreenWidth,
+            GameSettings.ScreenHeight,
+            _championManager
+        );
 
         _money = GameSettings.StartingMoney;
         _lives = GameSettings.StartingLives;

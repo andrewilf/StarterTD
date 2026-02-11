@@ -41,24 +41,26 @@ public static class TextureManager
     /// <param name="size">Width and height of the sprite.</param>
     /// <param name="color">Tint color for the sprite.</param>
     /// <param name="rotation">Rotation in radians (default 0).</param>
+    /// <param name="origin">Origin point (0-1 range, default 0.5,0.5 for center).</param>
     public static void DrawSprite(
         SpriteBatch spriteBatch,
         Vector2 position,
         Vector2 size,
         Color color,
-        float rotation = 0f
+        float rotation = 0f,
+        Vector2? origin = null
     )
     {
-        // Origin is at the center of the 1x1 pixel (0.5, 0.5).
-        // Scale is the desired size since the source texture is 1x1.
-        Vector2 origin = new Vector2(0.5f, 0.5f);
+        // Origin defaults to center of the 1x1 pixel (0.5, 0.5).
+        // Can be overridden for different scaling anchors (e.g., bottom-center for champion towers).
+        Vector2 spriteOrigin = origin ?? new Vector2(0.5f, 0.5f);
         spriteBatch.Draw(
             Pixel,
             position,
             sourceRectangle: null,
             color,
             rotation,
-            origin,
+            spriteOrigin,
             scale: size,
             SpriteEffects.None,
             layerDepth: 0f
