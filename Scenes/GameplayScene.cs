@@ -161,6 +161,26 @@ public class GameplayScene : IScene
             }
         }
 
+        if (_inputManager.IsRightClick())
+        {
+            Point mousePos = _inputManager.MousePosition;
+
+            if (!_uiPanel.ContainsPoint(mousePos))
+            {
+                Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
+                var tower = _towerManager.GetTowerAt(gridPos);
+
+                if (tower != null)
+                {
+                    int refund = _towerManager.SellTower(tower);
+                    _money += refund;
+
+                    Vector2 worldPos = Map.GridToWorld(gridPos);
+                    SpawnFloatingText(worldPos, $"+${refund}", Color.LimeGreen);
+                }
+            }
+        }
+
         // --- Update wave spawning ---
         _waveManager.Update(gameTime);
 
