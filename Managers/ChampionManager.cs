@@ -1,0 +1,118 @@
+using System;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using StarterTD.Entities;
+
+namespace StarterTD.Managers;
+
+/// <summary>
+/// Manages champion placement rules and cooldowns:
+/// - Global 10s cooldown blocks all champion placements after any champion is placed
+/// - Individual 15s respawn cooldowns prevent re-placement of dead champions
+/// - Generic tower placement requires their champion variant to be alive
+/// - Triggers debuff callbacks on generics when their champion dies
+/// </summary>
+public class ChampionManager
+{
+    /// <summary>Champion types that currently have an alive tower on the map.</summary>
+    private readonly HashSet<TowerType> _aliveChampions = new();
+
+    /// <summary>
+    /// Blocks all champion placement for 10 seconds after any champion is placed.
+    /// Decrements each frame via Update().
+    /// </summary>
+    private float _globalPlacementCooldown = 0f;
+
+    /// <summary>
+    /// Respawn timers for each champion type that has died (15s per type).
+    /// Removed from dict when timer reaches 0.
+    /// </summary>
+    private readonly Dictionary<TowerType, float> _respawnCooldowns = new();
+
+    private const float GLOBAL_PLACEMENT_COOLDOWN = 10.0f;
+    private const float RESPAWN_COOLDOWN = 15.0f;
+
+    /// <summary>
+    /// Check if a champion tower can be placed.
+    /// Returns false if:
+    /// - A champion of this type is already alive, OR
+    /// - Global placement cooldown is active, OR
+    /// - This champion's individual respawn cooldown is active
+    /// </summary>
+    public bool CanPlaceChampion(TowerType type)
+    {
+        if (_aliveChampions.Contains(type))
+            return false;
+
+        if (_globalPlacementCooldown > 0)
+            return false;
+
+        if (_respawnCooldowns.TryGetValue(type, out var cooldown) && cooldown > 0)
+            return false;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Check if a generic tower can be placed.
+    /// Returns false if the corresponding champion variant is not alive.
+    /// </summary>
+    public bool CanPlaceGeneric(TowerType type)
+    {
+        var championVariant = type.GetChampionVariant();
+        return _aliveChampions.Contains(championVariant);
+    }
+
+    /// <summary>
+    /// Called when a champion tower is successfully placed.
+    /// Marks it alive, starts global cooldown, and clears any respawn cooldown.
+    /// </summary>
+    public void OnChampionPlaced(TowerType type)
+    {
+        _aliveChampions.Add(type);
+        _globalPlacementCooldown = GLOBAL_PLACEMENT_COOLDOWN;
+        _respawnCooldowns.Remove(type);
+    }
+
+    /// <summary>
+    /// Called when a champion tower dies.
+    /// Marks it dead, starts respawn cooldown, and notifies all matching generic towers
+    /// to apply champion-death debuffs via UpdateChampionStatus(false).
+    /// </summary>
+    public void OnChampionDeath(TowerType type, List<Tower> allTowers)
+    {
+        _aliveChampions.Remove(type);
+        _respawnCooldowns[type] = RESPAWN_COOLDOWN;
+
+        var genericVariant = type.GetGenericVariant();
+
+        foreach (var tower in allTowers)
+        {
+            if (tower.TowerType == genericVariant && !tower.IsDead)
+                tower.UpdateChampionStatus(false);
+        }
+    }
+
+    /// <summary>
+    /// Update all timers (called once per frame).
+    /// Decrements global and respawn cooldowns, removing respawn entries when they hit 0.
+    /// </summary>
+    public void Update(GameTime gameTime)
+    {
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        if (_globalPlacementCooldown > 0)
+            _globalPlacementCooldown -= dt;
+
+        var keysToRemove = new List<TowerType>();
+        foreach (var type in _respawnCooldowns.Keys)
+        {
+            _respawnCooldowns[type] -= dt;
+            if (_respawnCooldowns[type] <= 0)
+                keysToRemove.Add(type);
+        }
+
+        foreach (var type in keysToRemove)
+            _respawnCooldowns.Remove(type);
+    }
+}

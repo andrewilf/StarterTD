@@ -19,6 +19,9 @@ public class GameplayScene : IScene
 {
     private readonly Game1 _game;
     private Map _map = null!;
+#pragma warning disable S1450 // GameplayScene owns ChampionManager (mediator pattern) and passes it to TowerManager
+    private ChampionManager _championManager = null!;
+#pragma warning restore S1450
     private TowerManager _towerManager = null!;
     private WaveManager _waveManager = null!;
     private InputManager _inputManager = null!;
@@ -46,7 +49,8 @@ public class GameplayScene : IScene
     public void LoadContent()
     {
         _map = new Map(MapDataRepository.GetMap(_selectedMapId));
-        _towerManager = new TowerManager(_map);
+        _championManager = new ChampionManager();
+        _towerManager = new TowerManager(_map, _championManager);
         _waveManager = new WaveManager(() => _map.ActivePath);
         _inputManager = new InputManager();
         _uiPanel = new UIPanel(GameSettings.ScreenWidth, GameSettings.ScreenHeight);

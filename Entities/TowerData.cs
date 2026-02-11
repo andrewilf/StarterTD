@@ -116,4 +116,32 @@ public static class TowerData
     /// </summary>
     public static bool IsChampion(this TowerType type) =>
         type == TowerType.ChampionGun || type == TowerType.ChampionCannon;
+
+    /// <summary>
+    /// Get the Generic variant of a Champion tower type.
+    /// Example: ChampionGun → Gun, ChampionCannon → Cannon
+    /// </summary>
+    public static TowerType GetGenericVariant(this TowerType championType)
+    {
+        return championType switch
+        {
+            TowerType.ChampionGun => TowerType.Gun,
+            TowerType.ChampionCannon => TowerType.Cannon,
+            _ => throw new ArgumentException($"{championType} is not a champion type"),
+        };
+    }
+
+    /// <summary>
+    /// Get the Champion variant of a Generic tower type.
+    /// Example: Gun → ChampionGun, Cannon → ChampionCannon
+    /// </summary>
+    public static TowerType GetChampionVariant(this TowerType genericType)
+    {
+        return genericType switch
+        {
+            TowerType.Gun => TowerType.ChampionGun,
+            TowerType.Cannon => TowerType.ChampionCannon,
+            _ => throw new ArgumentException($"{genericType} is not a generic type"),
+        };
+    }
 }

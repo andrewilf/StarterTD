@@ -7,6 +7,11 @@
   - Generic towers cost gold, Champions are free (cost 0)
   - Champions render 1.5x taller (DrawScale) using same texture
   - Only one Champion of each type can be placed simultaneously
+- **ChampionManager** system:
+  - Global 10s cooldown blocks all champion placement after any champion is placed
+  - Individual 15s respawn cooldown per champion type after death
+  - Generic towers can ONLY be placed if their champion variant is alive
+  - Champion death triggers `UpdateChampionStatus(false)` callback on matching generics (hook is wired, awaiting implementation)
 - Enemy state machine (Moving/Attacking)
 - 10 hardcoded waves
 - UI panel with tower selection buttons for Generics and Champions
@@ -16,7 +21,7 @@
 ## Backlog / To-Do
 
 ### High Priority
-- [ ] **Champion Debuff System**: When a Champion dies, apply stat debuffs to all active Generic towers (via `UpdateChampionStatus()` virtual hook).
+- [ ] **Champion Debuff Implementation**: Implement stat debuffs in `Tower.UpdateChampionStatus()` when champions die.
 - [ ] **Sprite Integration**: Replace rects with `Texture2D` assets.
 - [ ] **Sound**: Basic SFX (shoot, hit) and BGM manager.
 

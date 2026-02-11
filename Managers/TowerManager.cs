@@ -15,9 +15,7 @@ public class TowerManager
 {
     private readonly List<Tower> _towers = new();
     private readonly Map _map;
-
-    /// <summary>Track placed champions (only one per type allowed).</summary>
-    private readonly Dictionary<TowerType, Tower> _placedChampions = new();
+    private readonly ChampionManager _championManager;
 
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
@@ -51,9 +49,10 @@ public class TowerManager
     /// </summary>
     public Action<Vector2, float>? OnAOEImpact;
 
-    public TowerManager(Map map)
+    public TowerManager(Map map, ChampionManager championManager)
     {
         _map = map;
+        _championManager = championManager;
     }
 
     /// <summary>
@@ -68,8 +67,12 @@ public class TowerManager
 
         var tile = _map.Tiles[gridPos.X, gridPos.Y];
 
-        // Validate champion placement (only one per type)
-        if (type.IsChampion() && _placedChampions.ContainsKey(type))
+        bool isChampion = type.IsChampion();
+        bool canPlace = isChampion
+            ? _championManager.CanPlaceChampion(type)
+            : _championManager.CanPlaceGeneric(type);
+
+        if (!canPlace)
             return -1;
 
         if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
@@ -81,11 +84,9 @@ public class TowerManager
         _towers.Add(tower);
         tile.OccupyingTower = tower;
 
-        // Track champion placement
         if (type.IsChampion())
-            _placedChampions[type] = tower;
+            _championManager.OnChampionPlaced(type);
 
-        // Every placement changes the heat map — notify mediator to recompute
         OnTowerPlaced?.Invoke(gridPos);
 
         return tower.Cost;
@@ -113,9 +114,8 @@ public class TowerManager
         tile.OccupyingTower = null;
         _towers.Remove(tower);
 
-        // Remove from champion tracking if applicable
-        if (tower.TowerType.IsChampion() && _placedChampions.ContainsKey(tower.TowerType))
-            _placedChampions.Remove(tower.TowerType);
+        if (tower.TowerType.IsChampion())
+            _championManager.OnChampionDeath(tower.TowerType, _towers);
 
         if (SelectedTower == tower)
             SelectedTower = null;
@@ -125,6 +125,8 @@ public class TowerManager
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
+        _championManager.Update(gameTime);
+
         foreach (var tower in _towers)
         {
             tower.Update(gameTime, enemies);
