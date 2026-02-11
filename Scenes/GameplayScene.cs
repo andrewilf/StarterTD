@@ -144,11 +144,14 @@ public class GameplayScene : IScene
                             _uiPanel.SelectedTowerType.Value,
                             gridPos
                         );
-                        if (cost > 0)
+                        if (cost >= 0)
                         {
                             _money -= cost;
                             Vector2 worldPos = Map.GridToWorld(gridPos);
-                            SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
+                            if (cost > 0)
+                                SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
+                            _uiPanel.SelectedTowerType = null;
+                            _selectedTowerRange = 0f;
                         }
                     }
                 }
