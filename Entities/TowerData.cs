@@ -5,11 +5,14 @@ namespace StarterTD.Entities;
 
 /// <summary>
 /// Enum of available tower types for selection.
+/// Includes both Generic (Gun, Cannon) and Champion variants.
 /// </summary>
 public enum TowerType
 {
     Gun,
     Cannon,
+    ChampionGun,
+    ChampionCannon,
 }
 
 /// <summary>
@@ -29,7 +32,8 @@ public static class TowerData
         float AOERadius,
         Color Color,
         int MaxHealth,
-        int BlockCapacity
+        int BlockCapacity,
+        Vector2 DrawScale
     );
 
     /// <summary>
@@ -51,7 +55,8 @@ public static class TowerData
                 AOERadius: 0f,
                 Color: Color.Orange,
                 MaxHealth: 100,
-                BlockCapacity: 3
+                BlockCapacity: 3,
+                DrawScale: new Vector2(1.0f, 1.0f)
             ),
 
             // Cannon Tower: Slow fire rate, AOE damage, medium range
@@ -66,10 +71,77 @@ public static class TowerData
                 AOERadius: 50f,
                 Color: Color.Firebrick,
                 MaxHealth: 150,
-                BlockCapacity: 2
+                BlockCapacity: 2,
+                DrawScale: new Vector2(1.0f, 1.0f)
+            ),
+
+            // Champion Gun: Customized stats, taller visual, costs 0
+            TowerType.ChampionGun => new TowerStats(
+                "Champion Gun",
+                Range: 150f,
+                Damage: 5f,
+                FireRate: 0.4f,
+                Cost: 0,
+                MovementCost: 300,
+                IsAOE: false,
+                AOERadius: 0f,
+                Color: Color.Orange,
+                MaxHealth: 80,
+                BlockCapacity: 2,
+                DrawScale: new Vector2(1.0f, 1.5f)
+            ),
+
+            // Champion Cannon: Customized stats, taller visual, costs 0
+            TowerType.ChampionCannon => new TowerStats(
+                "Champion Cannon",
+                Range: 120f,
+                Damage: 4f,
+                FireRate: 1.0f,
+                Cost: 0,
+                MovementCost: 500,
+                IsAOE: true,
+                AOERadius: 70f,
+                Color: Color.Firebrick,
+                MaxHealth: 200,
+                BlockCapacity: 1,
+                DrawScale: new Vector2(1.0f, 1.5f)
             ),
 
             _ => throw new ArgumentException($"No stats for {type}"),
+        };
+    }
+
+    /// <summary>
+    /// Check if a tower type is a Champion variant.
+    /// </summary>
+    public static bool IsChampion(this TowerType type) =>
+        type == TowerType.ChampionGun || type == TowerType.ChampionCannon;
+
+    /// <summary>
+    /// Get the Generic variant of a Champion tower type.
+    /// Example: ChampionGun → Gun, ChampionCannon → Cannon
+    /// </summary>
+    public static TowerType GetGenericVariant(this TowerType championType)
+    {
+        return championType switch
+        {
+            TowerType.ChampionGun => TowerType.Gun,
+            TowerType.ChampionCannon => TowerType.Cannon,
+            _ => throw new ArgumentException($"{championType} is not a champion type"),
+        };
+    }
+
+    /// <summary>
+    /// Get the Champion variant of a Generic tower type.
+    /// Example: Gun → ChampionGun, Cannon → ChampionCannon
+    /// </summary>
+    public static TowerType GetChampionVariant(this TowerType genericType)
+    {
+        return genericType switch
+        {
+            TowerType.Gun => TowerType.ChampionGun,
+            TowerType.Cannon => TowerType.ChampionCannon,
+            _ => throw new ArgumentException($"{genericType} is not a generic type"),
         };
     }
 }

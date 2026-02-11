@@ -15,6 +15,7 @@ public class TowerManager
 {
     private readonly List<Tower> _towers = new();
     private readonly Map _map;
+    private readonly ChampionManager _championManager;
 
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
@@ -48,14 +49,16 @@ public class TowerManager
     /// </summary>
     public Action<Vector2, float>? OnAOEImpact;
 
-    public TowerManager(Map map)
+    public TowerManager(Map map, ChampionManager championManager)
     {
         _map = map;
+        _championManager = championManager;
     }
 
     /// <summary>
     /// Try to place a tower at the given grid position.
     /// Returns the cost if successful, or -1 if placement failed.
+    /// Champions can only have one per type placed at a time.
     /// </summary>
     public int TryPlaceTower(TowerType type, Point gridPos)
     {
@@ -63,6 +66,14 @@ public class TowerManager
             return -1;
 
         var tile = _map.Tiles[gridPos.X, gridPos.Y];
+
+        bool isChampion = type.IsChampion();
+        bool canPlace = isChampion
+            ? _championManager.CanPlaceChampion(type)
+            : _championManager.CanPlaceGeneric(type);
+
+        if (!canPlace)
+            return -1;
 
         if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
             return -1;
@@ -73,7 +84,9 @@ public class TowerManager
         _towers.Add(tower);
         tile.OccupyingTower = tower;
 
-        // Every placement changes the heat map — notify mediator to recompute
+        if (type.IsChampion())
+            _championManager.OnChampionPlaced(type);
+
         OnTowerPlaced?.Invoke(gridPos);
 
         return tower.Cost;
@@ -101,6 +114,9 @@ public class TowerManager
         tile.OccupyingTower = null;
         _towers.Remove(tower);
 
+        if (tower.TowerType.IsChampion())
+            _championManager.OnChampionDeath(tower.TowerType, _towers);
+
         if (SelectedTower == tower)
             SelectedTower = null;
 
@@ -109,6 +125,8 @@ public class TowerManager
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
+        _championManager.Update(gameTime);
+
         foreach (var tower in _towers)
         {
             tower.Update(gameTime, enemies);

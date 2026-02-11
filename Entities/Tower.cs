@@ -33,6 +33,9 @@ public class Tower : ITower
     /// <summary>Number of enemies currently attacking this tower.</summary>
     public int CurrentEngagedCount => _currentEngagedCount;
 
+    /// <summary>Scale factor for visual rendering (X, Y). Generics default to (1.0, 1.0), Champions to (1.0, 1.5).</summary>
+    public Vector2 DrawScale { get; private set; }
+
     public TowerType TowerType { get; }
 
     private float _fireCooldown;
@@ -89,14 +92,15 @@ public class Tower : ITower
             _currentEngagedCount--;
     }
 
-    private void DrawCapacityBar(SpriteBatch spriteBatch)
+    private void DrawCapacityBar(SpriteBatch spriteBatch, Vector2 drawPosition)
     {
         float capacityBarWidth = SpriteSize;
         float capacityBarHeight = 3f; // Slightly thinner than health bar
         float remainingPercent = (float)(BlockCapacity - CurrentEngagedCount) / BlockCapacity;
 
-        int capBarX = (int)(WorldPosition.X - capacityBarWidth / 2f);
-        int capBarY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f + 5f); // 5px below health bar
+        int capBarX = (int)(drawPosition.X - capacityBarWidth / 2f);
+        // Scale Y offset by DrawScale.Y so bars stay at top of scaled tower
+        int capBarY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f + 5f); // 5px below health bar
 
         // Dark gray background (full bar)
         TextureManager.DrawRect(
@@ -130,6 +134,7 @@ public class Tower : ITower
         MaxHealth = stats.MaxHealth;
         CurrentHealth = stats.MaxHealth;
         BlockCapacity = stats.BlockCapacity;
+        DrawScale = stats.DrawScale;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
@@ -186,12 +191,34 @@ public class Tower : ITower
 
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
     {
-        // Draw tower body (centered via DrawSprite)
+        // Determine origin and draw position based on vertical scaling.
+        // Champions (DrawScale.Y > 1.0) use bottom-center origin so they grow upward.
+        // Generic towers use centered origin (default behavior).
+        Vector2 spriteOrigin;
+        Vector2 drawPosition = WorldPosition;
+
+        if (DrawScale.Y > 1.0f)
+        {
+            // Champion tower: bottom-center origin.
+            // Position so bottom sits at same level as generic tower's bottom.
+            // Generic bottom = WorldPosition.Y + SpriteSize/2
+            spriteOrigin = new Vector2(0.5f, 1.0f);
+            drawPosition.Y += SpriteSize / 2f;
+        }
+        else
+        {
+            // Generic tower: centered origin
+            spriteOrigin = new Vector2(0.5f, 0.5f);
+        }
+
+        // Draw tower body (centered via DrawSprite), scaled by DrawScale
         TextureManager.DrawSprite(
             spriteBatch,
-            WorldPosition,
-            new Vector2(SpriteSize, SpriteSize),
-            TowerColor
+            drawPosition,
+            new Vector2(SpriteSize * DrawScale.X, SpriteSize * DrawScale.Y),
+            TowerColor,
+            rotation: 0f,
+            origin: spriteOrigin
         );
 
         // Draw health bar above tower (always visible for now)
@@ -202,8 +229,9 @@ public class Tower : ITower
             float healthPercent = (float)CurrentHealth / MaxHealth;
 
             // DrawRect uses top-left origin
-            int barX = (int)(WorldPosition.X - healthBarWidth / 2f);
-            int barY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f);
+            // Use drawPosition (adjusted for champion scaling) to position bar at tower top
+            int barX = (int)(drawPosition.X - healthBarWidth / 2f);
+            int barY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f);
 
             // Red background (full bar)
             TextureManager.DrawRect(
@@ -226,7 +254,7 @@ public class Tower : ITower
         }
 
         // Draw capacity bar below health bar (always visible)
-        DrawCapacityBar(spriteBatch);
+        DrawCapacityBar(spriteBatch, drawPosition);
 
         // Draw projectiles
         foreach (var proj in Projectiles)
@@ -242,5 +270,15 @@ public class Tower : ITower
     public void DrawRangeIndicator(SpriteBatch spriteBatch)
     {
         TextureManager.DrawFilledCircle(spriteBatch, WorldPosition, Range, Color.White * 0.15f);
+    }
+
+    /// <summary>
+    /// Hook for future debuff system. Called when a champion's alive state changes.
+    /// Generic towers can override this to respond to champion death/revival.
+    /// </summary>
+    public virtual void UpdateChampionStatus(bool isChampionAlive)
+    {
+        // Empty implementation for now
+        // Future: Apply stat debuffs when isChampionAlive = false
     }
 }
