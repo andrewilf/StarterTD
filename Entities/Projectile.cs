@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -19,6 +20,12 @@ public class Projectile
     public float AOERadius { get; }
     public Color ProjectileColor { get; }
     public bool IsActive { get; private set; } = true;
+
+    /// <summary>
+    /// Callback fired when this AoE projectile impacts (for visual effects).
+    /// Passes the impact position and AoE radius. Bubbles up to Tower → TowerManager → GameplayScene.
+    /// </summary>
+    public Action<Vector2, float>? OnAOEImpact;
 
     private readonly IEnemy? _target;
 
@@ -79,6 +86,9 @@ public class Projectile
                         enemy.TakeDamage(Damage);
                     }
                 }
+
+                // Fire AoE impact callback for visual effect
+                OnAOEImpact?.Invoke(Position, AOERadius);
             }
             else
             {

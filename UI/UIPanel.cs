@@ -80,13 +80,13 @@ public class UIPanel
 
         if (_gunButton.Contains(mousePos))
         {
-            var stats = TowerData.GetStats(TowerType.Gun, 1);
+            var stats = TowerData.GetStats(TowerType.Gun);
             SelectedTowerType = playerMoney >= stats.Cost ? TowerType.Gun : null;
             return true;
         }
         if (_cannonButton.Contains(mousePos))
         {
-            var stats = TowerData.GetStats(TowerType.Cannon, 1);
+            var stats = TowerData.GetStats(TowerType.Cannon);
             SelectedTowerType = playerMoney >= stats.Cost ? TowerType.Cannon : null;
             return true;
         }
@@ -117,11 +117,7 @@ public class UIPanel
     )
     {
         // Panel background
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(_x, 0, _width, _height),
-            new Color(40, 40, 50)
-        );
+        TextureManager.DrawRect(spriteBatch, new Rectangle(_x, 0, _width, _height), Color.Black);
 
         // Separator line
         TextureManager.DrawRect(spriteBatch, new Rectangle(_x, 0, 2, _height), Color.Gray);
@@ -156,19 +152,13 @@ public class UIPanel
             );
             spriteBatch.DrawString(
                 _font,
-                "R-Click: Upgrade",
-                new Vector2(_x + 10, _cannonButton.Bottom + 45),
-                Color.LightGray
-            );
-            spriteBatch.DrawString(
-                _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _cannonButton.Bottom + 70),
+                new Vector2(_x + 10, _cannonButton.Bottom + 45),
                 Color.LightGray
             );
 
             // --- Start Wave button ---
-            Color waveBtnColor = waveInProgress ? new Color(80, 80, 80) : new Color(0, 120, 0);
+            Color waveBtnColor = waveInProgress ? Color.Gray : Color.Green;
             TextureManager.DrawRect(spriteBatch, _startWaveButton, waveBtnColor);
             TextureManager.DrawRectOutline(spriteBatch, _startWaveButton, Color.White, 2);
             string waveText = waveInProgress ? "Wave Active..." : "Start Wave";
@@ -192,7 +182,7 @@ public class UIPanel
             TextureManager.DrawRect(
                 spriteBatch,
                 _startWaveButton,
-                waveInProgress ? new Color(80, 80, 80) : new Color(0, 120, 0)
+                waveInProgress ? Color.Gray : Color.Green
             );
             TextureManager.DrawRectOutline(spriteBatch, _startWaveButton, Color.White, 2);
         }
@@ -207,9 +197,9 @@ public class UIPanel
     )
     {
         bool isSelected = SelectedTowerType == type;
-        Color bgColor = isSelected ? new Color(80, 80, 120) : new Color(60, 60, 70);
+        Color bgColor = isSelected ? Color.SlateGray : Color.DarkSlateGray;
         if (!canAfford)
-            bgColor = new Color(40, 40, 40);
+            bgColor = Color.DarkGray;
 
         TextureManager.DrawRect(spriteBatch, rect, bgColor);
         TextureManager.DrawRectOutline(
@@ -220,7 +210,7 @@ public class UIPanel
         );
 
         // Tower color indicator
-        var stats = TowerData.GetStats(type, 1);
+        var stats = TowerData.GetStats(type);
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
@@ -241,7 +231,7 @@ public class UIPanel
     private void DrawButtonNoFont(SpriteBatch spriteBatch, Rectangle rect, TowerType type)
     {
         bool isSelected = SelectedTowerType == type;
-        Color bgColor = isSelected ? new Color(80, 80, 120) : new Color(60, 60, 70);
+        Color bgColor = isSelected ? Color.SlateGray : Color.DarkSlateGray;
         TextureManager.DrawRect(spriteBatch, rect, bgColor);
         TextureManager.DrawRectOutline(
             spriteBatch,
@@ -250,7 +240,7 @@ public class UIPanel
             2
         );
 
-        var stats = TowerData.GetStats(type, 1);
+        var stats = TowerData.GetStats(type);
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),

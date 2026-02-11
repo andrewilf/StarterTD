@@ -138,7 +138,7 @@ public class MapSelectionScene : IScene
     )
     {
         // Card background (lighter when hovered)
-        Color bgColor = isHovered ? new Color(70, 70, 80) : new Color(50, 50, 60);
+        Color bgColor = isHovered ? Color.DarkSlateGray : Color.DarkSlateGray * 0.89f;
         TextureManager.DrawRect(spriteBatch, bounds, bgColor);
 
         // Border (yellow when hovered, gray otherwise)
@@ -210,8 +210,8 @@ public class MapSelectionScene : IScene
 
                 // Check if tile is inside any walkable area
                 Color tileColor = mapData.IsInWalkableArea(new Point(x, y))
-                    ? new Color(194, 178, 128) // Path (sandy)
-                    : new Color(34, 139, 34); // HighGround (dark green)
+                    ? Color.Tan
+                    : Color.ForestGreen;
 
                 TextureManager.DrawRect(spriteBatch, tileRect, tileColor);
             }
@@ -219,6 +219,6 @@ public class MapSelectionScene : IScene
 
         // Draw preview border
         Rectangle gridBounds = new Rectangle(startX, startY, gridWidth, gridHeight);
-        TextureManager.DrawRectOutline(spriteBatch, gridBounds, new Color(255, 255, 255, 100), 2);
+        TextureManager.DrawRectOutline(spriteBatch, gridBounds, Color.White * 0.39f, 2);
     }
 }
