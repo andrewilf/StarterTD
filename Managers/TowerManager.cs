@@ -106,6 +106,18 @@ public class TowerManager
     }
 
     /// <summary>
+    /// Sell a tower, returning its refund value.
+    /// Refund is 60% of cost, scaled by remaining health percentage.
+    /// </summary>
+    public int SellTower(Tower tower)
+    {
+        float healthPercent = (float)tower.CurrentHealth / tower.MaxHealth;
+        int refund = (int)(tower.Cost * 0.6f * healthPercent);
+        RemoveTower(tower);
+        return refund;
+    }
+
+    /// <summary>
     /// Remove a tower from the grid: clear the tile's tower reference and notify scene.
     /// </summary>
     private void RemoveTower(Tower tower)

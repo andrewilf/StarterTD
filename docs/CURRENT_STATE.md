@@ -33,7 +33,7 @@
 ### Gameplay
 - [ ] **Enemy Variants**: Fast (Low HP) and Tank (High HP).
 - [ ] **Tower Abilities**: Slow, Splash, Poison.
-- [ ] **Sell**: Refund mechanic.
+- [x] **Sell**: Right-click towers (60% base refund scaled by health). Champions trigger death cooldown.
 - [ ] **Pause**: Toggle game state.
 
 ### UI Polish

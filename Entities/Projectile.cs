@@ -28,6 +28,8 @@ public class Projectile
     public Action<Vector2, float>? OnAOEImpact;
 
     private readonly IEnemy? _target;
+    private Vector2 _targetPosition;
+    private bool _targetLost = false;
 
     /// <summary>Size of the projectile sprite in pixels.</summary>
     private const float Size = 6f;
@@ -47,6 +49,8 @@ public class Projectile
     {
         Position = startPosition;
         _target = target;
+        _targetPosition = target.Position;
+        _targetLost = false;
         Damage = damage;
         Speed = speed;
         IsAOE = isAOE;
@@ -62,37 +66,43 @@ public class Projectile
         if (!IsActive)
             return false;
 
-        // If target is dead or gone, deactivate
-        if (_target == null || _target.IsDead || _target.ReachedEnd)
+        // If target dies or escapes, lock onto last known position
+        if (!_targetLost && (_target == null || _target.IsDead || _target.ReachedEnd))
         {
-            IsActive = false;
-            return false;
+            _targetPosition = _target?.Position ?? _targetPosition;
+            _targetLost = true;
         }
 
-        // Move toward target
-        Vector2 direction = _target.Position - Position;
+        // Move toward target or last known position
+        Vector2 direction = _targetPosition - Position;
         float distance = direction.Length();
 
         if (distance < HitDistance)
         {
-            // Hit!
-            if (IsAOE)
+            // Only apply damage if target was alive when we fired
+            if (!_targetLost && _target != null && !_target.IsDead)
             {
-                // Damage all enemies in AOE radius
-                foreach (var enemy in allEnemies)
+                if (IsAOE)
                 {
-                    if (!enemy.IsDead && Vector2.Distance(Position, enemy.Position) <= AOERadius)
+                    // Damage all enemies in AOE radius
+                    foreach (var enemy in allEnemies)
                     {
-                        enemy.TakeDamage(Damage);
+                        if (
+                            !enemy.IsDead
+                            && Vector2.Distance(Position, enemy.Position) <= AOERadius
+                        )
+                        {
+                            enemy.TakeDamage(Damage);
+                        }
                     }
-                }
 
-                // Fire AoE impact callback for visual effect
-                OnAOEImpact?.Invoke(Position, AOERadius);
-            }
-            else
-            {
-                _target.TakeDamage(Damage);
+                    // Fire AoE impact callback for visual effect
+                    OnAOEImpact?.Invoke(Position, AOERadius);
+                }
+                else
+                {
+                    _target.TakeDamage(Damage);
+                }
             }
 
             IsActive = false;
