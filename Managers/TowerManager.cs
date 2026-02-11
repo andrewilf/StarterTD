@@ -16,6 +16,9 @@ public class TowerManager
     private readonly List<Tower> _towers = new();
     private readonly Map _map;
 
+    /// <summary>Track placed champions (only one per type allowed).</summary>
+    private readonly Dictionary<TowerType, Tower> _placedChampions = new();
+
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
 
@@ -56,6 +59,7 @@ public class TowerManager
     /// <summary>
     /// Try to place a tower at the given grid position.
     /// Returns the cost if successful, or -1 if placement failed.
+    /// Champions can only have one per type placed at a time.
     /// </summary>
     public int TryPlaceTower(TowerType type, Point gridPos)
     {
@@ -63,6 +67,10 @@ public class TowerManager
             return -1;
 
         var tile = _map.Tiles[gridPos.X, gridPos.Y];
+
+        // Validate champion placement (only one per type)
+        if (type.IsChampion() && _placedChampions.ContainsKey(type))
+            return -1;
 
         if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
             return -1;
@@ -72,6 +80,10 @@ public class TowerManager
         tower.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
         _towers.Add(tower);
         tile.OccupyingTower = tower;
+
+        // Track champion placement
+        if (type.IsChampion())
+            _placedChampions[type] = tower;
 
         // Every placement changes the heat map — notify mediator to recompute
         OnTowerPlaced?.Invoke(gridPos);
@@ -100,6 +112,10 @@ public class TowerManager
         var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
         tile.OccupyingTower = null;
         _towers.Remove(tower);
+
+        // Remove from champion tracking if applicable
+        if (tower.TowerType.IsChampion() && _placedChampions.ContainsKey(tower.TowerType))
+            _placedChampions.Remove(tower.TowerType);
 
         if (SelectedTower == tower)
             SelectedTower = null;

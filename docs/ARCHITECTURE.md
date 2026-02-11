@@ -31,5 +31,9 @@ graph TD
 ## Key Non-Obvious Patterns
 
 - **Towers as overlays**: `Tile.OccupyingTower` holds a Tower reference; underlying `TileType` never changes after init. Movement cost checks the tower first, then terrain.
+- **Tower Types**: Enum-based with separate Generic (Gun, Cannon) and Champion (ChampionGun, ChampionCannon) variants. Check with `TowerType.IsChampion()` extension method.
+- **Champion Tracking**: `TowerManager._placedChampions` enforces one-per-type rule during placement validation.
+- **DrawScale**: All towers have `Vector2 DrawScale` (Generics: {1.0, 1.0}, Champions: {1.0, 1.5}). Scaling is upward-only; health/capacity bars use `SpriteSize * DrawScale.Y` for Y positioning.
+- **Debuff Hook**: `Tower.UpdateChampionStatus(bool isChampionAlive)` is virtual for future system when Champions die.
 - **AoE callback chain**: `Projectile.OnAOEImpact` → `Tower` → `TowerManager` → `GameplayScene` spawns the visual effect.
 - **WaveManager** takes `Func<List<Point>>` so each spawned enemy gets the latest path.

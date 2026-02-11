@@ -33,6 +33,9 @@ public class Tower : ITower
     /// <summary>Number of enemies currently attacking this tower.</summary>
     public int CurrentEngagedCount => _currentEngagedCount;
 
+    /// <summary>Scale factor for visual rendering (X, Y). Generics default to (1.0, 1.0), Champions to (1.0, 1.5).</summary>
+    public Vector2 DrawScale { get; private set; }
+
     public TowerType TowerType { get; }
 
     private float _fireCooldown;
@@ -96,7 +99,8 @@ public class Tower : ITower
         float remainingPercent = (float)(BlockCapacity - CurrentEngagedCount) / BlockCapacity;
 
         int capBarX = (int)(WorldPosition.X - capacityBarWidth / 2f);
-        int capBarY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f + 5f); // 5px below health bar
+        // Scale Y offset by DrawScale.Y so bars stay at top of scaled tower
+        int capBarY = (int)(WorldPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f + 5f); // 5px below health bar
 
         // Dark gray background (full bar)
         TextureManager.DrawRect(
@@ -130,6 +134,7 @@ public class Tower : ITower
         MaxHealth = stats.MaxHealth;
         CurrentHealth = stats.MaxHealth;
         BlockCapacity = stats.BlockCapacity;
+        DrawScale = stats.DrawScale;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
@@ -186,11 +191,11 @@ public class Tower : ITower
 
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
     {
-        // Draw tower body (centered via DrawSprite)
+        // Draw tower body (centered via DrawSprite), scaled by DrawScale
         TextureManager.DrawSprite(
             spriteBatch,
             WorldPosition,
-            new Vector2(SpriteSize, SpriteSize),
+            new Vector2(SpriteSize * DrawScale.X, SpriteSize * DrawScale.Y),
             TowerColor
         );
 
@@ -202,8 +207,9 @@ public class Tower : ITower
             float healthPercent = (float)CurrentHealth / MaxHealth;
 
             // DrawRect uses top-left origin
+            // Scale Y offset by DrawScale.Y so bars stay at top of scaled tower
             int barX = (int)(WorldPosition.X - healthBarWidth / 2f);
-            int barY = (int)(WorldPosition.Y - SpriteSize / 2f - 8f);
+            int barY = (int)(WorldPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f);
 
             // Red background (full bar)
             TextureManager.DrawRect(
@@ -242,5 +248,15 @@ public class Tower : ITower
     public void DrawRangeIndicator(SpriteBatch spriteBatch)
     {
         TextureManager.DrawFilledCircle(spriteBatch, WorldPosition, Range, Color.White * 0.15f);
+    }
+
+    /// <summary>
+    /// Hook for future debuff system. Called when a champion's alive state changes.
+    /// Generic towers can override this to respond to champion death/revival.
+    /// </summary>
+    public virtual void UpdateChampionStatus(bool isChampionAlive)
+    {
+        // Empty implementation for now
+        // Future: Apply stat debuffs when isChampionAlive = false
     }
 }

@@ -27,6 +27,8 @@ public class UIPanel
     // Button rectangles for tower selection
     private readonly Rectangle _gunButton;
     private readonly Rectangle _cannonButton;
+    private readonly Rectangle _championGunButton;
+    private readonly Rectangle _championCannonButton;
     private readonly Rectangle _startWaveButton;
 
     /// <summary>Whether the "Start Wave" button was clicked this frame.</summary>
@@ -52,6 +54,17 @@ public class UIPanel
             buttonWidth,
             buttonHeight
         );
+
+        // Champion buttons positioned below Generic towers
+        int championStartY = _cannonButton.Bottom + 60;
+        _championGunButton = new Rectangle(_x + 10, championStartY, buttonWidth, buttonHeight);
+        _championCannonButton = new Rectangle(
+            _x + 10,
+            championStartY + buttonHeight + gap,
+            buttonWidth,
+            buttonHeight
+        );
+
         _startWaveButton = new Rectangle(_x + 10, _height - 70, buttonWidth, buttonHeight);
     }
 
@@ -88,6 +101,18 @@ public class UIPanel
         {
             var stats = TowerData.GetStats(TowerType.Cannon);
             SelectedTowerType = playerMoney >= stats.Cost ? TowerType.Cannon : null;
+            return true;
+        }
+        if (_championGunButton.Contains(mousePos))
+        {
+            // Champions are always free, no cost check needed
+            SelectedTowerType = TowerType.ChampionGun;
+            return true;
+        }
+        if (_championCannonButton.Contains(mousePos))
+        {
+            // Champions are always free, no cost check needed
+            SelectedTowerType = TowerType.ChampionCannon;
             return true;
         }
         if (_startWaveButton.Contains(mousePos))
@@ -143,17 +168,39 @@ public class UIPanel
             DrawButton(spriteBatch, _gunButton, "Gun ($50)", TowerType.Gun, money >= 50);
             DrawButton(spriteBatch, _cannonButton, "Cannon ($80)", TowerType.Cannon, money >= 80);
 
+            // --- Champion buttons ---
+            spriteBatch.DrawString(
+                _font,
+                "Champions (Free):",
+                new Vector2(_x + 10, _cannonButton.Bottom + 30),
+                Color.Yellow
+            );
+            DrawButton(
+                spriteBatch,
+                _championGunButton,
+                "Champion Gun (Free)",
+                TowerType.ChampionGun,
+                true
+            );
+            DrawButton(
+                spriteBatch,
+                _championCannonButton,
+                "Champion Cannon (Free)",
+                TowerType.ChampionCannon,
+                true
+            );
+
             // --- Info text ---
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _cannonButton.Bottom + 20),
+                new Vector2(_x + 10, _championCannonButton.Bottom + 20),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _cannonButton.Bottom + 45),
+                new Vector2(_x + 10, _championCannonButton.Bottom + 45),
                 Color.LightGray
             );
 
@@ -178,6 +225,8 @@ public class UIPanel
             // Fallback: no font loaded — draw colored blocks as indicators
             DrawButtonNoFont(spriteBatch, _gunButton, TowerType.Gun);
             DrawButtonNoFont(spriteBatch, _cannonButton, TowerType.Cannon);
+            DrawButtonNoFont(spriteBatch, _championGunButton, TowerType.ChampionGun);
+            DrawButtonNoFont(spriteBatch, _championCannonButton, TowerType.ChampionCannon);
 
             TextureManager.DrawRect(
                 spriteBatch,
