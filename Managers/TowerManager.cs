@@ -10,7 +10,7 @@ using StarterTD.Interfaces;
 namespace StarterTD.Managers;
 
 /// <summary>
-/// Manages all placed towers: placement, upgrading, updating, and drawing.
+/// Manages all placed towers: placement, updating, and drawing.
 /// </summary>
 public class TowerManager
 {
@@ -70,21 +70,6 @@ public class TowerManager
         OnTowerPlaced?.Invoke(gridPos);
 
         return tower.Cost;
-    }
-
-    /// <summary>
-    /// Try to upgrade the tower at the given grid position.
-    /// Returns the upgrade cost if successful, or -1 if failed.
-    /// </summary>
-    public int TryUpgradeTower(Point gridPos)
-    {
-        var tower = GetTowerAt(gridPos);
-        if (tower == null || tower.Level >= 2)
-            return -1;
-
-        int cost = tower.UpgradeCost;
-        tower.Upgrade();
-        return cost;
     }
 
     /// <summary>

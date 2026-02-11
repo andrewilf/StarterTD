@@ -24,7 +24,6 @@ public static class TowerData
         float Damage,
         float FireRate,
         int Cost,
-        int UpgradeCost,
         int MovementCost,
         bool IsAOE,
         float AOERadius,
@@ -34,76 +33,43 @@ public static class TowerData
     );
 
     /// <summary>
-    /// Get stats for a tower type at a given level.
-    /// Level 1 = base stats, Level 2 = upgraded stats.
+    /// Get stats for a tower type.
     /// </summary>
-    public static TowerStats GetStats(TowerType type, int level)
+    public static TowerStats GetStats(TowerType type)
     {
-        return (type, level) switch
+        return type switch
         {
             // Gun Tower: Fast fire rate, low damage, short range
-            (TowerType.Gun, 1) => new TowerStats(
+            TowerType.Gun => new TowerStats(
                 "Gun Tower",
                 Range: 120f,
                 Damage: 3f,
                 FireRate: 0.3f,
                 Cost: 50,
-                UpgradeCost: 40,
                 MovementCost: 300,
                 IsAOE: false,
                 AOERadius: 0f,
-                Color: new Color(65, 105, 225),
+                Color: Color.Orange,
                 MaxHealth: 100,
-                BlockCapacity: 3
-            ), // Royal Blue
-
-            (TowerType.Gun, 2) => new TowerStats(
-                "Gun Tower Mk2",
-                Range: 150f,
-                Damage: 6f,
-                FireRate: 0.2f,
-                Cost: 50,
-                UpgradeCost: 0,
-                MovementCost: 300,
-                IsAOE: false,
-                AOERadius: 0f,
-                Color: new Color(30, 60, 180),
-                MaxHealth: 120,
                 BlockCapacity: 3
             ),
 
             // Cannon Tower: Slow fire rate, AOE damage, medium range
-            (TowerType.Cannon, 1) => new TowerStats(
+            TowerType.Cannon => new TowerStats(
                 "Cannon Tower",
                 Range: 100f,
                 Damage: 2f,
                 FireRate: 1.5f,
                 Cost: 80,
-                UpgradeCost: 60,
                 MovementCost: 500,
                 IsAOE: true,
                 AOERadius: 50f,
-                Color: new Color(178, 34, 34),
+                Color: Color.Firebrick,
                 MaxHealth: 150,
-                BlockCapacity: 2
-            ), // Firebrick Red
-
-            (TowerType.Cannon, 2) => new TowerStats(
-                "Cannon Tower Mk2",
-                Range: 120f,
-                Damage: 4f,
-                FireRate: 1.2f,
-                Cost: 80,
-                UpgradeCost: 0,
-                MovementCost: 500,
-                IsAOE: true,
-                AOERadius: 70f,
-                Color: new Color(139, 0, 0),
-                MaxHealth: 180,
                 BlockCapacity: 2
             ),
 
-            _ => throw new ArgumentException($"No stats for {type} level {level}"),
+            _ => throw new ArgumentException($"No stats for {type}"),
         };
     }
 }

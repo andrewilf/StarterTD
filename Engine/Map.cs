@@ -42,7 +42,7 @@ public class Tile
     /// </summary>
     public int MovementCost =>
         OccupyingTower != null
-            ? TowerData.GetStats(OccupyingTower.TowerType, 1).MovementCost
+            ? TowerData.GetStats(OccupyingTower.TowerType).MovementCost
             : Type switch
             {
                 TileType.HighGround => int.MaxValue,
@@ -268,14 +268,14 @@ public class Map
 
                 Color tileColor = tile.Type switch
                 {
-                    TileType.HighGround => new Color(34, 139, 34),
-                    TileType.Path => new Color(194, 178, 128),
-                    TileType.Rock => new Color(60, 60, 60),
+                    TileType.HighGround => Color.ForestGreen,
+                    TileType.Path => Color.Tan,
+                    TileType.Rock => Color.DarkGray,
                     _ => Color.Black,
                 };
 
                 TextureManager.DrawRect(spriteBatch, rect, tileColor);
-                TextureManager.DrawRectOutline(spriteBatch, rect, new Color(0, 0, 0, 60), 1);
+                TextureManager.DrawRectOutline(spriteBatch, rect, Color.Black * 0.24f, 1);
             }
         }
 
@@ -292,7 +292,7 @@ public class Map
 
         const int dotSize = 8;
         int halfDot = dotSize / 2;
-        var pathColor = new Color(100, 180, 255, 160);
+        var pathColor = Color.DeepSkyBlue * 0.63f;
 
         for (int i = 0; i < ActivePath.Count; i++)
         {

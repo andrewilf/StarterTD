@@ -13,14 +13,12 @@ namespace StarterTD.Entities;
 public class Tower : ITower
 {
     public string Name { get; private set; } = string.Empty;
-    public int Level { get; private set; }
     public Point GridPosition { get; }
     public Vector2 WorldPosition { get; }
     public float Range { get; private set; }
     public float Damage { get; private set; }
     public float FireRate { get; private set; }
     public int Cost { get; }
-    public int UpgradeCost { get; private set; }
     public bool IsAOE { get; private set; }
     public float AOERadius { get; private set; }
     public Color TowerColor { get; private set; }
@@ -49,9 +47,8 @@ public class Tower : ITower
         TowerType = type;
         GridPosition = gridPosition;
         WorldPosition = Map.GridToWorld(gridPosition);
-        Level = 1;
 
-        var stats = TowerData.GetStats(type, Level);
+        var stats = TowerData.GetStats(type);
         ApplyStats(stats);
         Cost = stats.Cost;
     }
@@ -98,7 +95,7 @@ public class Tower : ITower
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(capBarX, capBarY, (int)capacityBarWidth, (int)capacityBarHeight),
-            new Color(50, 50, 50) // Dark gray
+            Color.DarkGray
         );
 
         // Blue foreground (remaining capacity)
@@ -120,22 +117,12 @@ public class Tower : ITower
         Range = stats.Range;
         Damage = stats.Damage;
         FireRate = stats.FireRate;
-        UpgradeCost = stats.UpgradeCost;
         IsAOE = stats.IsAOE;
         AOERadius = stats.AOERadius;
         TowerColor = stats.Color;
         MaxHealth = stats.MaxHealth;
         CurrentHealth = stats.MaxHealth;
         BlockCapacity = stats.BlockCapacity;
-    }
-
-    public void Upgrade()
-    {
-        if (Level >= 2)
-            return;
-        Level++;
-        var stats = TowerData.GetStats(TowerType, Level);
-        ApplyStats(stats);
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
@@ -197,17 +184,6 @@ public class Tower : ITower
             TowerColor
         );
 
-        // Draw level indicator (small dot on top)
-        if (Level >= 2)
-        {
-            TextureManager.DrawSprite(
-                spriteBatch,
-                WorldPosition - new Vector2(0, SpriteSize / 2f - 3f),
-                new Vector2(6f, 6f),
-                Color.Gold
-            );
-        }
-
         // Draw health bar above tower (always visible for now)
         if ((CurrentHealth < MaxHealth))
         {
@@ -260,7 +236,7 @@ public class Tower : ITower
             spriteBatch,
             WorldPosition,
             new Vector2(Range * 2, Range * 2),
-            new Color(255, 255, 255, 30)
+            Color.White * 0.12f
         );
     }
 }

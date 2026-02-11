@@ -116,7 +116,7 @@ public class GameplayScene : IScene
                 if (_uiPanel.SelectedTowerType.HasValue)
                 {
                     // Try to place a tower
-                    var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value, 1);
+                    var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
                     if (_money >= stats.Cost)
                     {
                         int cost = _towerManager.TryPlaceTower(
@@ -136,32 +136,6 @@ public class GameplayScene : IScene
                     // Select existing tower
                     var tower = _towerManager.GetTowerAt(gridPos);
                     _towerManager.SelectedTower = tower;
-                }
-            }
-        }
-
-        // --- Handle right click (upgrade) ---
-        if (_inputManager.IsRightClick())
-        {
-            Point mousePos = _inputManager.MousePosition;
-            if (!_uiPanel.ContainsPoint(mousePos))
-            {
-                Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
-                var tower = _towerManager.GetTowerAt(gridPos);
-                if (tower != null && tower.Level < 2 && _money >= tower.UpgradeCost)
-                {
-                    int cost = _towerManager.TryUpgradeTower(gridPos);
-                    if (cost > 0)
-                    {
-                        _money -= cost;
-                        var upgradedTower = _towerManager.GetTowerAt(gridPos);
-                        if (upgradedTower != null)
-                            SpawnFloatingText(
-                                upgradedTower.WorldPosition,
-                                $"-${cost}",
-                                Color.Orange
-                            );
-                    }
                 }
             }
         }
@@ -268,8 +242,8 @@ public class GameplayScene : IScene
             bool canPlace = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
 
             Color hoverColor = canPlace
-                ? new Color(255, 255, 255, 60) // White — valid placement
-                : new Color(255, 0, 0, 40); // Red — invalid placement
+                ? Color.White * 0.24f
+                : Color.Red * 0.16f;
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
             TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);
@@ -288,7 +262,7 @@ public class GameplayScene : IScene
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-            new Color(0, 0, 0, 180)
+            Color.Black * 0.71f
         );
 
         int centerX = GameSettings.ScreenWidth / 2;

@@ -71,7 +71,7 @@ A fire-and-forget system for temporary UI (damage numbers, money changes).
 -   **Selection**: `MapSelectionScene` reads map data for previews. `GameplayScene` receives `mapId` via constructor.
 
 ### Tower System
--   **Data-Driven**: Tower stats are defined in `TowerData` records, not hardcoded in classes.
+-   **Data-Driven**: Tower stats are defined in `TowerData` records (single stat set per tower type, no leveling).
 -   **Targeting**: Towers scan the `enemies` list passed during `Update()` to find targets.
 -   **Blocking Capacity**: Each tower has a `BlockCapacity` (configured per tower type: Gun 3, Cannon 2) limiting simultaneous enemy engagements. Enemies call `TryEngage()` before attacking — if tower is at capacity, the enemy continues moving through. Engagement is released on: tower death, enemy death, path update, or enemy reaching exit. Visual feedback via blue capacity bar (100% blue = full capacity, 0% = at limit).
 

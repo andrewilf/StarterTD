@@ -12,9 +12,6 @@ public interface ITower
     /// <summary>Display name of the tower (e.g., "Gun Tower").</summary>
     string Name { get; }
 
-    /// <summary>Current upgrade level (1 = base, 2 = upgraded).</summary>
-    int Level { get; }
-
     /// <summary>Grid position (column, row) where the tower is placed.</summary>
     Point GridPosition { get; }
 
@@ -32,9 +29,6 @@ public interface ITower
 
     /// <summary>Cost to place this tower.</summary>
     int Cost { get; }
-
-    /// <summary>Cost to upgrade this tower to the next level.</summary>
-    int UpgradeCost { get; }
 
     /// <summary>Whether this tower deals area-of-effect damage.</summary>
     bool IsAOE { get; }
@@ -56,9 +50,6 @@ public interface ITower
 
     /// <summary>Apply damage to this tower.</summary>
     void TakeDamage(int amount);
-
-    /// <summary>Upgrade the tower to the next level.</summary>
-    void Upgrade();
 
     /// <summary>Update tower logic (targeting, firing).</summary>
     void Update(GameTime gameTime, List<Interfaces.IEnemy> enemies);
