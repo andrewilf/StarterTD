@@ -20,6 +20,7 @@
 - Enemy state machine (Moving/Attacking)
 - 10 hardcoded waves
 - UI panel with tower selection buttons for Generics and Champions
+- **Info Panel**: Click a placed tower to inspect stats (Name, HP, Block, Damage, Fire Rate) in a bottom-right overlay. Dismissed by ESC, clicking empty tile, or selecting a tower to place
 - Floating text, range indicators, AoE visuals
 - Victory/Defeat flow
 
