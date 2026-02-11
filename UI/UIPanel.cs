@@ -98,14 +98,18 @@ public class UIPanel
         if (_gunButton.Contains(mousePos))
         {
             var stats = TowerData.GetStats(TowerType.Gun);
-            bool canPlace = playerMoney >= stats.Cost && (_championManager?.CanPlaceGeneric(TowerType.Gun) ?? true);
+            bool canPlace =
+                playerMoney >= stats.Cost
+                && (_championManager?.CanPlaceGeneric(TowerType.Gun) ?? true);
             SelectedTowerType = canPlace ? TowerType.Gun : null;
             return true;
         }
         if (_cannonButton.Contains(mousePos))
         {
             var stats = TowerData.GetStats(TowerType.Cannon);
-            bool canPlace = playerMoney >= stats.Cost && (_championManager?.CanPlaceGeneric(TowerType.Cannon) ?? true);
+            bool canPlace =
+                playerMoney >= stats.Cost
+                && (_championManager?.CanPlaceGeneric(TowerType.Cannon) ?? true);
             SelectedTowerType = canPlace ? TowerType.Cannon : null;
             return true;
         }
