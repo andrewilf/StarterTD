@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -12,14 +13,22 @@ public static class TextureManager
     /// <summary>A 1x1 white pixel texture used for all placeholder rendering.</summary>
     public static Texture2D Pixel { get; private set; } = null!;
 
+    /// <summary>Cache of generated filled circle textures keyed by radius.</summary>
+    private static readonly Dictionary<int, Texture2D> FilledCircleCache = new();
+
     /// <summary>
     /// Initialize the texture manager. Call once during LoadContent.
-    /// Creates a 1x1 white pixel texture in memory.
+    /// Creates a 1x1 white pixel texture in memory and pre-generates common circle textures.
     /// </summary>
     public static void Initialize(GraphicsDevice graphicsDevice)
     {
         Pixel = new Texture2D(graphicsDevice, 1, 1);
         Pixel.SetData(new[] { Color.White });
+
+        // Pre-generate circles for tower ranges and AoE effects
+        GenerateFilledCircleTexture(graphicsDevice, 50); // Cannon AoE radius
+        GenerateFilledCircleTexture(graphicsDevice, 100); // Cannon range
+        GenerateFilledCircleTexture(graphicsDevice, 120); // Gun range
     }
 
     /// <summary>
@@ -93,17 +102,120 @@ public static class TextureManager
     }
 
     /// <summary>
-    /// Draw a simple circle approximation using a filled square.
-    /// For a real circle, you would generate a circle texture.
-    /// This is a placeholder — visually it's a colored square.
+    /// Draw a filled circle at the given center position with anti-aliased edges.
+    /// Uses a pre-cached base texture scaled to the desired radius.
+    /// For non-cached radii, scales the nearest larger cached texture.
     /// </summary>
-    public static void DrawCirclePlaceholder(
+    public static void DrawFilledCircle(
         SpriteBatch spriteBatch,
         Vector2 center,
         float radius,
         Color color
     )
     {
-        DrawSprite(spriteBatch, center, new Vector2(radius * 2, radius * 2), color);
+        if (radius < 1f)
+            return;
+
+        // Find the best cached texture to scale from
+        Texture2D? texture = FindBestCachedTexture((int)radius);
+        if (texture == null)
+        {
+            // Fallback if nothing is cached (shouldn't happen after Initialize)
+            DrawSprite(spriteBatch, center, new Vector2(radius * 2, radius * 2), color);
+            return;
+        }
+
+        // Scale the cached texture to match the desired radius
+        float scale = (radius * 2f) / texture.Width;
+        Vector2 origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
+        spriteBatch.Draw(texture, center, null, color, 0f, origin, scale, SpriteEffects.None, 0f);
+    }
+
+    /// <summary>
+    /// Find the best cached circle texture for the given radius.
+    /// Prefers exact match, then the smallest texture that's larger than needed.
+    /// </summary>
+    private static Texture2D? FindBestCachedTexture(int targetRadius)
+    {
+        // Exact match
+        if (FilledCircleCache.TryGetValue(targetRadius, out var exact))
+            return exact;
+
+        // Find smallest cached texture larger than target (scaling down looks better than up)
+        Texture2D? best = null;
+        int bestRadius = int.MaxValue;
+        foreach (var kvp in FilledCircleCache)
+        {
+            if (kvp.Key >= targetRadius && kvp.Key < bestRadius)
+            {
+                bestRadius = kvp.Key;
+                best = kvp.Value;
+            }
+        }
+
+        // Fall back to the largest cached texture (scaling down is fine)
+        if (best == null)
+        {
+            int largestRadius = 0;
+            foreach (var kvp in FilledCircleCache)
+            {
+                if (kvp.Key > largestRadius)
+                {
+                    largestRadius = kvp.Key;
+                    best = kvp.Value;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Generate and cache a filled circle texture with anti-aliased edges.
+    /// Edge pixels use alpha blending for a smooth appearance.
+    /// </summary>
+    private static void GenerateFilledCircleTexture(GraphicsDevice graphicsDevice, int radius)
+    {
+        if (FilledCircleCache.ContainsKey(radius))
+            return;
+
+        int size = radius * 2;
+        var texture = new Texture2D(graphicsDevice, size, size);
+        Color[] data = new Color[size * size];
+
+        int centerX = radius;
+        int centerY = radius;
+        float radiusSq = radius * radius;
+        // Anti-alias: pixels within 1px of the edge get partial alpha
+        float innerRadiusSq = (radius - 1f) * (radius - 1f);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - centerX;
+                float dy = y - centerY;
+                float distSq = dx * dx + dy * dy;
+
+                if (distSq <= innerRadiusSq)
+                {
+                    data[y * size + x] = Color.White;
+                }
+                else if (distSq <= radiusSq)
+                {
+                    // Smooth edge: lerp alpha based on distance within the 1px border
+                    float dist = System.MathF.Sqrt(distSq);
+                    float alpha = radius - dist; // 1.0 at inner edge, 0.0 at outer edge
+                    data[y * size + x] = Color.White * alpha;
+                }
+                else
+                {
+                    data[y * size + x] = Color.Transparent;
+                }
+            }
+        }
+
+        texture.SetData(data);
+        FilledCircleCache[radius] = texture;
     }
 }

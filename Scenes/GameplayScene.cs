@@ -26,12 +26,16 @@ public class GameplayScene : IScene
 
     private readonly List<IEnemy> _enemies = new();
     private readonly List<FloatingText> _floatingTexts = new();
+    private readonly List<AoEEffect> _aoeEffects = new();
     private int _money;
     private int _lives;
     private bool _gameOver;
     private bool _gameWon;
     private bool _allEnemiesCleared;
     private readonly string _selectedMapId;
+    private Tower? _hoveredTower;
+    private Point _mouseGrid;
+    private float _selectedTowerRange;
 
     public GameplayScene(Game1 game, string mapId)
     {
@@ -63,6 +67,9 @@ public class GameplayScene : IScene
         _towerManager.OnTowerPlaced = (gridPos) => RecomputePathAndReroute();
         _towerManager.OnTowerDestroyed = (gridPos) => RecomputePathAndReroute();
 
+        // Subscribe to AoE impact events to spawn visual effects
+        _towerManager.OnAOEImpact = (pos, radius) => _aoeEffects.Add(new AoEEffect(pos, radius));
+
         // Try to load font if available
         try
         {
@@ -91,6 +98,7 @@ public class GameplayScene : IScene
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
             _uiPanel.SelectedTowerType = null;
+            _selectedTowerRange = 0f;
             _towerManager.SelectedTower = null;
         }
 
@@ -102,6 +110,11 @@ public class GameplayScene : IScene
             if (_uiPanel.ContainsPoint(mousePos))
             {
                 _uiPanel.HandleClick(mousePos, _money);
+
+                // Cache selected tower range to avoid per-frame GetStats allocation in Draw
+                _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
+                    ? TowerData.GetStats(_uiPanel.SelectedTowerType.Value).Range
+                    : 0f;
 
                 if (_uiPanel.StartWaveClicked && !_waveManager.WaveInProgress && _allEnemiesCleared)
                 {
@@ -182,6 +195,18 @@ public class GameplayScene : IScene
         // --- Update towers ---
         _towerManager.Update(gameTime, _enemies);
 
+        // --- Detect hovered tower for range indicator ---
+        _mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
+        _hoveredTower = _towerManager.GetTowerAt(_mouseGrid);
+
+        // --- Update AoE effects ---
+        for (int i = _aoeEffects.Count - 1; i >= 0; i--)
+        {
+            _aoeEffects[i].Update(gameTime);
+            if (!_aoeEffects[i].IsActive)
+                _aoeEffects.RemoveAt(i);
+        }
+
         // --- Update floating texts ---
         for (int i = _floatingTexts.Count - 1; i >= 0; i--)
         {
@@ -197,12 +222,18 @@ public class GameplayScene : IScene
         _map.Draw(spriteBatch);
 
         // Draw towers
-        _towerManager.Draw(spriteBatch, _uiPanel.GetFont());
+        _towerManager.Draw(spriteBatch, _uiPanel.GetFont(), _hoveredTower);
 
         // Draw enemies
         foreach (var enemy in _enemies)
         {
             enemy.Draw(spriteBatch);
+        }
+
+        // Draw AoE effects (after enemies, before UI)
+        foreach (var effect in _aoeEffects)
+        {
+            effect.Draw(spriteBatch);
         }
 
         // Draw floating texts
@@ -223,27 +254,36 @@ public class GameplayScene : IScene
         );
 
         // Draw hover indicator on grid
-        Point mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
         if (
-            mouseGrid.X >= 0
-            && mouseGrid.X < _map.Columns
-            && mouseGrid.Y >= 0
-            && mouseGrid.Y < _map.Rows
+            _mouseGrid.X >= 0
+            && _mouseGrid.X < _map.Columns
+            && _mouseGrid.Y >= 0
+            && _mouseGrid.Y < _map.Rows
             && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
         )
         {
             var hoverRect = new Rectangle(
-                mouseGrid.X * GameSettings.TileSize,
-                mouseGrid.Y * GameSettings.TileSize,
+                _mouseGrid.X * GameSettings.TileSize,
+                _mouseGrid.Y * GameSettings.TileSize,
                 GameSettings.TileSize,
                 GameSettings.TileSize
             );
 
-            bool canPlace = _map.CanBuild(mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
+            bool canPlace = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
 
-            Color hoverColor = canPlace
-                ? Color.White * 0.24f
-                : Color.Red * 0.16f;
+            Color hoverColor = canPlace ? Color.White * 0.24f : Color.Red * 0.16f;
+
+            // Show range preview when placing a tower
+            if (_selectedTowerRange > 0f)
+            {
+                Vector2 hoverCenter = Map.GridToWorld(_mouseGrid);
+                TextureManager.DrawFilledCircle(
+                    spriteBatch,
+                    hoverCenter,
+                    _selectedTowerRange,
+                    Color.White * 0.15f
+                );
+            }
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
             TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);

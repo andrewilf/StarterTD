@@ -117,11 +117,7 @@ public class UIPanel
     )
     {
         // Panel background
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(_x, 0, _width, _height),
-            Color.Black
-        );
+        TextureManager.DrawRect(spriteBatch, new Rectangle(_x, 0, _width, _height), Color.Black);
 
         // Separator line
         TextureManager.DrawRect(spriteBatch, new Rectangle(_x, 0, 2, _height), Color.Gray);

@@ -28,6 +28,7 @@ graph TD
         F -- Manages --> J[InputManager];
         F -- Manages --> K[UIPanel];
         F -- Manages --> N[FloatingTexts];
+        F -- Manages --> O[AoEEffects];
         F -- Transitions to --> E;
     end
 ```
@@ -61,10 +62,11 @@ Rendering relies on dependency injection via the `Draw` call.
 
 ## Subsystems
 
-### Visual Feedback (FloatingText)
-A fire-and-forget system for temporary UI (damage numbers, money changes).
--   **Lifecycle**: Objects update themselves (velocity, fade) and flag themselves for removal when finished.
--   **Trigger**: Centralized in `GameplayScene`. Any logic (selling, killing) requests a popup via the scene.
+### Visual Feedback (FloatingText, AoEEffect)
+Fire-and-forget systems for temporary visuals.
+-   **Lifecycle**: Objects update themselves (velocity, fade, expansion) and flag themselves for removal when finished.
+-   **FloatingText**: Damage numbers, money changes. Triggered directly by `GameplayScene`.
+-   **AoEEffect**: Expanding orange circle on Cannon projectile impact. Triggered via callback chain: `Projectile.OnAOEImpact` → `Tower.OnAOEImpact` → `TowerManager.OnAOEImpact` → `GameplayScene` spawns the effect.
 
 ### Map System
 -   **Data-Driven**: Maps are defined in `MapDataRepository` as `MapData` records.
@@ -73,6 +75,7 @@ A fire-and-forget system for temporary UI (damage numbers, money changes).
 ### Tower System
 -   **Data-Driven**: Tower stats are defined in `TowerData` records (single stat set per tower type, no leveling).
 -   **Targeting**: Towers scan the `enemies` list passed during `Update()` to find targets.
+-   **Range Indicator**: Filled circle shown on tower hover and during placement preview. Uses pre-cached circle textures scaled via `TextureManager.DrawFilledCircle`.
 -   **Blocking Capacity**: Each tower has a `BlockCapacity` (configured per tower type: Gun 3, Cannon 2) limiting simultaneous enemy engagements. Enemies call `TryEngage()` before attacking — if tower is at capacity, the enemy continues moving through. Engagement is released on: tower death, enemy death, path update, or enemy reaching exit. Visual feedback via blue capacity bar (100% blue = full capacity, 0% = at limit).
 
 ### Enemy State Machine

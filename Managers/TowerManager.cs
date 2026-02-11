@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -17,7 +16,7 @@ public class TowerManager
     private readonly List<Tower> _towers = new();
     private readonly Map _map;
 
-    /// <summary>The currently selected/hovered tower (for showing range, upgrade info).</summary>
+    /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
 
     public IReadOnlyList<Tower> Towers => _towers;
@@ -43,6 +42,12 @@ public class TowerManager
     /// </summary>
     public Action<Point>? OnTowerDestroyed;
 
+    /// <summary>
+    /// Callback fired when an AoE projectile impacts (for visual effects).
+    /// Passes the impact position and AoE radius. GameplayScene uses this to spawn AoEEffect.
+    /// </summary>
+    public Action<Vector2, float>? OnAOEImpact;
+
     public TowerManager(Map map)
     {
         _map = map;
@@ -63,6 +68,8 @@ public class TowerManager
             return -1;
 
         var tower = new Tower(type, gridPos);
+        // Wire AoE callback once at placement (not per-frame)
+        tower.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
         _towers.Add(tower);
         tile.OccupyingTower = tower;
 
@@ -77,7 +84,12 @@ public class TowerManager
     /// </summary>
     public Tower? GetTowerAt(Point gridPos)
     {
-        return _towers.FirstOrDefault(t => t.GridPosition == gridPos);
+        foreach (var tower in _towers)
+        {
+            if (tower.GridPosition == gridPos)
+                return tower;
+        }
+        return null;
     }
 
     /// <summary>
@@ -95,9 +107,6 @@ public class TowerManager
         OnTowerDestroyed?.Invoke(tower.GridPosition);
     }
 
-    /// <summary>
-    /// Update all towers (targeting, firing, projectiles).
-    /// </summary>
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
         foreach (var tower in _towers)
@@ -117,15 +126,16 @@ public class TowerManager
 
     /// <summary>
     /// Draw all towers and their projectiles.
+    /// Draws range indicator for the hovered tower.
     /// </summary>
-    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
+    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null, Tower? hoveredTower = null)
     {
         foreach (var tower in _towers)
         {
             tower.Draw(spriteBatch, font);
         }
 
-        // Draw range indicator for selected tower
-        SelectedTower?.DrawRangeIndicator(spriteBatch);
+        // Draw range indicator for hovered tower
+        hoveredTower?.DrawRangeIndicator(spriteBatch);
     }
 }

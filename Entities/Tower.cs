@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -41,6 +42,12 @@ public class Tower : ITower
 
     /// <summary>List of active projectiles fired by this tower.</summary>
     public List<Projectile> Projectiles { get; } = new();
+
+    /// <summary>
+    /// Callback fired when an AoE projectile from this tower impacts (for visual effects).
+    /// Passes the impact position and AoE radius. Bubbles up to TowerManager → GameplayScene.
+    /// </summary>
+    public Action<Vector2, float>? OnAOEImpact;
 
     public Tower(TowerType type, Point gridPosition)
     {
@@ -162,6 +169,9 @@ public class Tower : ITower
                 Color.Yellow
             );
 
+            // Wire up projectile's AoE impact callback to bubble up to TowerManager → GameplayScene
+            projectile.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
+
             Projectiles.Add(projectile);
         }
 
@@ -226,17 +236,11 @@ public class Tower : ITower
     }
 
     /// <summary>
-    /// Draw the range circle indicator (called when tower is selected).
+    /// Draw the range circle indicator (called when tower is hovered or during placement preview).
+    /// Uses a pre-generated filled circle texture from TextureManager cache.
     /// </summary>
     public void DrawRangeIndicator(SpriteBatch spriteBatch)
     {
-        // Draw a semi-transparent range indicator as a large square
-        // (A real circle would require a generated texture)
-        TextureManager.DrawSprite(
-            spriteBatch,
-            WorldPosition,
-            new Vector2(Range * 2, Range * 2),
-            Color.White * 0.12f
-        );
+        TextureManager.DrawFilledCircle(spriteBatch, WorldPosition, Range, Color.White * 0.15f);
     }
 }
