@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Managers;
@@ -18,11 +18,12 @@ public class MapSelectionScene : IScene
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
     private SpriteFont? _font;
+    private MouseState _previousMouse = new();
 
     // Card bounds for the three map options
-    private Rectangle _card1Bounds;
-    private Rectangle _card2Bounds;
-    private Rectangle _card3Bounds;
+    private RectangleF _card1Bounds;
+    private RectangleF _card2Bounds;
+    private RectangleF _card3Bounds;
 
     // Track which card is currently hovered (-1 = none, 0-2 = card index)
     private int _hoveredCardIndex = -1;
@@ -44,16 +45,15 @@ public class MapSelectionScene : IScene
         int totalWidth = (cardWidth * 3) + (gap * 2);
         int startX = (GameSettings.ScreenWidth - totalWidth) / 2;
 
-        _card1Bounds = new Rectangle(startX, cardY, cardWidth, cardHeight);
-        _card2Bounds = new Rectangle(startX + cardWidth + gap, cardY, cardWidth, cardHeight);
-        _card3Bounds = new Rectangle(startX + (cardWidth + gap) * 2, cardY, cardWidth, cardHeight);
+        _card1Bounds = new RectangleF(startX, cardY, cardWidth, cardHeight);
+        _card2Bounds = new RectangleF(startX + cardWidth + gap, cardY, cardWidth, cardHeight);
+        _card3Bounds = new RectangleF(startX + (cardWidth + gap) * 2, cardY, cardWidth, cardHeight);
     }
 
     public void LoadContent()
     {
         _inputManager = new InputManager();
 
-        // Load the 3 available maps from the repository
         _availableMaps = new List<MapData>
         {
             MapDataRepository.GetMap("classic_s"),
@@ -61,15 +61,16 @@ public class MapSelectionScene : IScene
             MapDataRepository.GetMap("maze_test"),
         };
 
-        // Try to load font (same pattern as GameplayScene)
         try
         {
             _font = _game.Content.Load<SpriteFont>("DefaultFont");
         }
         catch
         {
-            // Font not available — will use fallback rendering
+            // Font not available
         }
+
+        _previousMouse = Mouse.GetState();
     }
 
     public void Update(GameTime gameTime)
@@ -78,17 +79,19 @@ public class MapSelectionScene : IScene
 
         Point mousePos = _inputManager.MousePosition;
 
-        // Update hover state
         _hoveredCardIndex = -1;
-        if (_card1Bounds.Contains(mousePos))
+        if (_card1Bounds.Contains(mousePos.ToVector2()))
             _hoveredCardIndex = 0;
-        else if (_card2Bounds.Contains(mousePos))
+        else if (_card2Bounds.Contains(mousePos.ToVector2()))
             _hoveredCardIndex = 1;
-        else if (_card3Bounds.Contains(mousePos))
+        else if (_card3Bounds.Contains(mousePos.ToVector2()))
             _hoveredCardIndex = 2;
 
-        // Handle click to select map
-        if (_inputManager.IsLeftClick())
+        MouseState currentMouse = Mouse.GetState();
+        if (
+            currentMouse.LeftButton == ButtonState.Pressed
+            && _previousMouse.LeftButton == ButtonState.Released
+        )
         {
             string? selectedMapId = _hoveredCardIndex switch
             {
@@ -100,11 +103,12 @@ public class MapSelectionScene : IScene
 
             if (selectedMapId != null)
             {
-                // Transition to gameplay with selected map
                 var gameplayScene = new GameplayScene(_game, selectedMapId);
                 _game.SetScene(gameplayScene);
             }
         }
+
+        _previousMouse = currentMouse;
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -132,25 +136,25 @@ public class MapSelectionScene : IScene
     /// </summary>
     private void DrawMapCard(
         SpriteBatch spriteBatch,
-        Rectangle bounds,
+        RectangleF bounds,
         MapData mapData,
         bool isHovered
     )
     {
         // Card background (lighter when hovered)
         Color bgColor = isHovered ? Color.DarkSlateGray : Color.DarkSlateGray * 0.89f;
-        TextureManager.DrawRect(spriteBatch, bounds, bgColor);
+        TextureManager.DrawRect(spriteBatch, bounds.ToRectangle(), bgColor);
 
         // Border (yellow when hovered, gray otherwise)
         Color borderColor = isHovered ? Color.Yellow : Color.Gray;
-        TextureManager.DrawRectOutline(spriteBatch, bounds, borderColor, 3);
+        TextureManager.DrawRectOutline(spriteBatch, bounds.ToRectangle(), borderColor, 3);
 
         // Title text at top
         if (_font != null)
         {
             Vector2 titleSize = _font.MeasureString(mapData.Name);
             Vector2 titlePos = new Vector2(
-                bounds.X + (bounds.Width - titleSize.X) / 2,
+                bounds.X + (bounds.Width - titleSize.X) / 2f,
                 bounds.Y + 15
             );
 
@@ -162,9 +166,9 @@ public class MapSelectionScene : IScene
 
         // Map preview area (offset from top to leave room for title)
         Rectangle previewBounds = new Rectangle(
-            bounds.X + 10,
-            bounds.Y + 60,
-            bounds.Width - 20,
+            (int)(bounds.X + 10),
+            (int)(bounds.Y + 60),
+            (int)(bounds.Width - 20),
             200
         );
         DrawMapPreview(spriteBatch, mapData, previewBounds);
@@ -175,7 +179,7 @@ public class MapSelectionScene : IScene
             string info = $"{mapData.Columns}x{mapData.Rows}";
             Vector2 infoSize = _font.MeasureString(info);
             Vector2 infoPos = new Vector2(
-                bounds.X + (bounds.Width - infoSize.X) / 2,
+                bounds.X + (bounds.Width - infoSize.X) / 2f,
                 bounds.Bottom - 40
             );
             spriteBatch.DrawString(_font, info, infoPos, Color.LightGray);

@@ -227,8 +227,20 @@ public class UIPanel
             );
             spriteBatch.DrawString(
                 _font,
-                "ESC: Deselect",
+                "R-Click: Sell",
                 new Vector2(_x + 10, _championCannonButton.Bottom + 45),
+                Color.LightGray
+            );
+            spriteBatch.DrawString(
+                _font,
+                "P: Pause",
+                new Vector2(_x + 10, _championCannonButton.Bottom + 70),
+                Color.LightGray
+            );
+            spriteBatch.DrawString(
+                _font,
+                "ESC: Deselect",
+                new Vector2(_x + 10, _championCannonButton.Bottom + 95),
                 Color.LightGray
             );
 
