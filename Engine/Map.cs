@@ -7,21 +7,6 @@ using StarterTD.Entities;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// Represents what a tile on the grid can be.
-/// </summary>
-public enum TileType
-{
-    /// <summary>High ground: towers can be placed, but enemies cannot walk through.</summary>
-    HighGround,
-
-    /// <summary>Walkable terrain. Enemies can traverse, towers can be placed.</summary>
-    Path,
-
-    /// <summary>Impassable and unbuildable rock terrain.</summary>
-    Rock,
-}
-
-/// <summary>
 /// A single tile in the grid.
 /// This is a class (reference type) so we can mutate it in the grid array.
 /// </summary>
@@ -36,7 +21,6 @@ public class Tile
 
     /// <summary>
     /// Movement cost for pathfinding. Towers add a cost penalty based on type.
-    /// HighGround and Rock are impassable (int.MaxValue). Path is walkable (cost 1).
     /// If a tower occupies this tile, use the higher of the tile's base cost and the tower's cost.
     /// Like a Python @property — recomputes from current state, no stored field.
     /// </summary>
@@ -44,13 +28,7 @@ public class Tile
     {
         get
         {
-            int baseCost = Type switch
-            {
-                TileType.HighGround => int.MaxValue,
-                TileType.Path => 1,
-                TileType.Rock => int.MaxValue,
-                _ => int.MaxValue,
-            };
+            int baseCost = TileData.GetStats(Type).MovementCost;
 
             if (OccupyingTower != null)
             {
@@ -245,7 +223,7 @@ public class Map
 
     /// <summary>
     /// Check if a grid position is valid and buildable.
-    /// HighGround and Path tiles are buildable if not occupied by a tower. Rock tiles are never buildable.
+    /// Buildability is determined by the tile type's IsBuildable flag and whether a tower already occupies it.
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
@@ -253,7 +231,7 @@ public class Map
             return false;
 
         var tile = Tiles[gridPos.X, gridPos.Y];
-        bool isBuildableTerrain = tile.Type == TileType.HighGround || tile.Type == TileType.Path;
+        bool isBuildableTerrain = TileData.GetStats(tile.Type).IsBuildable;
         bool notOccupied = tile.OccupyingTower == null;
 
         return isBuildableTerrain && notOccupied;
@@ -276,14 +254,7 @@ public class Map
                 );
 
                 var tile = Tiles[x, y];
-
-                Color tileColor = tile.Type switch
-                {
-                    TileType.HighGround => Color.ForestGreen,
-                    TileType.Path => Color.Tan,
-                    TileType.Rock => Color.DarkGray,
-                    _ => Color.Black,
-                };
+                Color tileColor = TileData.GetStats(tile.Type).Color;
 
                 TextureManager.DrawRect(spriteBatch, rect, tileColor);
                 TextureManager.DrawRectOutline(spriteBatch, rect, Color.Black * 0.24f, 1);
