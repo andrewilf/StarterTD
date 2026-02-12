@@ -119,6 +119,10 @@ public class GameplayScene : IScene
             {
                 _uiPanel.HandleClick(mousePos, _money);
 
+                // Selecting a tower to place clears the inspected tower
+                if (_uiPanel.SelectedTowerType.HasValue)
+                    _towerManager.SelectedTower = null;
+
                 // Cache selected tower range to avoid per-frame GetStats allocation in Draw
                 _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
                     ? TowerData.GetStats(_uiPanel.SelectedTowerType.Value).Range
@@ -144,11 +148,14 @@ public class GameplayScene : IScene
                             _uiPanel.SelectedTowerType.Value,
                             gridPos
                         );
-                        if (cost > 0)
+                        if (cost >= 0)
                         {
                             _money -= cost;
                             Vector2 worldPos = Map.GridToWorld(gridPos);
-                            SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
+                            if (cost > 0)
+                                SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
+                            _uiPanel.SelectedTowerType = null;
+                            _selectedTowerRange = 0f;
                         }
                     }
                 }
@@ -172,6 +179,9 @@ public class GameplayScene : IScene
 
                 if (tower != null)
                 {
+                    if (_towerManager.SelectedTower == tower)
+                        _towerManager.SelectedTower = null;
+
                     int refund = _towerManager.SellTower(tower);
                     _money += refund;
 
@@ -278,7 +288,8 @@ public class GameplayScene : IScene
             _lives,
             _waveManager.CurrentWave,
             _waveManager.TotalWaves,
-            waveActive
+            waveActive,
+            _towerManager.SelectedTower
         );
 
         // Draw hover indicator on grid

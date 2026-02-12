@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -152,7 +153,8 @@ public class UIPanel
         int lives,
         int wave,
         int totalWaves,
-        bool waveInProgress
+        bool waveInProgress,
+        Tower? selectedTower = null
     )
     {
         // Panel background
@@ -261,6 +263,9 @@ public class UIPanel
             );
             TextureManager.DrawRectOutline(spriteBatch, _startWaveButton, Color.White, 2);
         }
+
+        if (selectedTower != null)
+            DrawInfoPanel(spriteBatch, selectedTower);
     }
 
     private void DrawButton(
@@ -355,6 +360,82 @@ public class UIPanel
         string? overlay = (canAfford && !canPlace && hasRespawnCooldown) ? "Champion Dead" : null;
 
         DrawButton(spriteBatch, rect, label, towerType, canPlace, overlay);
+    }
+
+    /// <summary>
+    /// Draws a semi-transparent info panel at the bottom of the UI showing stats for the selected tower.
+    /// Positioned above the Start Wave button.
+    /// </summary>
+    private void DrawInfoPanel(SpriteBatch spriteBatch, Tower tower)
+    {
+        if (_font == null)
+            return;
+
+        const int padding = 8;
+        const int lineHeight = 20;
+        int panelWidth = _width - 12;
+        int numLines = 6; // name + separator + HP + block + damage + fire rate
+        int panelHeight = padding * 2 + numLines * lineHeight;
+        int panelX = _x + 6;
+        int panelY = _startWaveButton.Y - panelHeight - 10;
+
+        // Semi-transparent background
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(panelX, panelY, panelWidth, panelHeight),
+            Color.Black * 0.75f
+        );
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            new Rectangle(panelX, panelY, panelWidth, panelHeight),
+            Color.Gray,
+            1
+        );
+
+        int textX = panelX + padding;
+        int y = panelY + padding;
+
+        // Tower name with color indicator
+        var colorRect = new Rectangle(textX, y + 2, 12, 12);
+        TextureManager.DrawRect(spriteBatch, colorRect, tower.TowerColor);
+        spriteBatch.DrawString(
+            _font,
+            tower.Name,
+            new Vector2(textX + 18, y),
+            Color.White
+        );
+        y += lineHeight;
+
+        // Thin separator line
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(textX, y + 2, panelWidth - padding * 2, 1),
+            Color.Gray
+        );
+        y += lineHeight - 4;
+
+        // HP: current / max
+        string hpText = $"HP: {tower.CurrentHealth} / {tower.MaxHealth}";
+        spriteBatch.DrawString(_font, hpText, new Vector2(textX, y), Color.LimeGreen);
+        y += lineHeight;
+
+        // Block capacity: remaining / max
+        int remaining = Math.Max(0, tower.BlockCapacity - tower.CurrentEngagedCount);
+        string blockText = $"Block: {remaining} / {tower.BlockCapacity}";
+        spriteBatch.DrawString(_font, blockText, new Vector2(textX, y), Color.CornflowerBlue);
+        y += lineHeight;
+
+        // Damage
+        string dmgText = tower.IsAOE
+            ? $"Damage: {tower.Damage} (AOE)"
+            : $"Damage: {tower.Damage}";
+        spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
+        y += lineHeight;
+
+        // Fire rate (show as attacks per second for readability)
+        float aps = 1f / tower.FireRate;
+        string fireText = $"Fire Rate: {aps:F1}/s";
+        spriteBatch.DrawString(_font, fireText, new Vector2(textX, y), Color.White);
     }
 
     private void DrawChampionButton(
