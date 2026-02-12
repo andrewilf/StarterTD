@@ -18,6 +18,7 @@ public class MapSelectionScene : IScene
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
     private SpriteFont? _font;
+    private MouseState _previousMouse = new();
 
     // Card bounds for the three map options
     private RectangleF _card1Bounds;
@@ -53,7 +54,6 @@ public class MapSelectionScene : IScene
     {
         _inputManager = new InputManager();
 
-        // Load the 3 available maps from the repository
         _availableMaps = new List<MapData>
         {
             MapDataRepository.GetMap("classic_s"),
@@ -61,15 +61,16 @@ public class MapSelectionScene : IScene
             MapDataRepository.GetMap("maze_test"),
         };
 
-        // Try to load font (same pattern as GameplayScene)
         try
         {
             _font = _game.Content.Load<SpriteFont>("DefaultFont");
         }
         catch
         {
-            // Font not available — will use fallback rendering
+            // Font not available
         }
+
+        _previousMouse = Mouse.GetState();
     }
 
     public void Update(GameTime gameTime)
@@ -78,7 +79,6 @@ public class MapSelectionScene : IScene
 
         Point mousePos = _inputManager.MousePosition;
 
-        // Update hover state
         _hoveredCardIndex = -1;
         if (_card1Bounds.Contains(mousePos.ToVector2()))
             _hoveredCardIndex = 0;
@@ -87,8 +87,11 @@ public class MapSelectionScene : IScene
         else if (_card3Bounds.Contains(mousePos.ToVector2()))
             _hoveredCardIndex = 2;
 
-        // Handle click to select map
-        if (_inputManager.IsLeftClick())
+        MouseState currentMouse = Mouse.GetState();
+        if (
+            currentMouse.LeftButton == ButtonState.Pressed
+            && _previousMouse.LeftButton == ButtonState.Released
+        )
         {
             string? selectedMapId = _hoveredCardIndex switch
             {
@@ -100,11 +103,12 @@ public class MapSelectionScene : IScene
 
             if (selectedMapId != null)
             {
-                // Transition to gameplay with selected map
                 var gameplayScene = new GameplayScene(_game, selectedMapId);
                 _game.SetScene(gameplayScene);
             }
         }
+
+        _previousMouse = currentMouse;
     }
 
     public void Draw(SpriteBatch spriteBatch)

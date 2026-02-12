@@ -1,7 +1,8 @@
 # Project Manifest
 
 ## Active Systems
-- Core loop, scene management, map selection (3 maps)
+- Core loop, scene management (stack-based), map selection (3 maps)
+- **Pause Menu**: Press P to pause gameplay; resume with P/ESC or click Resume button
 - **MonoGame.Extended Integration**: Uses `CountdownTimer` for all cooldowns/timers and `RectangleF` for UI bounds
 - Dijkstra pathfinding with per-enemy rerouting (uses `Math.Max` for tile/tower movement costs to prevent pathfinding through HighGround towers)
 - 4 tower types: 2 Generic (Gun, Cannon) + 2 Champions (ChampionGun, ChampionCannon)
@@ -36,7 +37,7 @@
 - [ ] **Enemy Variants**: Fast (Low HP) and Tank (High HP).
 - [ ] **Tower Abilities**: Slow, Splash, Poison.
 - [x] **Sell**: Right-click towers (60% base refund scaled by health). Champions trigger death cooldown.
-- [ ] **Pause**: Toggle game state.
+- [x] **Pause**: Press P to pause; resume with P/ESC or Main Menu button.
 
 ### UI Polish
 - [ ] **Health Bars**: Enemy overlays.

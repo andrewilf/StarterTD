@@ -103,6 +103,12 @@ public class GameplayScene : IScene
         if (_gameOver || _gameWon)
             return;
 
+        if (_inputManager.IsKeyPressed(Keys.P))
+        {
+            _game.PushScene(new PauseScene(_game));
+            return;
+        }
+
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
             _uiPanel.SelectedTowerType = null;

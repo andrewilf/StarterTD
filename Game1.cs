@@ -43,11 +43,27 @@ public class Game1 : Game
     }
 
     /// <summary>
-    /// Public method to allow scenes to transition to other scenes.
+    /// Replace the current scene (clears the stack). Used for full transitions.
     /// </summary>
     public void SetScene(IScene scene)
     {
         _sceneManager.SetScene(scene);
+    }
+
+    /// <summary>
+    /// Push a scene on top (e.g., pause menu overlay). Preserves underlying scene.
+    /// </summary>
+    public void PushScene(IScene scene)
+    {
+        _sceneManager.PushScene(scene);
+    }
+
+    /// <summary>
+    /// Pop the top scene (e.g., close pause menu). Resumes underlying scene.
+    /// </summary>
+    public void PopScene()
+    {
+        _sceneManager.PopScene();
     }
 
     protected override void LoadContent()

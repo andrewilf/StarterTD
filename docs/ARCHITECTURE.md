@@ -6,9 +6,10 @@
 graph TD
     A[Program.cs] --> B[Game1.cs];
     B --> C{SceneManager};
-    C --> D{Active Scene (IScene)};
+    C --> D{Active Scene Stack};
     D --> E[MapSelectionScene];
     D --> F[GameplayScene];
+    D --> P[PauseScene];
 
     subgraph GameplayScene Implementation
         F -- Manages --> G[Map];
@@ -22,6 +23,14 @@ graph TD
         CM -.-> I;
     end
 ```
+
+## Scene Management
+
+- **Scene Stack**: `SceneManager` uses a stack-based system.
+  - `SetScene()` replaces the entire stack (full scene transitions like MainMenu → Gameplay).
+  - `PushScene()` adds an overlay (modal dialogs like pause menu).
+  - `PopScene()` removes the top scene (resume underlying scene).
+- Only the top scene updates and draws each frame.
 
 ## Data Flow
 
