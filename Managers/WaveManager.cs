@@ -39,9 +39,6 @@ public class WaveManager
     /// <summary>
     /// Constructor takes a Func that returns the current path.
     /// This way each spawned enemy gets the latest ActivePath (including maze reroutes).
-    ///
-    /// TypeScript analogy: Like passing `() => map.activePath` instead of `map.activePath` directly.
-    /// The function is called each time we need the path, so we always get the current one.
     /// </summary>
     public WaveManager(Func<List<Point>> pathProvider)
     {

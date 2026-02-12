@@ -2,7 +2,7 @@
 
 ## Developer Context
 I am a Python/TypeScript engineer new to C#.
-- **Tone**: Educational. Explain C# patterns (Delegates, LINQ, Structs) using Python/TS analogies.
+- **Tone**: Educational. Explain C# patterns (Delegates, LINQ, Structs).
 - **Code Style**: Readable over clever. Prioritize clear, explicit logic.
 - **Comments**: Explain "Why", not "What". Avoid conversational notes or redundant narration. Focus on non-obvious logic.
 
@@ -32,4 +32,4 @@ I am a Python/TypeScript engineer new to C#.
 ## Known Gotchas
 - **Positioning**: `TextureManager.DrawSprite` uses **CENTERED** origin. `DrawRect` uses **TOP-LEFT**.
 - **Assets**: Prefer `.png`. Check `Content/Content.mgcb` on build fail.
-- **MonoGame.Extended Timers**: `CountdownTimer.CurrentTime` is a `TimeSpan`, use `.TotalSeconds` for float conversion. Check completion via `State.HasFlag(TimerState.Completed)`.
+- **MonoGame.Extended Timers**: `CountdownTimer.CurrentTime` counts **up** (elapsed time, not remaining). It's a `TimeSpan`—use `.TotalSeconds` for float conversion. Check completion via `State.HasFlag(TimerState.Completed)`.

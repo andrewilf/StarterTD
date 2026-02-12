@@ -6,11 +6,6 @@ namespace StarterTD.Engine;
 
 /// <summary>
 /// Dijkstra-based pathfinding on a 2D grid. Static utility — no state, just pure functions.
-///
-/// Python/TS analogy: Like standalone functions `compute_heat_map(target, cost_fn)`
-/// and `extract_path(start, heat_map)`. The Func parameter is like passing
-/// `(point) => number` in TypeScript — lets the caller define movement costs
-/// without the pathfinder knowing about tiles or towers.
 /// </summary>
 public static class Pathfinder
 {

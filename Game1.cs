@@ -122,7 +122,8 @@ public class Game1 : Game
         {
             double currentFps = 1.0 / elapsed;
             // Exponential moving average: new_avg = current * factor + old_avg * (1 - factor)
-            _averageFps = (currentFps * FpsSmoothingFactor) + (_averageFps * (1 - FpsSmoothingFactor));
+            _averageFps =
+                (currentFps * FpsSmoothingFactor) + (_averageFps * (1 - FpsSmoothingFactor));
         }
     }
 
