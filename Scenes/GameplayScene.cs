@@ -37,6 +37,7 @@ public class GameplayScene : IScene
     private bool _allEnemiesCleared;
     private readonly string _selectedMapId;
     private Tower? _hoveredTower;
+    private IEnemy? _selectedEnemy;
     private Point _mouseGrid;
     private float _selectedTowerRange;
 
@@ -114,6 +115,7 @@ public class GameplayScene : IScene
             _uiPanel.SelectedTowerType = null;
             _selectedTowerRange = 0f;
             _towerManager.SelectedTower = null;
+            _selectedEnemy = null;
         }
 
         if (_inputManager.IsLeftClick())
@@ -125,9 +127,12 @@ public class GameplayScene : IScene
             {
                 _uiPanel.HandleClick(mousePos, _money);
 
-                // Selecting a tower to place clears the inspected tower
+                // Selecting a tower to place clears the inspected tower and enemy
                 if (_uiPanel.SelectedTowerType.HasValue)
+                {
                     _towerManager.SelectedTower = null;
+                    _selectedEnemy = null;
+                }
 
                 // Cache selected tower range to avoid per-frame GetStats allocation in Draw
                 _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
@@ -167,9 +172,20 @@ public class GameplayScene : IScene
                 }
                 else
                 {
-                    // Select existing tower
-                    var tower = _towerManager.GetTowerAt(gridPos);
-                    _towerManager.SelectedTower = tower;
+                    // Try to select an enemy first, then a tower
+                    var enemy = GetEnemyAt(mousePos.ToVector2());
+                    if (enemy != null)
+                    {
+                        _selectedEnemy = enemy;
+                        _towerManager.SelectedTower = null;
+                    }
+                    else
+                    {
+                        // Select existing tower
+                        var tower = _towerManager.GetTowerAt(gridPos);
+                        _towerManager.SelectedTower = tower;
+                        _selectedEnemy = null;
+                    }
                 }
             }
         }
@@ -295,7 +311,8 @@ public class GameplayScene : IScene
             _waveManager.CurrentWave,
             _waveManager.TotalWaves,
             waveActive,
-            _towerManager.SelectedTower
+            _towerManager.SelectedTower,
+            _selectedEnemy
         );
 
         // Draw hover indicator on grid
@@ -428,6 +445,23 @@ public class GameplayScene : IScene
             if (enemy is Enemy concreteEnemy)
                 concreteEnemy.UpdatePath(_map);
         }
+    }
+
+    /// <summary>
+    /// Get the enemy at a specific world position, or null.
+    /// Uses a click radius to make clicking on enemies easier.
+    /// </summary>
+    private IEnemy? GetEnemyAt(Vector2 worldPos)
+    {
+        const float clickRadius = 15f;
+
+        foreach (var enemy in _enemies)
+        {
+            float distance = Vector2.Distance(enemy.Position, worldPos);
+            if (distance <= clickRadius)
+                return enemy;
+        }
+        return null;
     }
 
     /// <summary>
