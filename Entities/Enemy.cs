@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Timers;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 
@@ -40,7 +41,7 @@ public class Enemy : IEnemy
     private const float SpriteSize = 20f;
     private EnemyState _state;
     private Tower? _targetTower;
-    private float _attackTimer;
+    private CountdownTimer? _attackTimer;
     private const float AttackInterval = 1.0f;
 
     public Enemy(
@@ -63,7 +64,7 @@ public class Enemy : IEnemy
         _color = color;
         AttackDamage = attackDamage;
         _state = EnemyState.Moving;
-        _attackTimer = 0f;
+        _attackTimer = null;
         Position = Map.GridToWorld(_path[0]);
     }
 
@@ -106,7 +107,7 @@ public class Enemy : IEnemy
             }
             _state = EnemyState.Moving;
             _targetTower = null;
-            _attackTimer = 0f;
+            _attackTimer = null;
         }
     }
 
@@ -134,7 +135,7 @@ public class Enemy : IEnemy
                 UpdateMovingState(dt, map);
                 break;
             case EnemyState.Attacking:
-                UpdateAttackingState(dt);
+                UpdateAttackingState(gameTime);
                 break;
         }
     }
@@ -168,7 +169,8 @@ public class Enemy : IEnemy
                 // Successfully engaged - switch to attacking
                 _state = EnemyState.Attacking;
                 _targetTower = nextTile.OccupyingTower;
-                _attackTimer = 0f;
+                _attackTimer = new CountdownTimer(AttackInterval);
+                _attackTimer.Start();
                 return; // Stop moving this frame
             }
             // Tower at capacity or no tower - continue moving
@@ -192,7 +194,7 @@ public class Enemy : IEnemy
         }
     }
 
-    private void UpdateAttackingState(float dt)
+    private void UpdateAttackingState(GameTime gameTime)
     {
         // Validate target still exists and is alive
         if (_targetTower?.IsDead ?? true)
@@ -201,18 +203,18 @@ public class Enemy : IEnemy
             _targetTower?.ReleaseEngagement();
             _state = EnemyState.Moving;
             _targetTower = null;
-            _attackTimer = 0f;
+            _attackTimer = null;
             return;
         }
 
-        // Increment attack timer
-        _attackTimer += dt;
+        // Update attack timer
+        _attackTimer?.Update(gameTime);
 
-        // Deal damage at fixed intervals
-        if (_attackTimer >= AttackInterval)
+        // Deal damage when timer completes
+        if (_attackTimer != null && _attackTimer.State.HasFlag(TimerState.Completed))
         {
             _targetTower.TakeDamage(AttackDamage);
-            _attackTimer -= AttackInterval; // Preserve overflow for consistent timing
+            _attackTimer.Restart();
         }
     }
 

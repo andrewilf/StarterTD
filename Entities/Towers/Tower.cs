@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Timers;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 
@@ -38,7 +39,7 @@ public class Tower : ITower
 
     public TowerType TowerType { get; }
 
-    private float _fireCooldown;
+    private CountdownTimer? _fireCooldown;
     private int _currentEngagedCount = 0;
     private const float SpriteSize = 30f;
     private const float ProjectileSpeed = 400f;
@@ -139,10 +140,7 @@ public class Tower : ITower
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
-        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-        if (_fireCooldown > 0)
-            _fireCooldown -= dt;
+        _fireCooldown?.Update(gameTime);
 
         IEnemy? target = null;
         float closestDist = float.MaxValue;
@@ -160,9 +158,12 @@ public class Tower : ITower
             }
         }
 
-        if (target != null && _fireCooldown <= 0)
+        bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
+
+        if (target != null && canFire)
         {
-            _fireCooldown = FireRate;
+            _fireCooldown = new CountdownTimer(FireRate);
+            _fireCooldown.Start();
 
             var projectile = new Projectile(
                 WorldPosition,

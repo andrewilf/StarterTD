@@ -2,6 +2,7 @@
 
 ## Active Systems
 - Core loop, scene management, map selection (3 maps)
+- **MonoGame.Extended Integration**: Uses `CountdownTimer` for all cooldowns/timers and `RectangleF` for UI bounds
 - Dijkstra pathfinding with per-enemy rerouting (uses `Math.Max` for tile/tower movement costs to prevent pathfinding through HighGround towers)
 - 4 tower types: 2 Generic (Gun, Cannon) + 2 Champions (ChampionGun, ChampionCannon)
   - Generic towers cost gold, Champions are free (cost 0)

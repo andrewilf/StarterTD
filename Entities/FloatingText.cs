@@ -3,6 +3,7 @@ namespace StarterTD.Entities;
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Timers;
 
 /// <summary>
 /// Represents temporary floating text that moves upward and fades out over time.
@@ -13,9 +14,9 @@ public class FloatingText
     public Vector2 Position { get; private set; }
     public string Text { get; }
     public Color Color { get; }
-    public bool IsActive => _remainingTime > 0;
+    public bool IsActive => !_timer.State.HasFlag(TimerState.Completed);
 
-    private float _remainingTime;
+    private readonly CountdownTimer _timer;
     private readonly float _lifetime;
     private readonly Vector2 _velocity;
 
@@ -39,7 +40,8 @@ public class FloatingText
         Text = text;
         Color = color;
         _lifetime = lifetime;
-        _remainingTime = lifetime;
+        _timer = new CountdownTimer(lifetime);
+        _timer.Start();
         _velocity = velocity ?? new Vector2(0, -20f); // Default: float upward
     }
 
@@ -48,8 +50,8 @@ public class FloatingText
     /// </summary>
     public void Update(GameTime gameTime)
     {
+        _timer.Update(gameTime);
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _remainingTime -= dt;
         Position += _velocity * dt;
     }
 
@@ -62,7 +64,8 @@ public class FloatingText
             return;
 
         // Fade-out alpha during last 30% of lifetime
-        float alpha = Math.Min(1f, _remainingTime / (_lifetime * 0.3f));
+        float remainingTime = (float)_timer.CurrentTime.TotalSeconds;
+        float alpha = Math.Min(1f, remainingTime / (_lifetime * 0.3f));
         Color fadeColor = Color * alpha;
 
         // Shadow for readability

@@ -32,3 +32,4 @@ I am a Python/TypeScript engineer new to C#.
 ## Known Gotchas
 - **Positioning**: `TextureManager.DrawSprite` uses **CENTERED** origin. `DrawRect` uses **TOP-LEFT**.
 - **Assets**: Prefer `.png`. Check `Content/Content.mgcb` on build fail.
+- **MonoGame.Extended Timers**: `CountdownTimer.CurrentTime` is a `TimeSpan`, use `.TotalSeconds` for float conversion. Check completion via `State.HasFlag(TimerState.Completed)`.

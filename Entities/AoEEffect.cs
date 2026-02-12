@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.Timers;
 using StarterTD.Engine;
 
 namespace StarterTD.Entities;
@@ -13,16 +14,17 @@ public class AoEEffect
 {
     public Vector2 Position { get; }
     public float MaxRadius { get; }
-    public bool IsActive { get; private set; }
+    public bool IsActive => !_timer.State.HasFlag(TimerState.Completed);
 
-    private float _elapsedTime;
+    private readonly CountdownTimer _timer;
     private const float DurationSeconds = 0.3f;
 
     public AoEEffect(Vector2 position, float maxRadius)
     {
         Position = position;
         MaxRadius = maxRadius;
-        IsActive = true;
+        _timer = new CountdownTimer(DurationSeconds);
+        _timer.Start();
     }
 
     public void Update(GameTime gameTime)
@@ -30,10 +32,7 @@ public class AoEEffect
         if (!IsActive)
             return;
 
-        _elapsedTime += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-        if (_elapsedTime >= DurationSeconds)
-            IsActive = false;
+        _timer.Update(gameTime);
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -41,7 +40,8 @@ public class AoEEffect
         if (!IsActive)
             return;
 
-        float progress = _elapsedTime / DurationSeconds;
+        float elapsed = DurationSeconds - (float)_timer.CurrentTime.TotalSeconds;
+        float progress = elapsed / DurationSeconds;
         float currentRadius = MaxRadius * progress;
         float opacity = 1f - progress;
 
