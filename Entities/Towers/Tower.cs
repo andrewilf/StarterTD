@@ -122,7 +122,7 @@ public class Tower : ITower
         );
     }
 
-    private void ApplyStats(TowerData.TowerStats stats)
+    private void ApplyStats(TowerStats stats)
     {
         Name = stats.Name;
         Range = stats.Range;
