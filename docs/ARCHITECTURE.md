@@ -33,7 +33,7 @@ graph TD
 ## Key Non-Obvious Patterns
 
 - **Towers as overlays**: `Tile.OccupyingTower` holds a Tower reference; underlying `TileType` never changes after init. Movement cost checks the tower first, then terrain.
-- **Tower Types**: Enum-based with separate Generic (Gun, Cannon) and Champion (ChampionGun, ChampionCannon) variants. Map between them with `TowerType.GetChampionVariant()` / `GetGenericVariant()` extension methods.
+- **Tower Types**: Enum-based with separate Generic (Gun, Cannon) and Champion (ChampionGun, ChampionCannon) variants. Each tower's stats live in a dedicated file under `Entities/Towers/` (e.g., `GunTower.cs`). `TowerData.GetStats()` is the registry that maps enum → stats. Map between variants with `TowerType.GetChampionVariant()` / `GetGenericVariant()` extension methods.
 - **Champion Placement Rules** (via `ChampionManager`):
   - Only one Champion per type can be alive on map
   - Global 10s cooldown blocks all Champion placements after any Champion is placed
