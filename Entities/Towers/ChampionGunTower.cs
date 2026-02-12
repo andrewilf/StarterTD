@@ -2,11 +2,6 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-/// <summary>
-/// Champion Gun: stronger Gun variant, free to place.
-/// Higher DPS (~12.5) and longer range than generic Gun, but fragile.
-/// Renders 1.5x taller to visually distinguish from generics.
-/// </summary>
 public static class ChampionGunTower
 {
     public static readonly TowerStats Stats = new(

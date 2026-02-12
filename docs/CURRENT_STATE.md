@@ -2,7 +2,7 @@
 
 ## Active Systems
 - Core loop, scene management, map selection (3 maps)
-- Dijkstra pathfinding with per-enemy rerouting
+- Dijkstra pathfinding with per-enemy rerouting (uses `Math.Max` for tile/tower movement costs to prevent pathfinding through HighGround towers)
 - 4 tower types: 2 Generic (Gun, Cannon) + 2 Champions (ChampionGun, ChampionCannon)
   - Generic towers cost gold, Champions are free (cost 0)
   - Champions render 1.5x taller (DrawScale) using bottom-center origin (grows upward)
@@ -18,7 +18,7 @@
   - Generic buttons gray out and show "Champion Dead" text when their champion dies (respawn active)
   - At game start, generic buttons just gray out (distinct from "champion died" state)
 - Enemy state machine (Moving/Attacking)
-- 10 hardcoded waves
+- 5 hardcoded waves
 - UI panel with tower selection buttons for Generics and Champions
 - **Info Panel**: Click a placed tower to inspect stats (Name, HP, Block, Damage, Fire Rate) in a bottom-right overlay. Dismissed by ESC, clicking empty tile, or selecting a tower to place
 - Floating text, range indicators, AoE visuals

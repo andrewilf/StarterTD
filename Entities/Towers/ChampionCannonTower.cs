@@ -2,11 +2,6 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-/// <summary>
-/// Champion Cannon: stronger Cannon variant, free to place.
-/// Higher DPS (~4) and larger splash than generic Cannon. Very tanky.
-/// Renders 1.5x taller to visually distinguish from generics.
-/// </summary>
 public static class ChampionCannonTower
 {
     public static readonly TowerStats Stats = new(

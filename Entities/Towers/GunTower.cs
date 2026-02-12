@@ -2,10 +2,6 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-/// <summary>
-/// Gun Tower: fast-firing single-target tower.
-/// High DPS (~10), short range, cheap.
-/// </summary>
 public static class GunTower
 {
     public static readonly TowerStats Stats = new(

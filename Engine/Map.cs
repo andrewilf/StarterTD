@@ -37,19 +37,30 @@ public class Tile
     /// <summary>
     /// Movement cost for pathfinding. Towers add a cost penalty based on type.
     /// HighGround and Rock are impassable (int.MaxValue). Path is walkable (cost 1).
-    /// If a tower occupies this tile, use its tower type's movement cost.
+    /// If a tower occupies this tile, use the higher of the tile's base cost and the tower's cost.
     /// Like a Python @property — recomputes from current state, no stored field.
     /// </summary>
-    public int MovementCost =>
-        OccupyingTower != null
-            ? TowerData.GetStats(OccupyingTower.TowerType).MovementCost
-            : Type switch
+    public int MovementCost
+    {
+        get
+        {
+            int baseCost = Type switch
             {
                 TileType.HighGround => int.MaxValue,
                 TileType.Path => 1,
                 TileType.Rock => int.MaxValue,
                 _ => int.MaxValue,
             };
+
+            if (OccupyingTower != null)
+            {
+                int towerCost = TowerData.GetStats(OccupyingTower.TowerType).MovementCost;
+                return Math.Max(baseCost, towerCost);
+            }
+
+            return baseCost;
+        }
+    }
 
     public Tile(Point gridPosition, TileType type)
     {

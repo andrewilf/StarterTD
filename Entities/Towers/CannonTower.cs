@@ -2,10 +2,6 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-/// <summary>
-/// Cannon Tower: slow-firing area-of-effect tower.
-/// Low single-target DPS (~1.3), but hits groups. Tanky.
-/// </summary>
 public static class CannonTower
 {
     public static readonly TowerStats Stats = new(

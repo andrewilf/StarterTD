@@ -398,12 +398,7 @@ public class UIPanel
         // Tower name with color indicator
         var colorRect = new Rectangle(textX, y + 2, 12, 12);
         TextureManager.DrawRect(spriteBatch, colorRect, tower.TowerColor);
-        spriteBatch.DrawString(
-            _font,
-            tower.Name,
-            new Vector2(textX + 18, y),
-            Color.White
-        );
+        spriteBatch.DrawString(_font, tower.Name, new Vector2(textX + 18, y), Color.White);
         y += lineHeight;
 
         // Thin separator line
@@ -426,9 +421,7 @@ public class UIPanel
         y += lineHeight;
 
         // Damage
-        string dmgText = tower.IsAOE
-            ? $"Damage: {tower.Damage} (AOE)"
-            : $"Damage: {tower.Damage}";
+        string dmgText = tower.IsAOE ? $"Damage: {tower.Damage} (AOE)" : $"Damage: {tower.Damage}";
         spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
         y += lineHeight;
 
