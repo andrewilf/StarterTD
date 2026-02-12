@@ -223,6 +223,9 @@ public class GameplayScene : IScene
 
             if (_enemies[i].IsDead)
             {
+                if (_selectedEnemy == _enemies[i])
+                    _selectedEnemy = null;
+
                 int bounty = _enemies[i].Bounty;
                 _money += bounty;
                 SpawnFloatingText(_enemies[i].Position, $"+${bounty}", Color.Gold);
@@ -231,6 +234,9 @@ public class GameplayScene : IScene
             }
             else if (_enemies[i].ReachedEnd)
             {
+                if (_selectedEnemy == _enemies[i])
+                    _selectedEnemy = null;
+
                 _lives--;
                 _enemies[i].OnDestroy(); // Release tower engagement before removal
                 _enemies.RemoveAt(i);
@@ -290,6 +296,9 @@ public class GameplayScene : IScene
             enemy.Draw(spriteBatch);
         }
 
+        // Draw selection indicators for selected tower/enemy
+        DrawSelectionIndicators(spriteBatch);
+
         // Draw AoE effects (after enemies, before UI)
         foreach (var effect in _aoeEffects)
         {
@@ -301,6 +310,13 @@ public class GameplayScene : IScene
         {
             floatingText.Draw(spriteBatch, _uiPanel.GetFont());
         }
+
+        // Validate selected tower still exists
+        if (
+            _towerManager.SelectedTower != null
+            && !_towerManager.Towers.Contains(_towerManager.SelectedTower)
+        )
+            _towerManager.SelectedTower = null;
 
         // Draw UI panel
         bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
@@ -470,5 +486,52 @@ public class GameplayScene : IScene
     private void SpawnFloatingText(Vector2 worldPos, string text, Color color)
     {
         _floatingTexts.Add(new FloatingText(worldPos, text, color));
+    }
+
+    /// <summary>
+    /// Draw visual selection indicators (pulsing circle outlines) around selected tower/enemy.
+    /// Uses a ring effect created by drawing two circles: outer and inner.
+    /// </summary>
+    private void DrawSelectionIndicators(SpriteBatch spriteBatch)
+    {
+        const float outerRadius = 35f;
+        const float innerRadius = 31f;
+        const float animationSpeed = 3f;
+
+        // Create a pulsing effect
+        float pulseIntensity =
+            (float)Math.Sin(DateTime.Now.TotalMilliseconds * animationSpeed / 1000f) * 0.3f
+            + 0.7f;
+        Color selectionColor = Color.LimeGreen * pulseIntensity;
+
+        // Draw outline ring around selected tower
+        if (_towerManager.SelectedTower != null)
+        {
+            Vector2 towerPos = _towerManager.SelectedTower.WorldPosition;
+            // Draw outer circle (bright)
+            TextureManager.DrawFilledCircle(spriteBatch, towerPos, outerRadius, selectionColor);
+            // Draw inner circle with transparent black to create ring effect
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                towerPos,
+                innerRadius,
+                Color.Black * 0.75f
+            );
+        }
+
+        // Draw outline ring around selected enemy
+        if (_selectedEnemy != null)
+        {
+            Vector2 enemyPos = _selectedEnemy.Position;
+            // Draw outer circle (bright)
+            TextureManager.DrawFilledCircle(spriteBatch, enemyPos, outerRadius, selectionColor);
+            // Draw inner circle with transparent black to create ring effect
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                enemyPos,
+                innerRadius,
+                Color.Black * 0.75f
+            );
+        }
     }
 }
