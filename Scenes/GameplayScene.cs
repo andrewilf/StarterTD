@@ -111,7 +111,7 @@ public class GameplayScene : IScene
 
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
-            _uiPanel.SelectedTowerType = null;
+            _uiPanel.ClearSelection();
             _selectedTowerRange = 0f;
             _towerManager.SelectedTower = null;
         }
@@ -138,13 +138,33 @@ public class GameplayScene : IScene
                 {
                     _waveManager.StartNextWave();
                 }
+
+                // Handle debug enemy spawning
+                if (_uiPanel.SpawnEnemyClicked)
+                {
+                    SpawnDebugEnemy();
+                }
             }
             else
             {
                 // Click on the game grid
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
 
-                if (_uiPanel.SelectedTowerType.HasValue)
+                if (_uiPanel.SelectionMode == UI.UISelectionMode.PlaceHighGround)
+                {
+                    // Place high ground tile
+                    if (
+                        gridPos.X >= 0
+                        && gridPos.X < _map.Columns
+                        && gridPos.Y >= 0
+                        && gridPos.Y < _map.Rows
+                    )
+                    {
+                        _map.Tiles[gridPos.X, gridPos.Y].Type = TileType.HighGround;
+                        RecomputePathAndReroute();
+                    }
+                }
+                else if (_uiPanel.SelectedTowerType.HasValue)
                 {
                     // Try to place a tower
                     var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
@@ -314,9 +334,14 @@ public class GameplayScene : IScene
                 GameSettings.TileSize
             );
 
-            bool canPlace = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
+            bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
+            bool isHighGroundMode = _uiPanel.SelectionMode == UI.UISelectionMode.PlaceHighGround;
 
-            Color hoverColor = canPlace ? Color.White * 0.24f : Color.Red * 0.16f;
+            Color hoverColor = canPlaceTower
+                ? Color.White * 0.24f
+                : isHighGroundMode
+                    ? Color.ForestGreen * 0.3f
+                    : Color.Red * 0.16f;
 
             // Show range preview when placing a tower
             if (_selectedTowerRange > 0f)
@@ -331,7 +356,12 @@ public class GameplayScene : IScene
             }
 
             TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
-            TextureManager.DrawRectOutline(spriteBatch, hoverRect, Color.White, 1);
+            TextureManager.DrawRectOutline(
+                spriteBatch,
+                hoverRect,
+                isHighGroundMode ? Color.ForestGreen : Color.White,
+                1
+            );
         }
 
         // Draw game over / win overlay
@@ -436,5 +466,24 @@ public class GameplayScene : IScene
     private void SpawnFloatingText(Vector2 worldPos, string text, Color color)
     {
         _floatingTexts.Add(new FloatingText(worldPos, text, color));
+    }
+
+    /// <summary>
+    /// Spawns a debug enemy at the spawn point using current wave stats.
+    /// </summary>
+    private void SpawnDebugEnemy()
+    {
+        var waveDef = _waveManager.CurrentWaveDefinition;
+        var enemy = new Enemy(
+            "Debug Enemy",
+            waveDef.EnemyHealth,
+            waveDef.EnemySpeed,
+            waveDef.EnemyBounty,
+            _map.ActivePath,
+            Color.Purple,
+            waveDef.AttackDamage
+        );
+
+        _enemies.Add(enemy);
     }
 }
