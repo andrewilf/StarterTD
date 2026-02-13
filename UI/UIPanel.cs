@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
 using StarterTD.Entities;
+using StarterTD.Interfaces;
 using StarterTD.Managers;
 
 namespace StarterTD.UI;
@@ -154,7 +155,8 @@ public class UIPanel
         int wave,
         int totalWaves,
         bool waveInProgress,
-        Tower? selectedTower = null
+        Tower? selectedTower = null,
+        IEnemy? selectedEnemy = null
     )
     {
         // Panel background
@@ -277,7 +279,9 @@ public class UIPanel
         }
 
         if (selectedTower != null)
-            DrawInfoPanel(spriteBatch, selectedTower);
+            DrawTowerInfoPanel(spriteBatch, selectedTower);
+        else if (selectedEnemy != null)
+            DrawEnemyInfoPanel(spriteBatch, selectedEnemy);
     }
 
     private void DrawButton(
@@ -378,7 +382,7 @@ public class UIPanel
     /// Draws a semi-transparent info panel at the bottom of the UI showing stats for the selected tower.
     /// Positioned above the Start Wave button.
     /// </summary>
-    private void DrawInfoPanel(SpriteBatch spriteBatch, Tower tower)
+    private void DrawTowerInfoPanel(SpriteBatch spriteBatch, Tower tower)
     {
         if (_font == null)
             return;
@@ -441,6 +445,70 @@ public class UIPanel
         float aps = 1f / tower.FireRate;
         string fireText = $"Fire Rate: {aps:F1}/s";
         spriteBatch.DrawString(_font, fireText, new Vector2(textX, y), Color.White);
+    }
+
+    private void DrawEnemyInfoPanel(SpriteBatch spriteBatch, IEnemy enemy)
+    {
+        if (_font == null)
+            return;
+
+        const int padding = 8;
+        const int lineHeight = 20;
+        int panelWidth = _width - 12;
+        int numLines = 6; // name + separator + health + speed + bounty + attack damage
+        int panelHeight = padding * 2 + numLines * lineHeight;
+        int panelX = _x + 6;
+        int panelY = _startWaveButton.Y - panelHeight - 10;
+
+        // Semi-transparent background
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(panelX, panelY, panelWidth, panelHeight),
+            Color.Black * 0.75f
+        );
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            new Rectangle(panelX, panelY, panelWidth, panelHeight),
+            Color.Gray,
+            1
+        );
+
+        int textX = panelX + padding;
+        int y = panelY + padding;
+
+        // Enemy name with color indicator
+        var colorRect = new Rectangle(textX, y + 2, 12, 12);
+        TextureManager.DrawRect(spriteBatch, colorRect, Color.OrangeRed);
+        spriteBatch.DrawString(_font, enemy.Name, new Vector2(textX + 18, y), Color.White);
+        y += lineHeight;
+
+        // Thin separator line
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(textX, y + 2, panelWidth - padding * 2, 1),
+            Color.Gray
+        );
+        y += lineHeight - 4;
+
+        // Health: current / max
+        string healthText =
+            $"Health: {enemy.Health:F1} / {enemy.MaxHealth:F1}";
+        spriteBatch.DrawString(_font, healthText, new Vector2(textX, y), Color.LimeGreen);
+        y += lineHeight;
+
+        // Speed
+        string speedText = $"Speed: {enemy.Speed:F1}";
+        spriteBatch.DrawString(_font, speedText, new Vector2(textX, y), Color.CornflowerBlue);
+        y += lineHeight;
+
+        // Bounty
+        string bountyText = $"Bounty: ${enemy.Bounty}";
+        spriteBatch.DrawString(_font, bountyText, new Vector2(textX, y), Color.Gold);
+        y += lineHeight;
+
+        // Attack Damage
+        string dmgText = $"Attack Dmg: {enemy.AttackDamage}";
+        spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
     }
 
     private void DrawChampionButton(
