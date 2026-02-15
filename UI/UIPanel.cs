@@ -9,6 +9,17 @@ using StarterTD.Managers;
 namespace StarterTD.UI;
 
 /// <summary>
+/// Selection mode for UI interactions.
+/// </summary>
+public enum UISelectionMode
+{
+    None,
+    PlaceTower,
+    PlaceHighGround,
+    SpawnEnemy,
+}
+
+/// <summary>
 /// Right-side UI panel showing player stats, tower selection buttons,
 /// and selected tower info. Uses SpriteFont-free rendering (colored rectangles
 /// and the TextureManager pixel). Text is drawn using a simple bitmap approach
@@ -28,6 +39,9 @@ public class UIPanel
     /// <summary>Which tower type the player has selected to place (null = none).</summary>
     public TowerType? SelectedTowerType { get; set; }
 
+    /// <summary>Current UI selection mode.</summary>
+    public UISelectionMode SelectionMode { get; private set; }
+
     // Button rectangles for tower selection
     private readonly Rectangle _gunButton;
     private readonly Rectangle _cannonButton;
@@ -35,8 +49,15 @@ public class UIPanel
     private readonly Rectangle _championCannonButton;
     private readonly Rectangle _startWaveButton;
 
+    // Debug button rectangles
+    private readonly Rectangle _placeHighGroundButton;
+    private readonly Rectangle _spawnEnemyButton;
+
     /// <summary>Whether the "Start Wave" button was clicked this frame.</summary>
     public bool StartWaveClicked { get; private set; }
+
+    /// <summary>Whether the "Spawn Enemy" button was clicked this frame.</summary>
+    public bool SpawnEnemyClicked { get; private set; }
 
     private SpriteFont? _font;
 
@@ -70,6 +91,16 @@ public class UIPanel
             buttonHeight
         );
 
+        // Debug buttons positioned below instructions (above Start Wave button)
+        int debugStartY = _height - 200;
+        _placeHighGroundButton = new Rectangle(_x + 10, debugStartY, buttonWidth, buttonHeight);
+        _spawnEnemyButton = new Rectangle(
+            _x + 10,
+            debugStartY + buttonHeight + gap,
+            buttonWidth,
+            buttonHeight
+        );
+
         _startWaveButton = new Rectangle(_x + 10, _height - 70, buttonWidth, buttonHeight);
     }
 
@@ -95,6 +126,22 @@ public class UIPanel
     public bool HandleClick(Point mousePos, int playerMoney)
     {
         StartWaveClicked = false;
+        SpawnEnemyClicked = false;
+
+        // Debug buttons
+        if (_placeHighGroundButton.Contains(mousePos))
+        {
+            SelectionMode = UISelectionMode.PlaceHighGround;
+            SelectedTowerType = null;
+            return true;
+        }
+        if (_spawnEnemyButton.Contains(mousePos))
+        {
+            SelectionMode = UISelectionMode.SpawnEnemy;
+            SelectedTowerType = null;
+            SpawnEnemyClicked = true;
+            return true;
+        }
 
         // Generic towers: check cost and champion alive requirement
         if (_gunButton.Contains(mousePos))
@@ -104,6 +151,7 @@ public class UIPanel
                 playerMoney >= stats.Cost
                 && (_championManager?.CanPlaceGeneric(TowerType.Gun) ?? true);
             SelectedTowerType = canPlace ? TowerType.Gun : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
             return true;
         }
         if (_cannonButton.Contains(mousePos))
@@ -113,6 +161,7 @@ public class UIPanel
                 playerMoney >= stats.Cost
                 && (_championManager?.CanPlaceGeneric(TowerType.Cannon) ?? true);
             SelectedTowerType = canPlace ? TowerType.Cannon : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
             return true;
         }
 
@@ -121,12 +170,14 @@ public class UIPanel
         {
             bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionGun) ?? true;
             SelectedTowerType = canPlace ? TowerType.ChampionGun : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
             return true;
         }
         if (_championCannonButton.Contains(mousePos))
         {
             bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionCannon) ?? true;
             SelectedTowerType = canPlace ? TowerType.ChampionCannon : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
             return true;
         }
 
@@ -138,6 +189,15 @@ public class UIPanel
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Clear all selections (called when ESC is pressed).
+    /// </summary>
+    public void ClearSelection()
+    {
+        SelectedTowerType = null;
+        SelectionMode = UISelectionMode.None;
     }
 
     /// <summary>
@@ -244,6 +304,28 @@ public class UIPanel
                 "ESC: Deselect",
                 new Vector2(_x + 10, _championCannonButton.Bottom + 95),
                 Color.LightGray
+            );
+
+            // --- Debug section ---
+            spriteBatch.DrawString(
+                _font,
+                "Debug Tools:",
+                new Vector2(_x + 10, _placeHighGroundButton.Top - 30),
+                Color.Orange
+            );
+
+            DrawDebugButton(
+                spriteBatch,
+                _placeHighGroundButton,
+                "Place High Ground",
+                UISelectionMode.PlaceHighGround
+            );
+
+            DrawDebugButton(
+                spriteBatch,
+                _spawnEnemyButton,
+                "Spawn Enemy",
+                UISelectionMode.SpawnEnemy
             );
 
             // --- Start Wave button ---
@@ -601,6 +683,39 @@ public class UIPanel
                     Color.Yellow
                 );
             }
+        }
+    }
+
+    private void DrawDebugButton(
+        SpriteBatch spriteBatch,
+        Rectangle rect,
+        string label,
+        UISelectionMode mode
+    )
+    {
+        bool isSelected = SelectionMode == mode;
+        Color bgColor = isSelected ? Color.DarkOrange : new Color(60, 40, 20);
+
+        TextureManager.DrawRect(spriteBatch, rect, bgColor);
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            rect,
+            isSelected ? Color.Yellow : Color.Gray,
+            2
+        );
+
+        if (_font != null)
+        {
+            Vector2 textSize = _font.MeasureString(label);
+            spriteBatch.DrawString(
+                _font,
+                label,
+                new Vector2(
+                    rect.X + (rect.Width - textSize.X) / 2,
+                    rect.Y + (rect.Height - textSize.Y) / 2
+                ),
+                Color.White
+            );
         }
     }
 }

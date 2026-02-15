@@ -27,6 +27,12 @@ public class WaveManager
     public bool AllWavesComplete { get; private set; }
     public bool WaveInProgress { get; private set; }
 
+    /// <summary>
+    /// Get the current wave definition, or the first wave if no wave has started yet.
+    /// </summary>
+    public WaveDefinition CurrentWaveDefinition =>
+        _currentWaveDef ?? _waves[CurrentWave < TotalWaves ? CurrentWave : TotalWaves - 1];
+
     private readonly List<WaveDefinition> _waves;
     private readonly Func<List<Point>> _pathProvider;
     private float _spawnTimer;

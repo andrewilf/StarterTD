@@ -37,9 +37,11 @@
 - Public API: `GlobalCooldownRemaining`, `GetRespawnCooldown(type)`, `IsChampionAlive(type)`
 
 ## UIPanel
+- `UISelectionMode` enum: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
 - Champion buttons: "Limit Reached" (alive), "Global: X.Xs", "Respawn: X.Xs"
 - Generic buttons: grayed + "Champion Dead" when respawn active; just grayed at game start
 - `DrawGenericTowerButton()` helper deduplicates champion-death logic
+- Debug buttons: Place High Ground (grid click mode), Spawn Enemy (instant, uses `WaveManager.CurrentWaveDefinition`)
 
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower selection. Auto-clears on death/end
