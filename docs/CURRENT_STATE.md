@@ -1,45 +1,32 @@
 # Project Manifest
 
 ## Active Systems
-- Core loop, scene management (stack-based), map selection (3 maps)
-- **Pause Menu**: Press P to pause gameplay; resume with P/ESC or click Resume button
-- **MonoGame.Extended Integration**: Uses `CountdownTimer` for all cooldowns/timers and `RectangleF` for UI bounds
-- Dijkstra pathfinding with per-enemy rerouting (uses `Math.Max` for tile/tower movement costs to prevent pathfinding through HighGround towers)
-- 4 tower types: 2 Generic (Gun, Cannon) + 2 Champions (ChampionGun, ChampionCannon)
-  - Generic towers cost gold, Champions are free (cost 0)
-  - Champions render 1.5x taller (DrawScale) using bottom-center origin (grows upward)
-  - Only one Champion of each type can be placed simultaneously
-- **ChampionManager** system with full visual integration:
-  - Global 10s cooldown blocks all champion placement after any champion is placed
-  - Individual 15s respawn cooldown per champion type after death
-  - Generic towers can ONLY be placed if their champion variant is alive
-  - Champion death triggers `UpdateChampionStatus(false)` callback on matching generics (hook is wired, awaiting implementation)
-  - **Public API for UI**: `GlobalCooldownRemaining`, `GetRespawnCooldown()`, `IsChampionAlive()`
-- **UI Integration**:
-  - Champion buttons show placement state: "Limit Reached" (alive), "Global: X.Xs" (global CD), "Respawn: X.Xs" (respawn CD)
-  - Generic buttons gray out and show "Champion Dead" text when their champion dies (respawn active)
-  - At game start, generic buttons just gray out (distinct from "champion died" state)
-- Enemy state machine (Moving/Attacking)
-- 5 hardcoded waves
-- UI panel with tower selection buttons for Generics and Champions
-- **Info Panel**: Click a placed tower to inspect stats (Name, HP, Block, Damage, Fire Rate) in a bottom-right overlay. Dismissed by ESC, clicking empty tile, or selecting a tower to place
-- Floating text, range indicators, AoE visuals
-- Victory/Defeat flow
+- Core loop, stack-based scene management, 3 maps
+- Pause: P to toggle, ESC/Resume button
+- MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
+- Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
+- 4 towers: 2 Generic (Gun, Cannon, cost gold) + 2 Champions (ChampionGun, ChampionCannon, free)
+- ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion
+- UI: champion/generic button states reflect cooldowns and champion alive status
+- Enemy FSM (Moving/Attacking), 5 hardcoded waves
+- Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection
+- Selection indicators: red outline, auto-deselect on death/end
+- Floating text, range indicators, AoE visuals, victory/defeat flow
 
-## Backlog / To-Do
+## Backlog
 
 ### High Priority
-- [ ] **Champion Debuff Implementation**: Implement stat debuffs in `Tower.UpdateChampionStatus()` when champions die.
-- [ ] **Sprite Integration**: Replace rects with `Texture2D` assets.
-- [ ] **Sound**: Basic SFX (shoot, hit) and BGM manager.
+- [ ] Champion debuff: implement `Tower.UpdateChampionStatus()` stat changes
+- [ ] Sprite integration: replace rects with `Texture2D`
+- [ ] Sound: SFX + BGM manager
 
 ### Gameplay
-- [ ] **Enemy Variants**: Fast (Low HP) and Tank (High HP).
-- [ ] **Tower Abilities**: Slow, Splash, Poison.
-- [x] **Sell**: Right-click towers (60% base refund scaled by health). Champions trigger death cooldown.
-- [x] **Pause**: Press P to pause; resume with P/ESC or Main Menu button.
+- [ ] Enemy variants: Fast (low HP), Tank (high HP)
+- [ ] Tower abilities: Slow, Splash, Poison
+- [x] Sell: right-click (60% base refund scaled by HP). Champions trigger death CD
+- [x] Pause
 
 ### UI Polish
-- [ ] **Health Bars**: Enemy overlays.
-- [x] **Range Rings**: Visual radius on hover and placement preview.
-- [ ] **Wave Preview**: "Next Wave" info.
+- [ ] Enemy health bars
+- [x] Range rings on hover/placement
+- [ ] Wave preview

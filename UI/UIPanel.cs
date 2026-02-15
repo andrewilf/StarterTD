@@ -491,8 +491,7 @@ public class UIPanel
         y += lineHeight - 4;
 
         // Health: current / max
-        string healthText =
-            $"Health: {enemy.Health:F1} / {enemy.MaxHealth:F1}";
+        string healthText = $"Health: {enemy.Health:F1} / {enemy.MaxHealth:F1}";
         spriteBatch.DrawString(_font, healthText, new Vector2(textX, y), Color.LimeGreen);
         y += lineHeight;
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -314,7 +315,7 @@ public class GameplayScene : IScene
         // Validate selected tower still exists
         if (
             _towerManager.SelectedTower != null
-            && !_towerManager.Towers.Contains(_towerManager.SelectedTower)
+            && !_towerManager.Towers.Any(t => t == _towerManager.SelectedTower)
         )
             _towerManager.SelectedTower = null;
 
@@ -489,49 +490,41 @@ public class GameplayScene : IScene
     }
 
     /// <summary>
-    /// Draw visual selection indicators (pulsing circle outlines) around selected tower/enemy.
-    /// Uses a ring effect created by drawing two circles: outer and inner.
+    /// Draw a red rectangle outline around the selected tower or enemy.
+    /// Sized dynamically based on the object's visual dimensions.
     /// </summary>
     private void DrawSelectionIndicators(SpriteBatch spriteBatch)
     {
-        const float outerRadius = 35f;
-        const float innerRadius = 31f;
-        const float animationSpeed = 3f;
+        const int borderThickness = 2;
+        const int padding = 4;
+        // Tower sprite is 30px, enemy sprite is 20px (private consts in their classes)
+        const float towerSpriteSize = 30f;
+        const float enemySpriteSize = 20f;
 
-        // Create a pulsing effect
-        float pulseIntensity =
-            (float)Math.Sin(DateTime.Now.TotalMilliseconds * animationSpeed / 1000f) * 0.3f
-            + 0.7f;
-        Color selectionColor = Color.LimeGreen * pulseIntensity;
-
-        // Draw outline ring around selected tower
         if (_towerManager.SelectedTower != null)
         {
-            Vector2 towerPos = _towerManager.SelectedTower.WorldPosition;
-            // Draw outer circle (bright)
-            TextureManager.DrawFilledCircle(spriteBatch, towerPos, outerRadius, selectionColor);
-            // Draw inner circle with transparent black to create ring effect
-            TextureManager.DrawFilledCircle(
-                spriteBatch,
-                towerPos,
-                innerRadius,
-                Color.Black * 0.75f
+            var tower = _towerManager.SelectedTower;
+            int w = (int)(towerSpriteSize * tower.DrawScale.X) + padding * 2;
+            int h = (int)(towerSpriteSize * tower.DrawScale.Y) + padding * 2;
+            var rect = new Rectangle(
+                (int)(tower.WorldPosition.X - w / 2f),
+                (int)(tower.WorldPosition.Y - h / 2f),
+                w,
+                h
             );
+            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
         }
 
-        // Draw outline ring around selected enemy
         if (_selectedEnemy != null)
         {
-            Vector2 enemyPos = _selectedEnemy.Position;
-            // Draw outer circle (bright)
-            TextureManager.DrawFilledCircle(spriteBatch, enemyPos, outerRadius, selectionColor);
-            // Draw inner circle with transparent black to create ring effect
-            TextureManager.DrawFilledCircle(
-                spriteBatch,
-                enemyPos,
-                innerRadius,
-                Color.Black * 0.75f
+            int size = (int)enemySpriteSize + padding * 2;
+            var rect = new Rectangle(
+                (int)(_selectedEnemy.Position.X - size / 2f),
+                (int)(_selectedEnemy.Position.Y - size / 2f),
+                size,
+                size
             );
+            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
         }
     }
 }
