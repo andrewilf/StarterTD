@@ -156,7 +156,7 @@ public class GameplayScene : IScene
                 // Click on the game grid
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
 
-                if (_uiPanel.SelectionMode == UI.UISelectionMode.PlaceHighGround)
+                if (_uiPanel.SelectionMode == UISelectionMode.PlaceHighGround)
                 {
                     // Place high ground tile
                     if (
@@ -369,7 +369,7 @@ public class GameplayScene : IScene
             );
 
             bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
-            bool isHighGroundMode = _uiPanel.SelectionMode == UI.UISelectionMode.PlaceHighGround;
+            bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
 
             Color hoverColor;
             if (canPlaceTower)

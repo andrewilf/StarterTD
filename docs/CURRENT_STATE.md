@@ -12,6 +12,7 @@
 - Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection
 - Selection indicators: red outline, auto-deselect on death/end
 - Floating text, range indicators, AoE visuals, victory/defeat flow
+- Debug sidebar: Place High Ground tiles, Spawn Enemy (uses current wave stats)
 
 ## Backlog
 
