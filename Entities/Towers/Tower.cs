@@ -15,6 +15,7 @@ namespace StarterTD.Entities;
 public class Tower : ITower
 {
     public string Name { get; private set; } = string.Empty;
+    public TowerState CurrentState { get; private set; } = TowerState.Active;
     public Point GridPosition { get; }
     public Vector2 WorldPosition { get; }
     public float Range { get; private set; }
@@ -27,6 +28,15 @@ public class Tower : ITower
     public int MaxHealth { get; private set; }
     public int CurrentHealth { get; private set; }
     public bool IsDead => CurrentHealth <= 0;
+
+    /// <summary>Time remaining (seconds) before tower returns to Active after a move.</summary>
+    public float CooldownTimer { get; set; }
+
+    /// <summary>Movement speed in pixels per second when in Moving state.</summary>
+    public float MoveSpeed { get; set; }
+
+    /// <summary>Grid cell the tower is walking toward while in Moving state.</summary>
+    public Point TargetGridPosition { get; set; }
 
     /// <summary>Maximum number of enemies that can simultaneously attack this tower.</summary>
     public int BlockCapacity { get; private set; }
@@ -140,6 +150,29 @@ public class Tower : ITower
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
+        if (CurrentState == TowerState.Active)
+        {
+            UpdateActive(gameTime, enemies);
+        }
+        else if (CurrentState == TowerState.Moving)
+        {
+            UpdateMovement(gameTime);
+        }
+
+        // Projectiles update regardless of state so in-flight shots still resolve
+        for (int i = Projectiles.Count - 1; i >= 0; i--)
+        {
+            Projectiles[i].Update(gameTime, enemies);
+            if (!Projectiles[i].IsActive)
+                Projectiles.RemoveAt(i);
+        }
+    }
+
+    /// <summary>
+    /// Normal targeting and firing logic. Only runs when CurrentState == Active.
+    /// </summary>
+    private void UpdateActive(GameTime gameTime, List<IEnemy> enemies)
+    {
         _fireCooldown?.Update(gameTime);
 
         IEnemy? target = null;
@@ -158,7 +191,8 @@ public class Tower : ITower
             }
         }
 
-        bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
+        bool canFire =
+            _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
 
         if (target != null && canFire)
         {
@@ -180,14 +214,15 @@ public class Tower : ITower
 
             Projectiles.Add(projectile);
         }
+    }
 
-        // Update projectiles
-        for (int i = Projectiles.Count - 1; i >= 0; i--)
-        {
-            Projectiles[i].Update(gameTime, enemies);
-            if (!Projectiles[i].IsActive)
-                Projectiles.RemoveAt(i);
-        }
+    /// <summary>
+    /// Handles tower movement toward TargetGridPosition. Only runs when CurrentState == Moving.
+    /// Movement logic will be implemented in a future feature pass.
+    /// </summary>
+    private void UpdateMovement(GameTime gameTime)
+    {
+        // Placeholder — movement logic will be added later
     }
 
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
