@@ -5,6 +5,7 @@
 - Pause: P to toggle, ESC/Resume button
 - MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
+- `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 2 Champions (ChampionGun, ChampionCannon, free)
 - ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion
 - UI: champion/generic button states reflect cooldowns and champion alive status
