@@ -50,7 +50,7 @@ public class Tower : ITower
     public TowerType TowerType { get; }
 
     private CountdownTimer? _fireCooldown;
-    private int _currentEngagedCount = 0;
+    private int _currentEngagedCount;
     private const float SpriteSize = 30f;
     private const float ProjectileSpeed = 400f;
 
@@ -191,8 +191,7 @@ public class Tower : ITower
             }
         }
 
-        bool canFire =
-            _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
+        bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
 
         if (target != null && canFire)
         {

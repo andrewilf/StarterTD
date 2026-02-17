@@ -23,6 +23,8 @@
 - `Tower.Draw()`: origin conditional on `DrawScale.Y > 1.0f`; champions offset Y by `SpriteSize / 2f`
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
 - AoE chain: `Projectile.OnAOEImpact` → `Tower` → `TowerManager` → `GameplayScene` spawns visual
+- State machine: `TowerState` (Active/Moving/Cooldown). `Update()` dispatches to `UpdateActive()` or `UpdateMovement()`. Projectiles update in all states
+- `TowerPathfinder`: tower-specific Dijkstra via `Pathfinder.ComputeHeatMap()` with custom cost function (Path=1, HighGround=2, occupied tower=10, Rock=impassable). Ignores enemies
 
 ## Tile System
 - `TileType` enum: HighGround, Path, Rock

@@ -40,13 +40,7 @@ public static class TowerPathfinder
         if (pathList == null)
             return null;
 
-        var path = new Queue<Point>();
-        foreach (var point in pathList)
-        {
-            path.Enqueue(point);
-        }
-
-        return path;
+        return new Queue<Point>(pathList);
     }
 
     /// <summary>
@@ -93,28 +87,15 @@ public static class TowerPathfinder
         Debug.Assert(path.Count > 0, "TowerPathfinder: path should not be empty");
 
         // Test 2: path must pass through the gap at (2,2)
-        bool passesGap = false;
-        var copy = new Queue<Point>(path);
-        while (copy.Count > 0)
-        {
-            if (copy.Dequeue() == new Point(2, 2))
-            {
-                passesGap = true;
-                break;
-            }
-        }
-        Debug.Assert(passesGap, "TowerPathfinder: path should route through gap at (2,2)");
+        Debug.Assert(
+            path.Contains(new Point(2, 2)),
+            "TowerPathfinder: path should route through gap at (2,2)"
+        );
 
         // Test 3: path starts at start and ends at destination
         var asList = new List<Point>(path);
-        Debug.Assert(
-            asList[0] == new Point(0, 0),
-            "TowerPathfinder: path should start at (0,0)"
-        );
-        Debug.Assert(
-            asList[^1] == new Point(4, 4),
-            "TowerPathfinder: path should end at (4,4)"
-        );
+        Debug.Assert(asList[0] == new Point(0, 0), "TowerPathfinder: path should start at (0,0)");
+        Debug.Assert(asList[^1] == new Point(4, 4), "TowerPathfinder: path should end at (4,4)");
 
         // Test 4: unreachable destination returns null
         var rocksOnly = new List<Rectangle> { new Rectangle(0, 2, 5, 1) };
@@ -130,10 +111,7 @@ public static class TowerPathfinder
         );
         var blockedMap = new Map(blockedData);
         var blockedPath = FindPath(new Point(0, 0), new Point(4, 4), blockedMap);
-        Debug.Assert(
-            blockedPath == null,
-            "TowerPathfinder: fully blocked path should return null"
-        );
+        Debug.Assert(blockedPath == null, "TowerPathfinder: fully blocked path should return null");
 
         Debug.WriteLine("TowerPathfinder.DebugValidate: All tests passed.");
     }
