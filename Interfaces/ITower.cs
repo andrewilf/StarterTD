@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using StarterTD.Entities;
 
 namespace StarterTD.Interfaces;
 
@@ -11,6 +12,9 @@ public interface ITower
 {
     /// <summary>Display name of the tower (e.g., "Gun Tower").</summary>
     string Name { get; }
+
+    /// <summary>Current behavioral state (Active, Moving, Cooldown).</summary>
+    TowerState CurrentState { get; }
 
     /// <summary>Grid position (column, row) where the tower is placed.</summary>
     Point GridPosition { get; }
