@@ -29,8 +29,12 @@ public class ChampionManager
     /// </summary>
     private readonly Dictionary<TowerType, float> _respawnCooldowns = new();
 
+    /// <summary>Per-champion ability cooldowns (15s after use). Removed from dict when expired.</summary>
+    private readonly Dictionary<TowerType, float> _abilityCooldowns = new();
+
     private const float GLOBAL_PLACEMENT_COOLDOWN = 10.0f;
     private const float RESPAWN_COOLDOWN = 15.0f;
+    private const float ABILITY_COOLDOWN = 15.0f;
 
     /// <summary>
     /// Check if a champion tower can be placed.
@@ -87,6 +91,24 @@ public class ChampionManager
         return _aliveChampions.Contains(type);
     }
 
+    /// <summary>Start the 15s ability cooldown after the player triggers the super ability.</summary>
+    public void StartAbilityCooldown(TowerType championType)
+    {
+        _abilityCooldowns[championType] = ABILITY_COOLDOWN;
+    }
+
+    /// <summary>Remaining seconds before the ability can be used again (0 if ready).</summary>
+    public float GetAbilityCooldownRemaining(TowerType championType)
+    {
+        return _abilityCooldowns.TryGetValue(championType, out var cd) ? Math.Max(0f, cd) : 0f;
+    }
+
+    /// <summary>True when the champion is alive and the ability cooldown has expired.</summary>
+    public bool IsAbilityReady(TowerType championType)
+    {
+        return IsChampionAlive(championType) && GetAbilityCooldownRemaining(championType) <= 0f;
+    }
+
     /// <summary>
     /// Called when a champion tower is successfully placed.
     /// Marks it alive, starts global cooldown, and clears any respawn cooldown.
@@ -138,5 +160,16 @@ public class ChampionManager
 
         foreach (var type in keysToRemove)
             _respawnCooldowns.Remove(type);
+
+        var abilityKeysToRemove = new List<TowerType>();
+        foreach (var type in _abilityCooldowns.Keys)
+        {
+            _abilityCooldowns[type] -= dt;
+            if (_abilityCooldowns[type] <= 0)
+                abilityKeysToRemove.Add(type);
+        }
+
+        foreach (var type in abilityKeysToRemove)
+            _abilityCooldowns.Remove(type);
     }
 }

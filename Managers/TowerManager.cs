@@ -220,6 +220,24 @@ public class TowerManager
         OnTowerPlaced?.Invoke(destination);
     }
 
+    /// <summary>
+    /// Applies the champion super ability buff to all relevant towers.
+    /// The champion gets 2x damage and 40% faster attack.
+    /// All generic towers of the matching type get 20% faster attack.
+    /// </summary>
+    public void TriggerChampionAbility(TowerType championType)
+    {
+        var genericType = championType.GetGenericVariant();
+
+        foreach (var tower in _towers)
+        {
+            if (tower.TowerType == championType)
+                tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f);
+            else if (tower.TowerType == genericType)
+                tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1.2f);
+        }
+    }
+
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
         _championManager.Update(gameTime);

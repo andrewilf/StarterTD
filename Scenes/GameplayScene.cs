@@ -20,9 +20,7 @@ public class GameplayScene : IScene
 {
     private readonly Game1 _game;
     private Map _map = null!;
-#pragma warning disable S1450 // GameplayScene owns ChampionManager (mediator pattern) and passes it to TowerManager
     private ChampionManager _championManager = null!;
-#pragma warning restore S1450
     private TowerManager _towerManager = null!;
     private WaveManager _waveManager = null!;
     private InputManager _inputManager = null!;
@@ -80,6 +78,13 @@ public class GameplayScene : IScene
 
         // Subscribe to AoE impact events to spawn visual effects
         _towerManager.OnAOEImpact = (pos, radius) => _aoeEffects.Add(new AoEEffect(pos, radius));
+
+        // Champion super ability: start cooldown and apply buff to relevant towers
+        _uiPanel.OnAbilityTriggered = championType =>
+        {
+            _championManager.StartAbilityCooldown(championType);
+            _towerManager.TriggerChampionAbility(championType);
+        };
 
         // Try to load font if available
         try
