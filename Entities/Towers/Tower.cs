@@ -35,6 +35,9 @@ public class Tower : ITower
     /// <summary>Movement speed in pixels per second when in Moving state.</summary>
     public float MoveSpeed { get; private set; }
 
+    /// <summary>Whether this tower type is allowed to move on the map.</summary>
+    public bool CanWalk { get; private set; }
+
     /// <summary>
     /// Fires when tower finishes its movement path and enters Cooldown.
     /// TowerManager uses this to re-add the tower to the tile grid.
@@ -182,6 +185,7 @@ public class Tower : ITower
         DrawScale = stats.DrawScale;
         MoveSpeed = stats.MoveSpeed;
         _cooldownDuration = stats.CooldownDuration;
+        CanWalk = stats.CanWalk;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)

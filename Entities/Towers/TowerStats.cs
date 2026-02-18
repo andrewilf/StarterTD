@@ -20,8 +20,9 @@ public record TowerStats(
     int MaxHealth, // Hit points
     int BlockCapacity, // Max enemies that can attack this tower at once
     Vector2 DrawScale, // Render scale (champions use 1.0, 1.5 to appear taller)
-    float MoveSpeed, // Pixels per second while in Moving state
-    float CooldownDuration // Seconds in Cooldown state after movement finishes
+    bool CanWalk, // Whether this tower type is allowed to move on the map
+    float MoveSpeed = 0f, // Pixels per second while in Moving state (only used when CanWalk is true)
+    float CooldownDuration = 0f // Seconds in Cooldown state after movement finishes (only used when CanWalk is true)
 );
 
 /// <summary>
