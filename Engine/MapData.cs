@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Microsoft.Xna.Framework;
 
 namespace StarterTD.Engine;
@@ -119,8 +121,22 @@ public static class MapDataRepository
         );
 
     /// <summary>
-    /// Lists all available map IDs.
+    /// Scans Content/Maps/ at runtime for .tmx files and returns their IDs (filename without extension), sorted.
+    /// No C# changes needed when maps are added or removed — just run sync_maps.sh.
     /// </summary>
-    public static List<string> GetAvailableMaps() =>
-        new() { "maze_test_1", "maze_test_2", "maze_test_3" };
+    public static List<string> GetAvailableMaps()
+    {
+        string mapsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Maps");
+
+        if (!Directory.Exists(mapsDir))
+            return [];
+
+        return Directory
+            .GetFiles(mapsDir, "*.tmx")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(id => id != null)
+            .Select(id => id!)
+            .OrderBy(id => id)
+            .ToList();
+    }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -10,8 +11,8 @@ using StarterTD.Managers;
 namespace StarterTD.Scenes;
 
 /// <summary>
-/// Map selection screen that allows players to choose from available maps
-/// before starting gameplay. Displays preview cards for each map.
+/// Map selection screen. Cards are arranged 3 per row; card height shrinks
+/// to fit all rows within the available vertical space.
 /// </summary>
 public class MapSelectionScene : IScene
 {
@@ -20,34 +21,22 @@ public class MapSelectionScene : IScene
     private SpriteFont? _font;
     private MouseState _previousMouse = new();
 
-    // Card bounds for the three map options
-    private RectangleF _card1Bounds;
-    private RectangleF _card2Bounds;
-    private RectangleF _card3Bounds;
+    private List<MapData> _availableMaps = [];
+    private List<RectangleF> _cardBounds = [];
 
-    // Track which card is currently hovered (-1 = none, 0-2 = card index)
+    // Track which card is currently hovered (-1 = none)
     private int _hoveredCardIndex = -1;
 
-    // Available maps loaded from repository
-    private List<MapData> _availableMaps = new();
+    private const int CardsPerRow = 3;
+    private const int CardWidth = 280;
+    private const int HorizontalGap = 50;
+    private const int VerticalGap = 30;
+    private const int TitleAreaHeight = 120; // space reserved at top for title
+    private const int ScreenPadding = 30; // bottom margin
 
     public MapSelectionScene(Game1 game)
     {
         _game = game;
-
-        // Calculate card positions (3 cards, 280x500 each, 50px gaps)
-        const int cardWidth = 280;
-        const int cardHeight = 500;
-        const int gap = 50;
-        const int cardY = 150;
-
-        // Center the 3 cards horizontally
-        int totalWidth = (cardWidth * 3) + (gap * 2);
-        int startX = (GameSettings.ScreenWidth - totalWidth) / 2;
-
-        _card1Bounds = new RectangleF(startX, cardY, cardWidth, cardHeight);
-        _card2Bounds = new RectangleF(startX + cardWidth + gap, cardY, cardWidth, cardHeight);
-        _card3Bounds = new RectangleF(startX + (cardWidth + gap) * 2, cardY, cardWidth, cardHeight);
     }
 
     public void LoadContent()
@@ -55,6 +44,32 @@ public class MapSelectionScene : IScene
         _inputManager = new InputManager();
 
         _availableMaps = MapDataRepository.GetAvailableMaps().ConvertAll(MapDataRepository.GetMap);
+
+        int count = _availableMaps.Count;
+        int rowCount = (int)Math.Ceiling(count / (double)CardsPerRow);
+
+        // Compute card height so all rows fit vertically within the screen.
+        int availableHeight =
+            GameSettings.ScreenHeight
+            - TitleAreaHeight
+            - ScreenPadding
+            - (VerticalGap * (rowCount - 1));
+        int cardHeight = rowCount > 0 ? availableHeight / rowCount : 200;
+
+        // Center the grid horizontally. If there is only one partial row, center that too.
+        int colsThisLayout = Math.Min(count, CardsPerRow);
+        int totalWidth = (CardWidth * colsThisLayout) + (HorizontalGap * (colsThisLayout - 1));
+        int startX = (GameSettings.ScreenWidth - totalWidth) / 2;
+
+        _cardBounds = [];
+        for (int i = 0; i < count; i++)
+        {
+            int col = i % CardsPerRow;
+            int row = i / CardsPerRow;
+            int x = startX + col * (CardWidth + HorizontalGap);
+            int y = TitleAreaHeight + row * (cardHeight + VerticalGap);
+            _cardBounds.Add(new RectangleF(x, y, CardWidth, cardHeight));
+        }
 
         try
         {
@@ -72,22 +87,23 @@ public class MapSelectionScene : IScene
     {
         _inputManager.Update();
 
-        Point mousePos = _inputManager.MousePosition;
+        Vector2 mousePos = _inputManager.MousePosition.ToVector2();
 
         _hoveredCardIndex = -1;
-        if (_card1Bounds.Contains(mousePos.ToVector2()))
-            _hoveredCardIndex = 0;
-        else if (_card2Bounds.Contains(mousePos.ToVector2()))
-            _hoveredCardIndex = 1;
-        else if (_card3Bounds.Contains(mousePos.ToVector2()))
-            _hoveredCardIndex = 2;
+        for (int i = 0; i < _cardBounds.Count; i++)
+        {
+            if (_cardBounds[i].Contains(mousePos))
+            {
+                _hoveredCardIndex = i;
+                break;
+            }
+        }
 
         MouseState currentMouse = Mouse.GetState();
         if (
             currentMouse.LeftButton == ButtonState.Pressed
             && _previousMouse.LeftButton == ButtonState.Released
             && _hoveredCardIndex >= 0
-            && _hoveredCardIndex < _availableMaps.Count
         )
         {
             string selectedMapId = _availableMaps[_hoveredCardIndex].Id;
@@ -100,26 +116,25 @@ public class MapSelectionScene : IScene
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        // Draw title at top
         if (_font != null)
         {
             string title = "Select Your Map";
             Vector2 titleSize = _font.MeasureString(title);
-            Vector2 titlePos = new Vector2((GameSettings.ScreenWidth - titleSize.X) / 2, 50);
+            Vector2 titlePos = new Vector2((GameSettings.ScreenWidth - titleSize.X) / 2, 40);
 
-            // Draw title with shadow
             spriteBatch.DrawString(_font, title, titlePos + new Vector2(2, 2), Color.Black);
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
 
-        // Draw the 3 map cards
-        DrawMapCard(spriteBatch, _card1Bounds, _availableMaps[0], _hoveredCardIndex == 0);
-        DrawMapCard(spriteBatch, _card2Bounds, _availableMaps[1], _hoveredCardIndex == 1);
-        DrawMapCard(spriteBatch, _card3Bounds, _availableMaps[2], _hoveredCardIndex == 2);
+        for (int i = 0; i < _availableMaps.Count; i++)
+        {
+            DrawMapCard(spriteBatch, _cardBounds[i], _availableMaps[i], _hoveredCardIndex == i);
+        }
     }
 
     /// <summary>
-    /// Draws a single map selection card with background, border, title, preview, and metadata.
+    /// Draws a single map selection card. The preview area scales with card height,
+    /// leaving fixed margins for the title (top) and metadata (bottom).
     /// </summary>
     private void DrawMapCard(
         SpriteBatch spriteBatch,
@@ -128,66 +143,60 @@ public class MapSelectionScene : IScene
         bool isHovered
     )
     {
-        // Card background (lighter when hovered)
         Color bgColor = isHovered ? Color.DarkSlateGray : Color.DarkSlateGray * 0.89f;
         TextureManager.DrawRect(spriteBatch, bounds.ToRectangle(), bgColor);
 
-        // Border (yellow when hovered, gray otherwise)
         Color borderColor = isHovered ? Color.Yellow : Color.Gray;
         TextureManager.DrawRectOutline(spriteBatch, bounds.ToRectangle(), borderColor, 3);
 
-        // Title text at top
+        const int titleMargin = 40; // height reserved for map name at top of card
+        const int metaMargin = 35; // height reserved for grid-size text at bottom of card
+
         if (_font != null)
         {
             Vector2 titleSize = _font.MeasureString(mapData.Name);
             Vector2 titlePos = new Vector2(
                 bounds.X + (bounds.Width - titleSize.X) / 2f,
-                bounds.Y + 15
+                bounds.Y + 10
             );
 
-            // Shadow
             spriteBatch.DrawString(_font, mapData.Name, titlePos + new Vector2(2, 2), Color.Black);
-            // Main text
             spriteBatch.DrawString(_font, mapData.Name, titlePos, Color.White);
         }
 
-        // Map preview area (offset from top to leave room for title)
+        // Preview fills the space between title and metadata margins.
         Rectangle previewBounds = new Rectangle(
             (int)(bounds.X + 10),
-            (int)(bounds.Y + 60),
+            (int)(bounds.Y + titleMargin),
             (int)(bounds.Width - 20),
-            200
+            (int)(bounds.Height - titleMargin - metaMargin)
         );
         DrawMapPreview(spriteBatch, mapData, previewBounds);
 
-        // Metadata at bottom
         if (_font != null)
         {
             string info = $"{mapData.Columns}x{mapData.Rows}";
             Vector2 infoSize = _font.MeasureString(info);
             Vector2 infoPos = new Vector2(
                 bounds.X + (bounds.Width - infoSize.X) / 2f,
-                bounds.Bottom - 40
+                bounds.Bottom - metaMargin + 8
             );
             spriteBatch.DrawString(_font, info, infoPos, Color.LightGray);
         }
     }
 
     /// <summary>
-    /// Renders a miniature version of the map grid showing paths, buildable areas, and maze zones.
-    /// Uses the same color scheme as the full Map class.
+    /// Renders a miniature version of the map grid showing terrain types.
     /// </summary>
     private static void DrawMapPreview(SpriteBatch spriteBatch, MapData mapData, Rectangle bounds)
     {
         const int miniTileSize = 13;
 
-        // Calculate centered position
         int gridWidth = mapData.Columns * miniTileSize;
         int gridHeight = mapData.Rows * miniTileSize;
         int startX = bounds.X + (bounds.Width - gridWidth) / 2;
         int startY = bounds.Y + (bounds.Height - gridHeight) / 2;
 
-        // Render grid
         for (int x = 0; x < mapData.Columns; x++)
         {
             for (int y = 0; y < mapData.Rows; y++)
@@ -220,7 +229,6 @@ public class MapSelectionScene : IScene
             }
         }
 
-        // Draw preview border
         Rectangle gridBounds = new Rectangle(startX, startY, gridWidth, gridHeight);
         TextureManager.DrawRectOutline(spriteBatch, gridBounds, Color.White * 0.39f, 2);
     }

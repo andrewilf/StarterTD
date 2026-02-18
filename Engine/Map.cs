@@ -52,7 +52,7 @@ public class Tile
 
 /// <summary>
 /// The game map: a 2D grid of tiles with Dijkstra-based pathfinding.
-/// Terrain is defined by WalkableAreas rectangles; enemies find their own route.
+/// Terrain is loaded from a Tiled .tmx TileGrid; enemies find their own route at runtime.
 /// </summary>
 public class Map
 {
@@ -82,12 +82,6 @@ public class Map
     /// The map data used to create this map.
     /// </summary>
     public MapData MapData { get; }
-
-    /// <summary>
-    /// Default constructor uses the first available map.
-    /// </summary>
-    public Map()
-        : this(MapDataRepository.GetMap(MapDataRepository.GetAvailableMaps()[0])) { }
 
     /// <summary>
     /// Primary constructor accepting MapData.

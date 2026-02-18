@@ -53,7 +53,7 @@ The tileset is `Content/Maps/terrain.png` — a horizontal spritesheet, 40×40px
    - Name `exit` — top-left corner of the exit tile
 5. Optionally set a display name: **Map → Map Properties → +** → string property `name`
 6. Save as `Content/Maps/<your_id>.tmx`
-7. Run `./sync_maps.sh` to register the map (see below)
+7. Run `bash sync_maps.sh` to register the map (see below)
 8. Run `dotnet build` to verify
 
 ### Edit an existing map
@@ -63,18 +63,20 @@ Open the `.tmx` file in Tiled, make changes, save. Run the game — changes are 
 ### Remove a map
 
 1. Delete the `.tmx` file from `Content/Maps/`
-2. Run `./sync_maps.sh` to deregister it
+2. Run `bash sync_maps.sh` to deregister it
 
 ### sync_maps.sh
 
 `sync_maps.sh` automatically syncs `StarterTD.csproj` and `Engine/MapData.cs` to match whatever `.tmx` files are present in `Content/Maps/`. Run it any time you add or remove a map file.
 
+The script requires **bash** (not `sh`). Use `bash sync_maps.sh` or run it directly with `./` (which reads the shebang). Do **not** use `sh sync_maps.sh` — macOS's default `sh` is POSIX-only and will error.
+
 ```bash
 # Preview changes without writing anything
-./sync_maps.sh --dry-run
+bash sync_maps.sh --dry-run
 
 # Apply changes
-./sync_maps.sh
+bash sync_maps.sh
 ```
 
 ### Tileset tips
