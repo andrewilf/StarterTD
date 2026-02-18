@@ -19,6 +19,9 @@ public class Tile
     /// <summary>The tower occupying this tile, or null if unoccupied.</summary>
     public Tower? OccupyingTower { get; set; }
 
+    /// <summary>Tower committed to moving here but not yet arrived. Blocks placement and movement targeting.</summary>
+    public Tower? ReservedByTower { get; set; }
+
     /// <summary>
     /// Movement cost for pathfinding. Towers add a cost penalty based on type.
     /// If a tower occupies this tile, use the higher of the tile's base cost and the tower's cost.
@@ -233,8 +236,9 @@ public class Map
         var tile = Tiles[gridPos.X, gridPos.Y];
         bool isBuildableTerrain = TileData.GetStats(tile.Type).IsBuildable;
         bool notOccupied = tile.OccupyingTower == null;
+        bool notReserved = tile.ReservedByTower == null;
 
-        return isBuildableTerrain && notOccupied;
+        return isBuildableTerrain && notOccupied && notReserved;
     }
 
     /// <summary>

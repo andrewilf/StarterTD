@@ -24,7 +24,7 @@
 - [ ] Sound: SFX + BGM manager
 
 ### Gameplay
-- [x] Tower walking: walkable towers (`CanWalk: true`) move on right-click (select → right-click empty buildable tile). Gold path preview on hover
+- [x] Tower walking: walkable towers (`CanWalk: true`) move on right-click (select → right-click empty buildable tile). Gold path preview on hover. Destination is reserved at commit time (`Tile.ReservedByTower`) — blocks placement and second-walker targeting mid-transit
 
 - [ ] Enemy variants: Fast (low HP), Tank (high HP)
 - [ ] Tower abilities: Slow, Splash, Poison

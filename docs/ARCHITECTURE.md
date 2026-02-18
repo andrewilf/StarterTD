@@ -18,7 +18,7 @@
 - `TowerType` enum: Generic (Gun, Cannon) + Champion (ChampionGun, ChampionCannon)
 - Stats per type in `Entities/Towers/<Type>Tower.cs`; registry: `TowerData.GetStats()`
 - Variant mapping: `TowerType.GetChampionVariant()` / `GetGenericVariant()`
-- Towers overlay tiles: `Tile.OccupyingTower` ref; `TileType` immutable after init
+- Tiles track two tower references: `OccupyingTower` (physically present) and `ReservedByTower` (committed destination, not yet arrived). `Map.CanBuild()` rejects tiles where either is non-null. `TileType` immutable after init
 - `DrawScale`: Generics {1,1}, Champions {1,1.5}. Champions use bottom-center origin (0.5,1.0), Y offset grows upward. Bars use `SpriteSize * DrawScale.Y`
 - `Tower.Draw()`: origin conditional on `DrawScale.Y > 1.0f`; champions offset Y by `SpriteSize / 2f`
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
@@ -27,7 +27,7 @@
 - State machine: `TowerState` (Active/Moving/Cooldown). Moving: `_drawPosition` interpolates tile-to-tile, `GridPosition` updates on cell arrival, origin tile cleared (ghost). Cooldown: move-ready timer only — tower still fires. Both Active+Cooldown run `UpdateActive()`. `OnMovementComplete` callback lets `TowerManager` re-occupy destination tile and trigger reroute
 - `TowerManager.GetPreviewPath(dest)`: returns `List<Point>?` for hover preview — checks `CanWalk`, `Active` state, `CanBuild`. `GameplayScene` calls per-frame, draws gold dot+line path overlay between map and tower layers
 - `Tower.DrawPosition`: smooth visual position during movement (use instead of `WorldPosition` for visual tracking). `WorldPosition` always snapped to grid
-- `TowerManager.MoveTower(tower, dest)`: ghost origin tile → reroute enemies → `StartMoving()`. `HandleMovementComplete`: re-occupy dest → reroute enemies
+- `TowerManager.MoveTower(tower, dest)`: ghost origin tile → set `destTile.ReservedByTower = tower` → reroute enemies → `StartMoving()`. `HandleMovementComplete`: clear reservation → re-occupy dest → reroute enemies. `RemoveTower()` calls `ClearReservationFor()` on mid-movement death to free the reserved tile
 - `TowerPathfinder`: tower-specific Dijkstra via `Pathfinder.ComputeHeatMap()` with custom cost function (Path=1, HighGround=2, occupied tower=10, Rock=impassable). Ignores enemies
 
 ## Tile System
