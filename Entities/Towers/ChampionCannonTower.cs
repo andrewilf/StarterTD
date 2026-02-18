@@ -17,6 +17,7 @@ public static class ChampionCannonTower
         MaxHealth: 200,
         BlockCapacity: 1,
         DrawScale: new Vector2(1.0f, 1.5f),
+        CanWalk: true,
         MoveSpeed: 80f,
         CooldownDuration: 2.0f
     );

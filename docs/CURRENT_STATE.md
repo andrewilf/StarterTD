@@ -24,7 +24,8 @@
 - [ ] Sound: SFX + BGM manager
 
 ### Gameplay
-- [x] Tower walking: champion towers move on right-click (select → right-click empty buildable tile)
+- [x] Tower walking: walkable towers (`CanWalk: true`) move on right-click (select → right-click empty buildable tile). Gold path preview on hover
+
 - [ ] Enemy variants: Fast (low HP), Tank (high HP)
 - [ ] Tower abilities: Slow, Splash, Poison
 - [x] Sell: right-click (60% base refund scaled by HP). Champions trigger death CD

@@ -17,6 +17,7 @@ public static class ChampionGunTower
         MaxHealth: 80,
         BlockCapacity: 2,
         DrawScale: new Vector2(1.0f, 1.5f),
+        CanWalk: true,
         MoveSpeed: 80f,
         CooldownDuration: 2.0f
     );

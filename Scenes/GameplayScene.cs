@@ -41,6 +41,7 @@ public class GameplayScene : IScene
     private IEnemy? _selectedEnemy;
     private Point _mouseGrid;
     private float _selectedTowerRange;
+    private List<Point>? _towerMovePreviewPath;
 
     public GameplayScene(Game1 game, string mapId)
     {
@@ -117,6 +118,7 @@ public class GameplayScene : IScene
             _selectedTowerRange = 0f;
             _towerManager.SelectedTower = null;
             _selectedEnemy = null;
+            _towerMovePreviewPath = null;
         }
 
         if (_inputManager.IsLeftClick())
@@ -220,11 +222,11 @@ public class GameplayScene : IScene
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
                 var tower = _towerManager.GetTowerAt(gridPos);
 
-                // Move command: selected champion + right-click on empty buildable tile
+                // Move command: selected walkable tower + right-click on empty buildable tile
                 var selected = _towerManager.SelectedTower;
                 if (
                     selected != null
-                    && selected.TowerType.IsChampion()
+                    && selected.CanWalk
                     && selected.CurrentState == TowerState.Active
                     && tower == null
                     && _map.CanBuild(gridPos)
@@ -232,6 +234,7 @@ public class GameplayScene : IScene
                 {
                     _towerManager.MoveTower(selected, gridPos);
                     _towerManager.SelectedTower = null;
+                    _towerMovePreviewPath = null;
                 }
                 else if (tower != null)
                 {
@@ -299,6 +302,9 @@ public class GameplayScene : IScene
         _mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
         _hoveredTower = _towerManager.GetTowerAt(_mouseGrid);
 
+        // --- Compute tower movement path preview when a walkable tower is selected ---
+        _towerMovePreviewPath = _towerManager.GetPreviewPath(_mouseGrid);
+
         // --- Update AoE effects ---
         for (int i = _aoeEffects.Count - 1; i >= 0; i--)
         {
@@ -320,6 +326,10 @@ public class GameplayScene : IScene
     {
         // Draw map
         _map.Draw(spriteBatch);
+
+        // Draw tower movement path preview (before towers so towers render on top)
+        if (_towerMovePreviewPath != null)
+            DrawTowerMovePreview(spriteBatch, _towerMovePreviewPath);
 
         // Draw towers
         _towerManager.Draw(spriteBatch, _uiPanel.GetFont(), _hoveredTower);
@@ -570,6 +580,69 @@ public class GameplayScene : IScene
                 size
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
+        }
+    }
+
+    /// <summary>
+    /// Visualizes a planned tower movement path as dots connected by line segments.
+    /// Gold color distinguishes it from the enemy path (DeepSkyBlue).
+    /// </summary>
+    private static void DrawTowerMovePreview(SpriteBatch spriteBatch, List<Point> path)
+    {
+        if (path.Count == 0)
+            return;
+
+        const int dotSize = 8;
+        int halfDot = dotSize / 2;
+        var pathColor = Color.Gold * 0.75f;
+
+        for (int i = 0; i < path.Count; i++)
+        {
+            var point = path[i];
+            int centerX = point.X * GameSettings.TileSize + GameSettings.TileSize / 2;
+            int centerY = point.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
+
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(centerX - halfDot, centerY - halfDot, dotSize, dotSize),
+                pathColor
+            );
+
+            if (i < path.Count - 1)
+            {
+                var next = path[i + 1];
+                int nextCenterX = next.X * GameSettings.TileSize + GameSettings.TileSize / 2;
+                int nextCenterY = next.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
+
+                if (next.Y == point.Y)
+                {
+                    int minX = Math.Min(centerX, nextCenterX);
+                    TextureManager.DrawRect(
+                        spriteBatch,
+                        new Rectangle(
+                            minX,
+                            centerY - halfDot / 2,
+                            Math.Abs(nextCenterX - centerX),
+                            halfDot
+                        ),
+                        pathColor
+                    );
+                }
+                else if (next.X == point.X)
+                {
+                    int minY = Math.Min(centerY, nextCenterY);
+                    TextureManager.DrawRect(
+                        spriteBatch,
+                        new Rectangle(
+                            centerX - halfDot / 2,
+                            minY,
+                            halfDot,
+                            Math.Abs(nextCenterY - centerY)
+                        ),
+                        pathColor
+                    );
+                }
+            }
         }
     }
 

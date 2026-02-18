@@ -106,6 +106,26 @@ public class TowerManager
     }
 
     /// <summary>
+    /// Returns the planned movement path from the selected tower to destination,
+    /// or null if no valid path exists. Used by GameplayScene for the hover preview.
+    /// </summary>
+    public List<Point>? GetPreviewPath(Point destination)
+    {
+        var tower = SelectedTower;
+        if (tower == null || !tower.CanWalk || tower.CurrentState != TowerState.Active)
+            return null;
+
+        if (!_map.CanBuild(destination))
+            return null;
+
+        var queue = TowerPathfinder.FindPath(tower.GridPosition, destination, _map);
+        if (queue == null || queue.Count <= 1)
+            return null;
+
+        return new List<Point>(queue);
+    }
+
+    /// <summary>
     /// Sell a tower, returning its refund value.
     /// Refund is 60% of cost, scaled by remaining health percentage.
     /// </summary>
