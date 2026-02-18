@@ -16,8 +16,11 @@ public class Tower : ITower
 {
     public string Name { get; private set; } = string.Empty;
     public TowerState CurrentState { get; private set; } = TowerState.Active;
-    public Point GridPosition { get; }
-    public Vector2 WorldPosition { get; }
+    public Point GridPosition { get; private set; }
+    public Vector2 WorldPosition => Map.GridToWorld(GridPosition);
+
+    /// <summary>Visual position used for rendering. Interpolates smoothly during movement.</summary>
+    public Vector2 DrawPosition => _drawPosition;
     public float Range { get; private set; }
     public float Damage { get; private set; }
     public float FireRate { get; private set; }
@@ -29,14 +32,14 @@ public class Tower : ITower
     public int CurrentHealth { get; private set; }
     public bool IsDead => CurrentHealth <= 0;
 
-    /// <summary>Time remaining (seconds) before tower returns to Active after a move.</summary>
-    public float CooldownTimer { get; set; }
-
     /// <summary>Movement speed in pixels per second when in Moving state.</summary>
-    public float MoveSpeed { get; set; }
+    public float MoveSpeed { get; private set; }
 
-    /// <summary>Grid cell the tower is walking toward while in Moving state.</summary>
-    public Point TargetGridPosition { get; set; }
+    /// <summary>
+    /// Fires when tower finishes its movement path and enters Cooldown.
+    /// TowerManager uses this to re-add the tower to the tile grid.
+    /// </summary>
+    public Action? OnMovementComplete;
 
     /// <summary>Maximum number of enemies that can simultaneously attack this tower.</summary>
     public int BlockCapacity { get; private set; }
@@ -54,6 +57,11 @@ public class Tower : ITower
     private const float SpriteSize = 30f;
     private const float ProjectileSpeed = 400f;
 
+    private Vector2 _drawPosition;
+    private Queue<Point> _movePath = new();
+    private float _cooldownTimer;
+    private float _cooldownDuration;
+
     /// <summary>List of active projectiles fired by this tower.</summary>
     public List<Projectile> Projectiles { get; } = new();
 
@@ -67,7 +75,7 @@ public class Tower : ITower
     {
         TowerType = type;
         GridPosition = gridPosition;
-        WorldPosition = Map.GridToWorld(gridPosition);
+        _drawPosition = Map.GridToWorld(gridPosition);
 
         var stats = TowerData.GetStats(type);
         ApplyStats(stats);
@@ -101,6 +109,32 @@ public class Tower : ITower
     {
         if (_currentEngagedCount > 0)
             _currentEngagedCount--;
+    }
+
+    private void DrawMoveCooldownBar(SpriteBatch spriteBatch, Vector2 drawPosition)
+    {
+        float barWidth = SpriteSize;
+        float barHeight = 3f;
+        // Fills from 0% (just arrived) to 100% (ready to move again)
+        float progress = 1f - (_cooldownTimer / _cooldownDuration);
+
+        int barX = (int)(drawPosition.X - barWidth / 2f);
+        // Position below capacity bar: health bar is at -8f offset, capacity at -3f, this at +2f
+        int barY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f + 10f);
+
+        // Dark gray background
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(barX, barY, (int)barWidth, (int)barHeight),
+            Color.DarkGray
+        );
+
+        // Yellow foreground (progress toward move-ready)
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(barX, barY, (int)(barWidth * progress), (int)barHeight),
+            Color.Gold
+        );
     }
 
     private void DrawCapacityBar(SpriteBatch spriteBatch, Vector2 drawPosition)
@@ -146,17 +180,23 @@ public class Tower : ITower
         CurrentHealth = stats.MaxHealth;
         BlockCapacity = stats.BlockCapacity;
         DrawScale = stats.DrawScale;
+        MoveSpeed = stats.MoveSpeed;
+        _cooldownDuration = stats.CooldownDuration;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
-        if (CurrentState == TowerState.Active)
-        {
-            UpdateActive(gameTime, enemies);
-        }
-        else if (CurrentState == TowerState.Moving)
+        if (CurrentState == TowerState.Moving)
         {
             UpdateMovement(gameTime);
+        }
+        else
+        {
+            // Tower can fire in both Active and Cooldown states
+            UpdateActive(gameTime, enemies);
+
+            if (CurrentState == TowerState.Cooldown)
+                UpdateCooldown(gameTime);
         }
 
         // Projectiles update regardless of state so in-flight shots still resolve
@@ -216,12 +256,71 @@ public class Tower : ITower
     }
 
     /// <summary>
-    /// Handles tower movement toward TargetGridPosition. Only runs when CurrentState == Moving.
-    /// Movement logic will be implemented in a future feature pass.
+    /// Begin moving along a path. TowerPathfinder includes the start cell as the first
+    /// element, so we dequeue it immediately since the tower is already there.
+    /// </summary>
+    public void StartMoving(Queue<Point> path)
+    {
+        _movePath = path;
+
+        // Discard start cell (tower is already standing on it)
+        if (_movePath.Count > 0)
+            _movePath.Dequeue();
+
+        if (_movePath.Count == 0)
+            return;
+
+        CurrentState = TowerState.Moving;
+        _drawPosition = WorldPosition;
+    }
+
+    /// <summary>
+    /// Smoothly interpolates the tower's visual position along the path queue.
+    /// Updates GridPosition on arrival at each cell. Transitions to Cooldown when path exhausted.
     /// </summary>
     private void UpdateMovement(GameTime gameTime)
     {
-        // Placeholder — movement logic will be added later
+        if (_movePath.Count == 0)
+        {
+            _drawPosition = WorldPosition;
+            CurrentState = TowerState.Cooldown;
+            _cooldownTimer = _cooldownDuration;
+            OnMovementComplete?.Invoke();
+            return;
+        }
+
+        Point nextGrid = _movePath.Peek();
+        Vector2 nextWorld = Map.GridToWorld(nextGrid);
+
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Vector2 direction = nextWorld - _drawPosition;
+        float distance = direction.Length();
+        float moveAmount = MoveSpeed * dt;
+
+        if (distance <= moveAmount)
+        {
+            _drawPosition = nextWorld;
+            GridPosition = nextGrid;
+            _movePath.Dequeue();
+        }
+        else
+        {
+            direction.Normalize();
+            _drawPosition += direction * moveAmount;
+        }
+    }
+
+    /// <summary>
+    /// Post-move delay before the tower can move again. Tower can still fire during cooldown.
+    /// </summary>
+    private void UpdateCooldown(GameTime gameTime)
+    {
+        _cooldownTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+        if (_cooldownTimer <= 0f)
+        {
+            _cooldownTimer = 0f;
+            CurrentState = TowerState.Active;
+        }
     }
 
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
@@ -230,7 +329,7 @@ public class Tower : ITower
         // Champions (DrawScale.Y > 1.0) use bottom-center origin so they grow upward.
         // Generic towers use centered origin (default behavior).
         Vector2 spriteOrigin;
-        Vector2 drawPosition = WorldPosition;
+        Vector2 drawPosition = _drawPosition;
 
         if (DrawScale.Y > 1.0f)
         {
@@ -246,12 +345,15 @@ public class Tower : ITower
             spriteOrigin = new Vector2(0.5f, 0.5f);
         }
 
+        // Semi-transparent when moving so tower looks ghostly (non-blocking)
+        Color bodyColor = CurrentState == TowerState.Moving ? TowerColor * 0.5f : TowerColor;
+
         // Draw tower body (centered via DrawSprite), scaled by DrawScale
         TextureManager.DrawSprite(
             spriteBatch,
             drawPosition,
             new Vector2(SpriteSize * DrawScale.X, SpriteSize * DrawScale.Y),
-            TowerColor,
+            bodyColor,
             rotation: 0f,
             origin: spriteOrigin
         );
@@ -290,6 +392,10 @@ public class Tower : ITower
 
         // Draw capacity bar below health bar (always visible)
         DrawCapacityBar(spriteBatch, drawPosition);
+
+        // Draw movement cooldown bar (fills 0→100%, disappears when ready to move again)
+        if (CurrentState == TowerState.Cooldown)
+            DrawMoveCooldownBar(spriteBatch, drawPosition);
 
         // Draw projectiles
         foreach (var proj in Projectiles)

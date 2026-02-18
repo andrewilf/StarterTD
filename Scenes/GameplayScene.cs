@@ -220,7 +220,20 @@ public class GameplayScene : IScene
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
                 var tower = _towerManager.GetTowerAt(gridPos);
 
-                if (tower != null)
+                // Move command: selected champion + right-click on empty buildable tile
+                var selected = _towerManager.SelectedTower;
+                if (
+                    selected != null
+                    && selected.TowerType.IsChampion()
+                    && selected.CurrentState == TowerState.Active
+                    && tower == null
+                    && _map.CanBuild(gridPos)
+                )
+                {
+                    _towerManager.MoveTower(selected, gridPos);
+                    _towerManager.SelectedTower = null;
+                }
+                else if (tower != null)
                 {
                     if (_towerManager.SelectedTower == tower)
                         _towerManager.SelectedTower = null;

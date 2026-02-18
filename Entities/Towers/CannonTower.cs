@@ -16,6 +16,8 @@ public static class CannonTower
         Color: Color.Firebrick,
         MaxHealth: 150,
         BlockCapacity: 2,
-        DrawScale: new Vector2(1.0f, 1.0f)
+        DrawScale: new Vector2(1.0f, 1.0f),
+        MoveSpeed: 80f,
+        CooldownDuration: 2.0f
     );
 }

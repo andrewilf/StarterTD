@@ -16,6 +16,8 @@ public static class ChampionGunTower
         Color: Color.Orange,
         MaxHealth: 80,
         BlockCapacity: 2,
-        DrawScale: new Vector2(1.0f, 1.5f)
+        DrawScale: new Vector2(1.0f, 1.5f),
+        MoveSpeed: 80f,
+        CooldownDuration: 2.0f
     );
 }
