@@ -8,7 +8,7 @@
 - `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 2 Champions (ChampionGun, ChampionCannon, free)
 - ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion
-- UI: champion/generic button states reflect cooldowns and champion alive status
+- UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/affordability sub-labels
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
 - Enemy FSM (Moving/Attacking), 5 hardcoded waves
 - Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection

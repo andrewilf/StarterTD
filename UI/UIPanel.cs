@@ -42,11 +42,9 @@ public class UIPanel
     /// <summary>Current UI selection mode.</summary>
     public UISelectionMode SelectionMode { get; private set; }
 
-    // Button rectangles for tower selection
-    private readonly Rectangle _gunButton;
-    private readonly Rectangle _cannonButton;
-    private readonly Rectangle _championGunButton;
-    private readonly Rectangle _championCannonButton;
+    // Consolidated tower buttons (each covers champion + generic for that type)
+    private readonly Rectangle _gunTowerButton;
+    private readonly Rectangle _cannonTowerButton;
     private readonly Rectangle _startWaveButton;
 
     // Debug button rectangles
@@ -73,20 +71,10 @@ public class UIPanel
         int startY = 120;
         int gap = 10;
 
-        _gunButton = new Rectangle(_x + 10, startY, buttonWidth, buttonHeight);
-        _cannonButton = new Rectangle(
+        _gunTowerButton = new Rectangle(_x + 10, startY, buttonWidth, buttonHeight);
+        _cannonTowerButton = new Rectangle(
             _x + 10,
             startY + buttonHeight + gap,
-            buttonWidth,
-            buttonHeight
-        );
-
-        // Champion buttons positioned below Generic towers
-        int championStartY = _cannonButton.Bottom + 60;
-        _championGunButton = new Rectangle(_x + 10, championStartY, buttonWidth, buttonHeight);
-        _championCannonButton = new Rectangle(
-            _x + 10,
-            championStartY + buttonHeight + gap,
             buttonWidth,
             buttonHeight
         );
@@ -143,41 +131,15 @@ public class UIPanel
             return true;
         }
 
-        // Generic towers: check cost and champion alive requirement
-        if (_gunButton.Contains(mousePos))
+        // Consolidated tower buttons: place champion if dead, generic if champion is alive
+        if (_gunTowerButton.Contains(mousePos))
         {
-            var stats = TowerData.GetStats(TowerType.Gun);
-            bool canPlace =
-                playerMoney >= stats.Cost
-                && (_championManager?.CanPlaceGeneric(TowerType.Gun) ?? true);
-            SelectedTowerType = canPlace ? TowerType.Gun : null;
-            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
+            HandleConsolidatedTowerClick(TowerType.Gun, TowerType.ChampionGun, playerMoney);
             return true;
         }
-        if (_cannonButton.Contains(mousePos))
+        if (_cannonTowerButton.Contains(mousePos))
         {
-            var stats = TowerData.GetStats(TowerType.Cannon);
-            bool canPlace =
-                playerMoney >= stats.Cost
-                && (_championManager?.CanPlaceGeneric(TowerType.Cannon) ?? true);
-            SelectedTowerType = canPlace ? TowerType.Cannon : null;
-            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
-            return true;
-        }
-
-        // Champion towers: check placement rules (free, so no cost check)
-        if (_championGunButton.Contains(mousePos))
-        {
-            bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionGun) ?? true;
-            SelectedTowerType = canPlace ? TowerType.ChampionGun : null;
-            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
-            return true;
-        }
-        if (_championCannonButton.Contains(mousePos))
-        {
-            bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionCannon) ?? true;
-            SelectedTowerType = canPlace ? TowerType.ChampionCannon : null;
-            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
+            HandleConsolidatedTowerClick(TowerType.Cannon, TowerType.ChampionCannon, playerMoney);
             return true;
         }
 
@@ -189,6 +151,31 @@ public class UIPanel
         }
 
         return false;
+    }
+
+    // Champion dead → place champion. Champion alive → place generic.
+    private void HandleConsolidatedTowerClick(
+        TowerType genericType,
+        TowerType championType,
+        int playerMoney
+    )
+    {
+        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
+        if (!championAlive)
+        {
+            bool canPlace = _championManager?.CanPlaceChampion(championType) ?? true;
+            SelectedTowerType = canPlace ? championType : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
+        }
+        else
+        {
+            var stats = TowerData.GetStats(genericType);
+            bool canPlace =
+                playerMoney >= stats.Cost
+                && (_championManager?.CanPlaceGeneric(genericType) ?? true);
+            SelectedTowerType = canPlace ? genericType : null;
+            SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
+        }
     }
 
     /// <summary>
@@ -242,67 +229,48 @@ public class UIPanel
                 Color.White
             );
 
-            // --- Tower buttons ---
-            DrawGenericTowerButton(
+            // --- Tower buttons (champion if dead, generic if champion alive) ---
+            DrawConsolidatedTowerButton(
                 spriteBatch,
-                _gunButton,
-                "Gun ($50)",
+                _gunTowerButton,
                 TowerType.Gun,
                 TowerType.ChampionGun,
                 50,
                 money
             );
 
-            DrawGenericTowerButton(
+            DrawConsolidatedTowerButton(
                 spriteBatch,
-                _cannonButton,
-                "Cannon ($80)",
+                _cannonTowerButton,
                 TowerType.Cannon,
                 TowerType.ChampionCannon,
                 80,
                 money
             );
 
-            // --- Champion buttons ---
-            spriteBatch.DrawString(
-                _font,
-                "Champions (Free):",
-                new Vector2(_x + 10, _cannonButton.Bottom + 30),
-                Color.Yellow
-            );
-
-            DrawChampionButton(spriteBatch, _championGunButton, "Champ Gun", TowerType.ChampionGun);
-
-            DrawChampionButton(
-                spriteBatch,
-                _championCannonButton,
-                "Champ Cannon",
-                TowerType.ChampionCannon
-            );
-
             // --- Info text ---
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _championCannonButton.Bottom + 20),
+                new Vector2(_x + 10, _cannonTowerButton.Bottom + 20),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "R-Click: Sell",
-                new Vector2(_x + 10, _championCannonButton.Bottom + 45),
+                new Vector2(_x + 10, _cannonTowerButton.Bottom + 45),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "P: Pause",
-                new Vector2(_x + 10, _championCannonButton.Bottom + 70),
+                new Vector2(_x + 10, _cannonTowerButton.Bottom + 70),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _championCannonButton.Bottom + 95),
+                new Vector2(_x + 10, _cannonTowerButton.Bottom + 95),
                 Color.LightGray
             );
 
@@ -346,11 +314,22 @@ public class UIPanel
         }
         else
         {
-            // Fallback: no font loaded — draw colored blocks as indicators
-            DrawButtonNoFont(spriteBatch, _gunButton, TowerType.Gun);
-            DrawButtonNoFont(spriteBatch, _cannonButton, TowerType.Cannon);
-            DrawButtonNoFont(spriteBatch, _championGunButton, TowerType.ChampionGun);
-            DrawButtonNoFont(spriteBatch, _championCannonButton, TowerType.ChampionCannon);
+            // Fallback: no font loaded — draw colored blocks as indicators.
+            // Show champion color when dead, generic color when alive.
+            bool gunChampAlive = _championManager?.IsChampionAlive(TowerType.ChampionGun) ?? false;
+            bool cannonChampAlive =
+                _championManager?.IsChampionAlive(TowerType.ChampionCannon) ?? false;
+
+            DrawButtonNoFont(
+                spriteBatch,
+                _gunTowerButton,
+                gunChampAlive ? TowerType.Gun : TowerType.ChampionGun
+            );
+            DrawButtonNoFont(
+                spriteBatch,
+                _cannonTowerButton,
+                cannonChampAlive ? TowerType.Cannon : TowerType.ChampionCannon
+            );
 
             TextureManager.DrawRect(
                 spriteBatch,
@@ -364,58 +343,6 @@ public class UIPanel
             DrawTowerInfoPanel(spriteBatch, selectedTower);
         else if (selectedEnemy != null)
             DrawEnemyInfoPanel(spriteBatch, selectedEnemy);
-    }
-
-    private void DrawButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        string label,
-        TowerType type,
-        bool canAfford,
-        string? overlayText = null
-    )
-    {
-        bool isSelected = SelectedTowerType == type;
-        Color bgColor = isSelected ? Color.SlateGray : Color.DarkSlateGray;
-        if (!canAfford)
-            bgColor = Color.DarkGray;
-
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        // Tower color indicator
-        var stats = TowerData.GetStats(type);
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            stats.Color
-        );
-
-        if (_font != null)
-        {
-            spriteBatch.DrawString(
-                _font,
-                label,
-                new Vector2(rect.X + 50, rect.Y + 15),
-                canAfford ? Color.White : Color.DarkGray
-            );
-
-            // Draw overlay text if provided (e.g., "Champion Dead")
-            if (overlayText != null && !canAfford)
-            {
-                spriteBatch.DrawString(
-                    _font,
-                    overlayText,
-                    new Vector2(rect.X + 50, rect.Y + 30),
-                    Color.Red
-                );
-            }
-        }
     }
 
     private void DrawButtonNoFont(SpriteBatch spriteBatch, Rectangle rect, TowerType type)
@@ -439,25 +366,100 @@ public class UIPanel
     }
 
     /// <summary>
-    /// Helper to draw a generic tower button with champion placement check.
-    /// Shows "Champion Dead" overlay only if the champion was placed and died (respawn cooldown active).
+    /// Draws a single button that acts as the champion button when the champion is dead,
+    /// and switches to the generic button once the champion is alive on the field.
     /// </summary>
-    private void DrawGenericTowerButton(
+    private void DrawConsolidatedTowerButton(
         SpriteBatch spriteBatch,
         Rectangle rect,
-        string label,
-        TowerType towerType,
-        TowerType championVariant,
-        int cost,
+        TowerType genericType,
+        TowerType championType,
+        int genericCost,
         int playerMoney
     )
     {
-        bool canAfford = playerMoney >= cost;
-        bool canPlace = canAfford && (_championManager?.CanPlaceGeneric(towerType) ?? true);
-        bool hasRespawnCooldown = (_championManager?.GetRespawnCooldown(championVariant) ?? 0f) > 0;
-        string? overlay = (canAfford && !canPlace && hasRespawnCooldown) ? "Champion Dead" : null;
+        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
+        bool isSelected = SelectedTowerType == genericType || SelectedTowerType == championType;
 
-        DrawButton(spriteBatch, rect, label, towerType, canPlace, overlay);
+        Color bgColor;
+        Color textColor = Color.White;
+        string mainLabel;
+        string? subLabel = null;
+        TowerType indicatorType;
+
+        if (!championAlive)
+        {
+            indicatorType = championType;
+            mainLabel = $"{genericType} (Free)";
+
+            float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
+            float respawnCooldown = _championManager?.GetRespawnCooldown(championType) ?? 0f;
+
+            if (globalCooldown > 0)
+            {
+                bgColor = Color.DarkSlateGray;
+                subLabel = $"Global: {globalCooldown:F1}s";
+                textColor = Color.DarkGray;
+            }
+            else if (respawnCooldown > 0)
+            {
+                bgColor = Color.DarkSlateGray;
+                subLabel = $"Respawn: {respawnCooldown:F1}s";
+                textColor = Color.DarkGray;
+            }
+            else
+            {
+                bgColor = Color.DarkSlateGray;
+                subLabel = "Place Champion";
+            }
+        }
+        else
+        {
+            indicatorType = genericType;
+            bool canAfford = playerMoney >= genericCost;
+            mainLabel = $"{genericType} (${genericCost})";
+            bgColor = canAfford ? Color.DarkSlateGray : Color.DarkGray;
+            textColor = canAfford ? Color.White : Color.DarkGray;
+            if (!canAfford)
+                subLabel = "Can't Afford";
+        }
+
+        if (isSelected)
+            bgColor = Color.SlateGray;
+
+        TextureManager.DrawRect(spriteBatch, rect, bgColor);
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            rect,
+            isSelected ? Color.Yellow : Color.Gray,
+            2
+        );
+
+        var stats = TowerData.GetStats(indicatorType);
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
+            stats.Color
+        );
+
+        spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
+
+        if (subLabel != null)
+        {
+            Color subColor;
+            if (subLabel == "Place Champion")
+                subColor = Color.LightGreen;
+            else if (subLabel == "Can't Afford")
+                subColor = Color.Red;
+            else
+                subColor = Color.Yellow; // cooldown text
+            spriteBatch.DrawString(
+                _font,
+                subLabel,
+                new Vector2(rect.X + 50, rect.Y + 28),
+                subColor
+            );
+        }
     }
 
     /// <summary>
@@ -590,100 +592,6 @@ public class UIPanel
         // Attack Damage
         string dmgText = $"Attack Dmg: {enemy.AttackDamage}";
         spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
-    }
-
-    private void DrawChampionButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        string label,
-        TowerType championType
-    )
-    {
-        bool isSelected = SelectedTowerType == championType;
-
-        // Default fallback if no champion manager
-        if (_championManager == null)
-        {
-            DrawButton(spriteBatch, rect, $"{label} (Free)", championType, canAfford: true);
-            return;
-        }
-
-        // Determine button state and cooldown overlay text
-        Color bgColor;
-        Color textColor = Color.White;
-        string? cooldownText = null;
-
-        if (isSelected)
-        {
-            bgColor = Color.SlateGray;
-        }
-        else if (_championManager.IsChampionAlive(championType))
-        {
-            // Champion already placed - locked
-            bgColor = Color.DarkGray;
-            textColor = Color.DarkGray;
-            cooldownText = "Limit Reached";
-        }
-        else
-        {
-            float globalCooldown = _championManager.GlobalCooldownRemaining;
-            float respawnCooldown = _championManager.GetRespawnCooldown(championType);
-
-            if (globalCooldown > 0)
-            {
-                bgColor = Color.DarkSlateGray;
-                cooldownText = $"Global: {globalCooldown:F1}s";
-            }
-            else if (respawnCooldown > 0)
-            {
-                bgColor = Color.DarkSlateGray;
-                cooldownText = $"Respawn: {respawnCooldown:F1}s";
-            }
-            else
-            {
-                // Available to place
-                bgColor = Color.DarkSlateGray;
-            }
-        }
-
-        // Draw button background and outline (matching DrawButton pattern)
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        // Draw tower color indicator (matching DrawButton pattern)
-        var stats = TowerData.GetStats(championType);
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            stats.Color
-        );
-
-        // Draw label text
-        if (_font != null)
-        {
-            spriteBatch.DrawString(
-                _font,
-                $"{label} (Free)",
-                new Vector2(rect.X + 50, rect.Y + 10),
-                textColor
-            );
-
-            // Draw cooldown overlay text if present
-            if (cooldownText != null)
-            {
-                spriteBatch.DrawString(
-                    _font,
-                    cooldownText,
-                    new Vector2(rect.X + 50, rect.Y + 30),
-                    Color.Yellow
-                );
-            }
-        }
     }
 
     private void DrawDebugButton(

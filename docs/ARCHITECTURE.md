@@ -44,9 +44,8 @@
 
 ## UIPanel
 - `UISelectionMode` enum: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
-- Champion buttons: "Limit Reached" (alive), "Global: X.Xs", "Respawn: X.Xs"
-- Generic buttons: grayed + "Champion Dead" when respawn active; just grayed at game start
-- `DrawGenericTowerButton()` helper deduplicates champion-death logic
+- Consolidated buttons (one per tower type): champion mode when champion dead (free, shows cooldown), generic mode when champion alive (costs gold). `HandleConsolidatedTowerClick()` dispatches to champion or generic placement logic.
+- Button sub-labels: "Place Champion" (green), "Global: X.Xs" / "Respawn: X.Xs" (yellow, cooldown active), "Can't Afford" (red)
 - Debug buttons: Place High Ground (grid click mode), Spawn Enemy (instant, uses `WaveManager.CurrentWaveDefinition`)
 
 ## Enemy Selection
