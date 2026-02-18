@@ -428,7 +428,12 @@ public class UIPanel
             bgColor = Color.SlateGray;
 
         TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(spriteBatch, rect, isSelected ? Color.Yellow : Color.Gray, 2);
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            rect,
+            isSelected ? Color.Yellow : Color.Gray,
+            2
+        );
 
         var stats = TowerData.GetStats(indicatorType);
         TextureManager.DrawRect(
@@ -437,22 +442,23 @@ public class UIPanel
             stats.Color
         );
 
-        if (_font != null)
-        {
-            spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
+        spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
 
-            if (subLabel != null)
-            {
-                Color subColor = subLabel == "Place Champion" ? Color.LightGreen
-                    : subLabel == "Can't Afford" ? Color.Red
-                    : Color.Yellow; // cooldown text
-                spriteBatch.DrawString(
-                    _font,
-                    subLabel,
-                    new Vector2(rect.X + 50, rect.Y + 28),
-                    subColor
-                );
-            }
+        if (subLabel != null)
+        {
+            Color subColor;
+            if (subLabel == "Place Champion")
+                subColor = Color.LightGreen;
+            else if (subLabel == "Can't Afford")
+                subColor = Color.Red;
+            else
+                subColor = Color.Yellow; // cooldown text
+            spriteBatch.DrawString(
+                _font,
+                subLabel,
+                new Vector2(rect.X + 50, rect.Y + 28),
+                subColor
+            );
         }
     }
 
