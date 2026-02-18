@@ -145,6 +145,11 @@ public class TowerManager
         var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
         if (tile.OccupyingTower == tower)
             tile.OccupyingTower = null;
+
+        // If the tower died while moving, its reserved destination tile must be freed
+        if (tower.CurrentState == TowerState.Moving)
+            ClearReservationFor(tower);
+
         _towers.Remove(tower);
 
         if (tower.TowerType.IsChampion())
@@ -154,6 +159,25 @@ public class TowerManager
             SelectedTower = null;
 
         OnTowerDestroyed?.Invoke(tower.GridPosition);
+    }
+
+    /// <summary>
+    /// Scans all tiles to clear a reservation left by a tower that died mid-movement.
+    /// O(W*H) but only runs on the rare event of a moving tower dying.
+    /// </summary>
+    private void ClearReservationFor(Tower tower)
+    {
+        for (int x = 0; x < _map.Columns; x++)
+        {
+            for (int y = 0; y < _map.Rows; y++)
+            {
+                if (_map.Tiles[x, y].ReservedByTower == tower)
+                {
+                    _map.Tiles[x, y].ReservedByTower = null;
+                    return;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -169,6 +193,10 @@ public class TowerManager
         // Ghost: remove tower from origin tile so enemies treat it as open
         var originTile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
         originTile.OccupyingTower = null;
+
+        // Reserve destination immediately — blocks placement and other movement commands mid-transit
+        var destTile = _map.Tiles[destination.X, destination.Y];
+        destTile.ReservedByTower = tower;
 
         // Wire completion callback before starting (handles single-frame edge case)
         tower.OnMovementComplete = () => HandleMovementComplete(tower, destination);
@@ -186,6 +214,7 @@ public class TowerManager
     private void HandleMovementComplete(Tower tower, Point destination)
     {
         var destTile = _map.Tiles[destination.X, destination.Y];
+        destTile.ReservedByTower = null;
         destTile.OccupyingTower = tower;
 
         OnTowerPlaced?.Invoke(destination);
