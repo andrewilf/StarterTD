@@ -70,8 +70,8 @@ public class Game1 : Game
     {
         _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-        // Initialize the texture manager (creates the 1x1 white pixel)
-        TextureManager.Initialize(GraphicsDevice);
+        // Initialize the texture manager (creates the 1x1 white pixel and loads terrain tileset)
+        TextureManager.Initialize(GraphicsDevice, Content);
 
         // Try to load debug font (same font used for UI)
         try
