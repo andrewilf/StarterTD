@@ -123,7 +123,8 @@ public class TowerManager
     private void RemoveTower(Tower tower)
     {
         var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
-        tile.OccupyingTower = null;
+        if (tile.OccupyingTower == tower)
+            tile.OccupyingTower = null;
         _towers.Remove(tower);
 
         if (tower.TowerType.IsChampion())
@@ -133,6 +134,41 @@ public class TowerManager
             SelectedTower = null;
 
         OnTowerDestroyed?.Invoke(tower.GridPosition);
+    }
+
+    /// <summary>
+    /// Initiate tower movement: clears the origin tile (ghost), triggers enemy reroute,
+    /// and starts the tower's smooth movement along the path.
+    /// </summary>
+    public void MoveTower(Tower tower, Point destination)
+    {
+        var path = TowerPathfinder.FindPath(tower.GridPosition, destination, _map);
+        if (path == null || path.Count <= 1)
+            return;
+
+        // Ghost: remove tower from origin tile so enemies treat it as open
+        var originTile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
+        originTile.OccupyingTower = null;
+
+        // Wire completion callback before starting (handles single-frame edge case)
+        tower.OnMovementComplete = () => HandleMovementComplete(tower, destination);
+
+        // Reroute enemies through the now-vacated tile
+        OnTowerPlaced?.Invoke(tower.GridPosition);
+
+        tower.StartMoving(path);
+    }
+
+    /// <summary>
+    /// Called when a tower finishes its movement path. Re-occupies the destination tile
+    /// and triggers enemy reroute around the newly placed tower.
+    /// </summary>
+    private void HandleMovementComplete(Tower tower, Point destination)
+    {
+        var destTile = _map.Tiles[destination.X, destination.Y];
+        destTile.OccupyingTower = tower;
+
+        OnTowerPlaced?.Invoke(destination);
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)

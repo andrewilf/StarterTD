@@ -16,6 +16,8 @@ public static class GunTower
         Color: Color.Orange,
         MaxHealth: 100,
         BlockCapacity: 3,
-        DrawScale: new Vector2(1.0f, 1.0f)
+        DrawScale: new Vector2(1.0f, 1.0f),
+        MoveSpeed: 80f,
+        CooldownDuration: 2.0f
     );
 }

@@ -19,7 +19,9 @@ public record TowerStats(
     Color Color, // Visual color for placeholder sprite
     int MaxHealth, // Hit points
     int BlockCapacity, // Max enemies that can attack this tower at once
-    Vector2 DrawScale // Render scale (champions use 1.0, 1.5 to appear taller)
+    Vector2 DrawScale, // Render scale (champions use 1.0, 1.5 to appear taller)
+    float MoveSpeed, // Pixels per second while in Moving state
+    float CooldownDuration // Seconds in Cooldown state after movement finishes
 );
 
 /// <summary>
