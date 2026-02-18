@@ -1,7 +1,7 @@
 # Project Manifest
 
 ## Active Systems
-- Core loop, stack-based scene management, 3 maps
+- Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — add/remove files + `bash sync_maps.sh`)
 - Pause: P to toggle, ESC/Resume button
 - MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
@@ -20,7 +20,7 @@
 
 ### High Priority
 - [ ] Champion debuff: implement `Tower.UpdateChampionStatus()` stat changes
-- [ ] Sprite integration: replace rects with `Texture2D`
+- [x] Sprite integration: terrain tiles use `terrain.png` spritesheet via `TextureManager.DrawTile()`
 - [ ] Sound: SFX + BGM manager
 
 ### Gameplay

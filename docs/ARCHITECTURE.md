@@ -30,6 +30,12 @@
 - `TowerManager.MoveTower(tower, dest)`: ghost origin tile → set `destTile.ReservedByTower = tower` → reroute enemies → `StartMoving()`. `HandleMovementComplete`: clear reservation → re-occupy dest → reroute enemies. `RemoveTower()` calls `ClearReservationFor()` on mid-movement death to free the reserved tile
 - `TowerPathfinder`: tower-specific Dijkstra via `Pathfinder.ComputeHeatMap()` with custom cost function (Path=1, HighGround=2, occupied tower=10, Rock=impassable). Ignores enemies
 
+## Map Loading
+- Maps are Tiled `.tmx` files in `Content/Maps/`. `TmxLoader.TryLoad(id)` parses XML → `MapData.TileGrid` (column-major `[col,row]`)
+- `MapDataRepository.GetAvailableMaps()` scans `Content/Maps/*.tmx` at runtime — no C# changes needed when adding/removing maps
+- `Map.InitializeTiles()`: TileGrid fast-path fills directly; legacy rectangle path still supported
+- `TextureManager.DrawTile()`: draws from `terrain.png` spritesheet (col = `(int)TileType`); falls back to colored rect
+
 ## Tile System
 - `TileType` enum: HighGround, Path, Rock
 - Stats in `Engine/TileTypes/<Type>Tile.cs`; registry: `TileData.GetStats()`
