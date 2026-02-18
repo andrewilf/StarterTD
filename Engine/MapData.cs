@@ -5,10 +5,10 @@ using Microsoft.Xna.Framework;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// Data-driven map configuration. Defines terrain layout via rectangles.
-/// Dijkstra computes the actual enemy route at runtime from tile costs.
+/// Data-driven map configuration. Terrain layout comes from either a TileGrid (Tiled .tmx maps)
+/// or legacy WalkableAreas/RockAreas rectangles. Dijkstra computes the enemy route at runtime.
 ///
-/// Python/TS analogy: Like a config dict { spawn, exit, walkable_rects, ... }
+/// Python/TS analogy: Like a config dict { spawn, exit, tile_grid, ... }
 /// that a Map class reads to build a 2D grid.
 /// </summary>
 public record MapData(
@@ -16,17 +16,27 @@ public record MapData(
     string Id, // Unique identifier
     Point SpawnPoint, // Where enemies enter the map
     Point ExitPoint, // Where enemies leave the map
-    List<Rectangle> WalkableAreas, // Rectangles of Path tiles (walkable + buildable terrain)
+    List<Rectangle> WalkableAreas, // Rectangles of Path tiles — unused when TileGrid is set
     int Columns = 20, // Grid width
     int Rows = 15, // Grid height
-    List<Rectangle>? RockAreas = null // Rectangles of Rock tiles (impassable + unbuildable)
+    List<Rectangle>? RockAreas = null // Rectangles of Rock tiles — unused when TileGrid is set
 )
 {
+    // Kept outside the primary constructor to avoid S2368 (multidimensional array in public ctor).
+    // Set via object initializer: new MapData(...) { TileGrid = grid }
+    public TileType[,]? TileGrid { get; init; } = null;
+
     /// <summary>
     /// Validates map data. Throws ArgumentException if invalid.
     /// </summary>
     public void Validate()
     {
+        if (TileGrid != null && (TileGrid.GetLength(0) != Columns || TileGrid.GetLength(1) != Rows))
+            throw new ArgumentException(
+                $"Map '{Name}': TileGrid dimensions ({TileGrid.GetLength(0)}x{TileGrid.GetLength(1)}) "
+                    + $"do not match Columns/Rows ({Columns}x{Rows})"
+            );
+
         if (SpawnPoint.X < 0 || SpawnPoint.X >= Columns || SpawnPoint.Y < 0 || SpawnPoint.Y >= Rows)
             throw new ArgumentException(
                 $"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is out of bounds"
@@ -76,10 +86,14 @@ public record MapData(
     }
 
     /// <summary>
-    /// Check if a point falls inside any walkable area rectangle.
+    /// Check if a point is a walkable (Path) tile.
+    /// For Tiled maps, reads TileGrid directly. For legacy rectangle maps, checks WalkableAreas.
     /// </summary>
     public bool IsInWalkableArea(Point p)
     {
+        if (TileGrid != null)
+            return TileGrid[p.X, p.Y] == TileType.Path;
+
         foreach (var area in WalkableAreas)
         {
             if (p.X >= area.Left && p.X < area.Right && p.Y >= area.Top && p.Y < area.Bottom)
@@ -90,127 +104,23 @@ public record MapData(
 };
 
 /// <summary>
-/// Static repository of predefined maps. Think of this like TowerData.GetStats().
+/// Loads maps by ID from Tiled .tmx files in Content/Maps/.
+/// Add a new map by creating a .tmx file — no C# changes required.
 /// </summary>
 public static class MapDataRepository
 {
     /// <summary>
-    /// Gets a predefined map by ID. Throws if not found.
+    /// Loads a map from its .tmx file. Throws if the file is not found or is invalid.
     /// </summary>
     public static MapData GetMap(string mapId) =>
-        mapId switch
-        {
-            "classic_s" => CreateClassicSPath(),
-            "straight" => CreateStraightPath(),
-            "maze_test" => CreateMazeTestPath(),
-            _ => throw new ArgumentException($"Unknown map ID: {mapId}"),
-        };
+        TmxLoader.TryLoad(mapId)
+        ?? throw new ArgumentException(
+            $"Map file not found for ID '{mapId}'. " + $"Expected: Content/Maps/{mapId}.tmx"
+        );
 
     /// <summary>
     /// Lists all available map IDs.
     /// </summary>
-    public static List<string> GetAvailableMaps() => new() { "classic_s", "straight", "maze_test" };
-
-    /// <summary>
-    /// Classic S-path: corridors forming a serpentine route.
-    /// </summary>
-    private static MapData CreateClassicSPath()
-    {
-        // S-path defined as corridor rectangles:
-        //   Row 2: x=0-17   (left to right)
-        //   Col 17: y=2-6   (down)
-        //   Row 6: x=2-17   (right to left)
-        //   Col 2: y=6-10   (down)
-        //   Row 10: x=2-17  (left to right)
-        //   Col 17: y=10-13 (down)
-        //   Row 13: x=0-17  (right to left)
-        var walkableAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 2, 18, 1), // Row 2: x=0 to x=17
-            new Rectangle(17, 2, 1, 5), // Col 17: y=2 to y=6
-            new Rectangle(2, 6, 16, 1), // Row 6: x=2 to x=17
-            new Rectangle(2, 6, 1, 5), // Col 2: y=6 to y=10
-            new Rectangle(2, 10, 16, 1), // Row 10: x=2 to x=17
-            new Rectangle(17, 10, 1, 4), // Col 17: y=10 to y=13
-            new Rectangle(0, 13, 18, 1), // Row 13: x=0 to x=17
-        };
-
-        var rockAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
-        };
-
-        var mapData = new MapData(
-            Name: "Classic S-Path",
-            Id: "classic_s",
-            SpawnPoint: new Point(0, 2),
-            ExitPoint: new Point(0, 13),
-            WalkableAreas: walkableAreas,
-            RockAreas: rockAreas
-        );
-
-        mapData.Validate();
-        return mapData;
-    }
-
-    /// <summary>
-    /// Simple straight horizontal path for testing.
-    /// </summary>
-    private static MapData CreateStraightPath()
-    {
-        var walkableAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 7, 20, 1), // Full width horizontal line on row 7
-        };
-
-        var rockAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
-        };
-
-        var mapData = new MapData(
-            Name: "Straight Path",
-            Id: "straight",
-            SpawnPoint: new Point(0, 7),
-            ExitPoint: new Point(19, 7),
-            WalkableAreas: walkableAreas,
-            RockAreas: rockAreas
-        );
-
-        mapData.Validate();
-        return mapData;
-    }
-
-    /// <summary>
-    /// Maze test map: straight path through a large open buildable area.
-    /// Players build towers anywhere in the area to force enemies into detours.
-    /// </summary>
-    private static MapData CreateMazeTestPath()
-    {
-        var walkableAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 7, 20, 1), // Horizontal path across row 7 (full width for spawn/exit)
-            new Rectangle(2, 1, 15, 13), // Large buildable area (x=2-16, y=1-13)
-        };
-
-        var rockAreas = new List<Rectangle>
-        {
-            new Rectangle(0, 0, 20, 1), // Top strip: full width, row 0
-            new Rectangle(0, 14, 20, 1), // Bottom strip: full width, row 14
-        };
-
-        var mapData = new MapData(
-            Name: "Maze Test",
-            Id: "maze_test",
-            SpawnPoint: new Point(0, 7),
-            ExitPoint: new Point(19, 7),
-            WalkableAreas: walkableAreas,
-            RockAreas: rockAreas
-        );
-
-        mapData.Validate();
-        return mapData;
-    }
+    public static List<string> GetAvailableMaps() =>
+        new() { "maze_test_1", "maze_test_2", "maze_test_3" };
 }

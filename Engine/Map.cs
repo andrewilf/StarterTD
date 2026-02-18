@@ -84,10 +84,10 @@ public class Map
     public MapData MapData { get; }
 
     /// <summary>
-    /// BACKWARD COMPATIBLE: Default constructor uses classic S-path.
+    /// Default constructor uses the first available map.
     /// </summary>
     public Map()
-        : this(MapDataRepository.GetMap("classic_s")) { }
+        : this(MapDataRepository.GetMap(MapDataRepository.GetAvailableMaps()[0])) { }
 
     /// <summary>
     /// Primary constructor accepting MapData.
@@ -117,10 +117,24 @@ public class Map
     }
 
     /// <summary>
-    /// Initialize tiles: all start as HighGround, then WalkableAreas are marked as Path.
+    /// Initialize tiles from MapData. Tiled maps use a pre-built TileGrid; legacy maps use rectangle fill.
     /// </summary>
     private void InitializeTiles()
     {
+        // Fast path: Tiled .tmx map already has a complete per-tile type grid
+        if (MapData.TileGrid != null)
+        {
+            for (int x = 0; x < Columns; x++)
+            {
+                for (int y = 0; y < Rows; y++)
+                {
+                    Tiles[x, y] = new Tile(new Point(x, y), MapData.TileGrid[x, y]);
+                }
+            }
+            return;
+        }
+
+        // Legacy path: fill by rectangle regions
         for (int x = 0; x < Columns; x++)
         {
             for (int y = 0; y < Rows; y++)
@@ -258,10 +272,7 @@ public class Map
                 );
 
                 var tile = Tiles[x, y];
-                Color tileColor = TileData.GetStats(tile.Type).Color;
-
-                TextureManager.DrawRect(spriteBatch, rect, tileColor);
-                TextureManager.DrawRectOutline(spriteBatch, rect, Color.Black * 0.24f, 1);
+                TextureManager.DrawTile(spriteBatch, rect, tile.Type);
             }
         }
 

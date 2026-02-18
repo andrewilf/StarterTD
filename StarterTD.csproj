@@ -24,6 +24,17 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\Maps\maze_test_1.tmx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Maps\maze_test_2.tmx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Content\Maps\maze_test_3.tmx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="MonoGame.Extended" Version="5.3.1" />
     <PackageReference Include="MonoGame.Extended.Content.Pipeline" Version="5.3.1" />
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />

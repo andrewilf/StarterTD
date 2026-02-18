@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace StarterTD.Engine;
@@ -13,17 +14,33 @@ public static class TextureManager
     /// <summary>A 1x1 white pixel texture used for all placeholder rendering.</summary>
     public static Texture2D Pixel { get; private set; } = null!;
 
+    /// <summary>
+    /// Terrain spritesheet from Maps/terrain.png.
+    /// Each tile is TileSize × TileSize pixels, laid out horizontally: HighGround, Path, Rock.
+    /// Null if the texture failed to load (falls back to colored rects).
+    /// </summary>
+    public static Texture2D? TerrainTileset { get; private set; }
+
     /// <summary>Cache of generated filled circle textures keyed by radius.</summary>
     private static readonly Dictionary<int, Texture2D> FilledCircleCache = new();
 
     /// <summary>
     /// Initialize the texture manager. Call once during LoadContent.
-    /// Creates a 1x1 white pixel texture in memory and pre-generates common circle textures.
+    /// Creates a 1x1 white pixel texture, loads the terrain tileset, and pre-generates circle textures.
     /// </summary>
-    public static void Initialize(GraphicsDevice graphicsDevice)
+    public static void Initialize(GraphicsDevice graphicsDevice, ContentManager content)
     {
         Pixel = new Texture2D(graphicsDevice, 1, 1);
         Pixel.SetData(new[] { Color.White });
+
+        try
+        {
+            TerrainTileset = content.Load<Texture2D>("Maps/terrain");
+        }
+        catch
+        {
+            // Terrain sprite not available — Map.Draw will fall back to colored rectangles
+        }
 
         // Pre-generate circles for tower ranges and AoE effects
         GenerateFilledCircleTexture(graphicsDevice, 50); // Cannon AoE radius
@@ -170,6 +187,29 @@ public static class TextureManager
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// Draw a terrain tile using the spritesheet, falling back to a colored rect if unavailable.
+    /// The spritesheet column index matches TileType ordinal value (HighGround=0, Path=1, Rock=2).
+    /// </summary>
+    public static void DrawTile(SpriteBatch spriteBatch, Rectangle destRect, TileType tileType)
+    {
+        if (TerrainTileset != null)
+        {
+            int col = (int)tileType;
+            var sourceRect = new Rectangle(
+                col * GameSettings.TileSize,
+                0,
+                GameSettings.TileSize,
+                GameSettings.TileSize
+            );
+            spriteBatch.Draw(TerrainTileset, destRect, sourceRect, Color.White);
+        }
+        else
+        {
+            spriteBatch.Draw(Pixel, destRect, TileData.GetStats(tileType).Color);
+        }
     }
 
     /// <summary>

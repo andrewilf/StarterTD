@@ -54,12 +54,7 @@ public class MapSelectionScene : IScene
     {
         _inputManager = new InputManager();
 
-        _availableMaps = new List<MapData>
-        {
-            MapDataRepository.GetMap("classic_s"),
-            MapDataRepository.GetMap("straight"),
-            MapDataRepository.GetMap("maze_test"),
-        };
+        _availableMaps = MapDataRepository.GetAvailableMaps().ConvertAll(MapDataRepository.GetMap);
 
         try
         {
@@ -91,21 +86,13 @@ public class MapSelectionScene : IScene
         if (
             currentMouse.LeftButton == ButtonState.Pressed
             && _previousMouse.LeftButton == ButtonState.Released
+            && _hoveredCardIndex >= 0
+            && _hoveredCardIndex < _availableMaps.Count
         )
         {
-            string? selectedMapId = _hoveredCardIndex switch
-            {
-                0 => "classic_s",
-                1 => "straight",
-                2 => "maze_test",
-                _ => null,
-            };
-
-            if (selectedMapId != null)
-            {
-                var gameplayScene = new GameplayScene(_game, selectedMapId);
-                _game.SetScene(gameplayScene);
-            }
+            string selectedMapId = _availableMaps[_hoveredCardIndex].Id;
+            var gameplayScene = new GameplayScene(_game, selectedMapId);
+            _game.SetScene(gameplayScene);
         }
 
         _previousMouse = currentMouse;
@@ -212,10 +199,22 @@ public class MapSelectionScene : IScene
                     miniTileSize
                 );
 
-                // Check if tile is inside any walkable area
-                Color tileColor = mapData.IsInWalkableArea(new Point(x, y))
-                    ? Color.Tan
-                    : Color.ForestGreen;
+                Color tileColor;
+                if (mapData.TileGrid != null)
+                {
+                    tileColor = mapData.TileGrid[x, y] switch
+                    {
+                        TileType.Path => Color.Tan,
+                        TileType.Rock => Color.DarkGray,
+                        _ => Color.ForestGreen,
+                    };
+                }
+                else
+                {
+                    tileColor = mapData.IsInWalkableArea(new Point(x, y))
+                        ? Color.Tan
+                        : Color.ForestGreen;
+                }
 
                 TextureManager.DrawRect(spriteBatch, tileRect, tileColor);
             }
