@@ -220,6 +220,21 @@ public class TowerManager
         OnTowerPlaced?.Invoke(destination);
     }
 
+    /// <summary>
+    /// Dispatches the champion super ability to all relevant towers.
+    /// Each tower type's AbilityEffect delegate (defined in its own stats file) handles what the buff does.
+    /// </summary>
+    public void TriggerChampionAbility(TowerType championType)
+    {
+        var genericType = championType.GetGenericVariant();
+
+        foreach (var tower in _towers)
+        {
+            if (tower.TowerType == championType || tower.TowerType == genericType)
+                TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
+        }
+    }
+
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
         _championManager.Update(gameTime);

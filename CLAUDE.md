@@ -6,13 +6,8 @@ I am a Python/TypeScript engineer new to C#.
 - **Code Style**: Readable over clever. Prioritize clear, explicit logic.
 - **Comments**: Explain "Why", not "What". Avoid conversational notes or redundant narration. Focus on non-obvious logic.
 
-## Project Architecture (Source of Truth: `docs/ARCHITECTURE.md`)
-- **Pattern**: `Game1` → `SceneManager` → `[MapSelectionScene | GameplayScene]`.
-- **Mediator Rule**: Each scene owns its managers (`WaveManager`, `TowerManager`, etc.).
-- **Data Flow**:
-    - **Down**: Scene passes data to managers via `Update()`.
-    - **Up**: Managers notify Scene via `Action` callbacks.
-    - **Strict Isolation**: Managers **never** reference each other directly.
+## Project Architecture
+Source of truth: `docs/ARCHITECTURE.md`.
 
 ## Documentation Strategy
 - **Status & Backlog**: Check `docs/CURRENT_STATE.md` for features and **To-Do** items.

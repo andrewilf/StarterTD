@@ -19,6 +19,9 @@ public static class ChampionGunTower
         DrawScale: new Vector2(1.0f, 1.5f),
         CanWalk: true,
         MoveSpeed: 80f,
-        CooldownDuration: 2.0f
+        CooldownDuration: 2.0f,
+        AbilityDuration: 5f,
+        AbilityCooldown: 15f,
+        AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f)
     );
 }

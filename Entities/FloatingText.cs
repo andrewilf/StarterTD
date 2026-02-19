@@ -64,8 +64,9 @@ public class FloatingText
             return;
 
         // Fade-out alpha during last 30% of lifetime
-        float remainingTime = (float)_timer.CurrentTime.TotalSeconds;
-        float alpha = Math.Min(1f, remainingTime / (_lifetime * 0.3f));
+        float elapsed = (float)_timer.CurrentTime.TotalSeconds;
+        float remaining = _lifetime - elapsed;
+        float alpha = Math.Min(1f, remaining / (_lifetime * 0.3f));
         Color fadeColor = Color * alpha;
 
         // Shadow for readability

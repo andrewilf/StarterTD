@@ -65,6 +65,14 @@ public class Tower : ITower
     private float _cooldownTimer;
     private float _cooldownDuration;
 
+    private float _abilityTimer;
+    private float _abilityDuration;
+    private float _originalDamage;
+    private float _originalFireRate;
+
+    /// <summary>True while the super ability buff is active on this tower.</summary>
+    public bool IsAbilityBuffActive { get; private set; }
+
     /// <summary>List of active projectiles fired by this tower.</summary>
     public List<Projectile> Projectiles { get; } = new();
 
@@ -185,11 +193,53 @@ public class Tower : ITower
         DrawScale = stats.DrawScale;
         MoveSpeed = stats.MoveSpeed;
         _cooldownDuration = stats.CooldownDuration;
+        _abilityDuration = stats.AbilityDuration;
         CanWalk = stats.CanWalk;
+    }
+
+    /// <summary>
+    /// Apply a temporary buff to this tower's damage and fire rate.
+    /// damageMult scales damage (2f = double). fireRateSpeedMult speeds up attack (1.4f = 40% faster).
+    /// Safe to call while already active — resets the timer but does not stack multipliers.
+    /// </summary>
+    public void ActivateAbilityBuff(float damageMult, float fireRateSpeedMult)
+    {
+        if (!IsAbilityBuffActive)
+        {
+            _originalDamage = Damage;
+            _originalFireRate = FireRate;
+        }
+        else
+        {
+            // Already buffed: restore originals before re-applying to avoid stacking
+            Damage = _originalDamage;
+            FireRate = _originalFireRate;
+        }
+
+        Damage *= damageMult;
+        // Lower FireRate value = faster attack (seconds between shots)
+        FireRate /= fireRateSpeedMult;
+        IsAbilityBuffActive = true;
+        _abilityTimer = _abilityDuration;
+    }
+
+    private void DeactivateAbilityBuff()
+    {
+        Damage = _originalDamage;
+        FireRate = _originalFireRate;
+        IsAbilityBuffActive = false;
+        _abilityTimer = 0f;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
+        if (IsAbilityBuffActive)
+        {
+            _abilityTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_abilityTimer <= 0f)
+                DeactivateAbilityBuff();
+        }
+
         if (CurrentState == TowerState.Moving)
         {
             UpdateMovement(gameTime);
@@ -347,6 +397,23 @@ public class Tower : ITower
         {
             // Generic tower: centered origin
             spriteOrigin = new Vector2(0.5f, 0.5f);
+        }
+
+        // Ability aura: two concentric circles give a soft glow effect
+        if (IsAbilityBuffActive)
+        {
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                _drawPosition,
+                SpriteSize * 1.4f,
+                Color.Gold * 0.25f
+            );
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                _drawPosition,
+                SpriteSize * 0.9f,
+                Color.Gold * 0.45f
+            );
         }
 
         // Semi-transparent when moving so tower looks ghostly (non-blocking)

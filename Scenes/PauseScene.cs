@@ -18,6 +18,7 @@ public class PauseScene : IScene
 
     private readonly Rectangle _resumeButton;
     private readonly Rectangle _mainMenuButton;
+    private MouseState _previousMouse = new();
 
     private const int ButtonWidth = 200;
     private const int ButtonHeight = 60;
@@ -51,6 +52,7 @@ public class PauseScene : IScene
         }
 
         _previousKeyboard = Keyboard.GetState();
+        _previousMouse = Mouse.GetState();
     }
 
     public void Update(GameTime gameTime)
@@ -67,15 +69,19 @@ public class PauseScene : IScene
             return;
         }
 
-        MouseState mouse = Mouse.GetState();
-        if (mouse.LeftButton == ButtonState.Pressed)
+        MouseState currentMouse = Mouse.GetState();
+        if (
+            currentMouse.LeftButton == ButtonState.Pressed
+            && _previousMouse.LeftButton == ButtonState.Released
+        )
         {
-            Point mousePos = mouse.Position;
+            Point mousePos = currentMouse.Position;
 
             if (_resumeButton.Contains(mousePos))
             {
                 _game.PopScene();
                 _previousKeyboard = currentKeyboard;
+                _previousMouse = currentMouse;
                 return;
             }
 
@@ -83,11 +89,13 @@ public class PauseScene : IScene
             {
                 _game.SetScene(new MapSelectionScene(_game));
                 _previousKeyboard = currentKeyboard;
+                _previousMouse = currentMouse;
                 return;
             }
         }
 
         _previousKeyboard = currentKeyboard;
+        _previousMouse = currentMouse;
     }
 
     public void Draw(SpriteBatch spriteBatch)

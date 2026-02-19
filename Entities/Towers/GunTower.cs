@@ -17,6 +17,8 @@ public static class GunTower
         MaxHealth: 100,
         BlockCapacity: 3,
         DrawScale: new Vector2(1.0f, 1.0f),
-        CanWalk: false
+        CanWalk: false,
+        AbilityDuration: 4f,
+        AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1.2f)
     );
 }

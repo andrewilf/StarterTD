@@ -44,8 +44,16 @@ public class UIPanel
 
     // Consolidated tower buttons (each covers champion + generic for that type)
     private readonly Rectangle _gunTowerButton;
+    private readonly Rectangle _gunAbilityButton;
     private readonly Rectangle _cannonTowerButton;
+    private readonly Rectangle _cannonAbilityButton;
     private readonly Rectangle _startWaveButton;
+
+    /// <summary>
+    /// Fired when the player clicks a ready ability button.
+    /// Passes the champion tower type (e.g. ChampionGun). GameplayScene wires this.
+    /// </summary>
+    public Action<TowerType>? OnAbilityTriggered;
 
     // Debug button rectangles
     private readonly Rectangle _placeHighGroundButton;
@@ -68,15 +76,26 @@ public class UIPanel
 
         int buttonWidth = _width - 20;
         int buttonHeight = 50;
+        int abilityButtonHeight = 28;
         int startY = 120;
         int gap = 10;
+        int abilityGap = 5;
 
         _gunTowerButton = new Rectangle(_x + 10, startY, buttonWidth, buttonHeight);
-        _cannonTowerButton = new Rectangle(
+        _gunAbilityButton = new Rectangle(
             _x + 10,
-            startY + buttonHeight + gap,
+            startY + buttonHeight + abilityGap,
             buttonWidth,
-            buttonHeight
+            abilityButtonHeight
+        );
+
+        int cannonStartY = startY + buttonHeight + abilityGap + abilityButtonHeight + gap;
+        _cannonTowerButton = new Rectangle(_x + 10, cannonStartY, buttonWidth, buttonHeight);
+        _cannonAbilityButton = new Rectangle(
+            _x + 10,
+            cannonStartY + buttonHeight + abilityGap,
+            buttonWidth,
+            abilityButtonHeight
         );
 
         // Debug buttons positioned below instructions (above Start Wave button)
@@ -137,9 +156,21 @@ public class UIPanel
             HandleConsolidatedTowerClick(TowerType.Gun, TowerType.ChampionGun, playerMoney);
             return true;
         }
+        if (_gunAbilityButton.Contains(mousePos))
+        {
+            if (_championManager?.IsAbilityReady(TowerType.ChampionGun) ?? false)
+                OnAbilityTriggered?.Invoke(TowerType.ChampionGun);
+            return true;
+        }
         if (_cannonTowerButton.Contains(mousePos))
         {
             HandleConsolidatedTowerClick(TowerType.Cannon, TowerType.ChampionCannon, playerMoney);
+            return true;
+        }
+        if (_cannonAbilityButton.Contains(mousePos))
+        {
+            if (_championManager?.IsAbilityReady(TowerType.ChampionCannon) ?? false)
+                OnAbilityTriggered?.Invoke(TowerType.ChampionCannon);
             return true;
         }
 
@@ -238,6 +269,7 @@ public class UIPanel
                 50,
                 money
             );
+            DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
 
             DrawConsolidatedTowerButton(
                 spriteBatch,
@@ -247,30 +279,31 @@ public class UIPanel
                 80,
                 money
             );
+            DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
 
             // --- Info text ---
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _cannonTowerButton.Bottom + 20),
+                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 15),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "R-Click: Sell",
-                new Vector2(_x + 10, _cannonTowerButton.Bottom + 45),
+                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 35),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "P: Pause",
-                new Vector2(_x + 10, _cannonTowerButton.Bottom + 70),
+                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 55),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _cannonTowerButton.Bottom + 95),
+                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 75),
                 Color.LightGray
             );
 
@@ -592,6 +625,56 @@ public class UIPanel
         // Attack Damage
         string dmgText = $"Attack Dmg: {enemy.AttackDamage}";
         spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
+    }
+
+    private void DrawAbilityButton(SpriteBatch spriteBatch, Rectangle rect, TowerType championType)
+    {
+        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
+        float cooldown = _championManager?.GetAbilityCooldownRemaining(championType) ?? 0f;
+
+        Color bgColor;
+        string label;
+        Color textColor;
+        Color outlineColor;
+
+        if (!championAlive)
+        {
+            bgColor = new Color(40, 40, 40);
+            label = "ABILITY (no champion)";
+            textColor = Color.DarkGray;
+            outlineColor = Color.DarkGray;
+        }
+        else if (cooldown > 0f)
+        {
+            bgColor = new Color(50, 50, 30);
+            label = $"ABILITY CD: {cooldown:F1}s";
+            textColor = Color.Yellow;
+            outlineColor = Color.DarkGoldenrod;
+        }
+        else
+        {
+            bgColor = new Color(30, 80, 20);
+            label = "USE ABILITY!";
+            textColor = Color.LimeGreen;
+            outlineColor = Color.LimeGreen;
+        }
+
+        TextureManager.DrawRect(spriteBatch, rect, bgColor);
+        TextureManager.DrawRectOutline(spriteBatch, rect, outlineColor, 1);
+
+        if (_font != null)
+        {
+            Vector2 textSize = _font.MeasureString(label);
+            spriteBatch.DrawString(
+                _font,
+                label,
+                new Vector2(
+                    rect.X + (rect.Width - textSize.X) / 2f,
+                    rect.Y + (rect.Height - textSize.Y) / 2f
+                ),
+                textColor
+            );
+        }
     }
 
     private void DrawDebugButton(

@@ -25,14 +25,14 @@ public class AoEEffect
         _timer = new CountdownTimer(DurationSeconds);
         _timer.Start();
 
-        Random random = new Random();
+        var rng = new Random();
         for (int i = 0; i < ParticleCount; i++)
         {
-            float angle = (float)(random.NextDouble() * Math.PI * 2);
-            float speed = 100f + (float)(random.NextDouble() * 100f);
+            float angle = (float)(rng.NextDouble() * Math.PI * 2);
+            float speed = 100f + (float)(rng.NextDouble() * 100f);
             Vector2 velocity = new Vector2(MathF.Cos(angle) * speed, MathF.Sin(angle) * speed);
 
-            _particles.Add(new Particle(Position, velocity));
+            _particles.Add(new Particle(Position, velocity, rng));
         }
     }
 
@@ -78,12 +78,11 @@ public class AoEEffect
         private readonly Vector2 _velocity;
         private readonly float _size;
 
-        public Particle(Vector2 startPosition, Vector2 velocity)
+        public Particle(Vector2 startPosition, Vector2 velocity, Random rng)
         {
             _position = startPosition;
             _velocity = velocity;
-            Random random = new Random();
-            _size = 2f + (float)(random.NextDouble() * 3f);
+            _size = 2f + (float)(rng.NextDouble() * 3f);
         }
 
         public void Update(float dt)
