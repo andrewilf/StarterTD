@@ -8,16 +8,16 @@ namespace StarterTD.Engine;
 
 /// <summary>
 /// Data-driven map configuration. Terrain layout comes from either a TileGrid (Tiled .tmx maps)
-/// or legacy WalkableAreas/RockAreas rectangles. Dijkstra computes the enemy route at runtime.
+/// or legacy WalkableAreas/RockAreas rectangles. Dijkstra computes enemy routes at runtime.
 ///
-/// Python/TS analogy: Like a config dict { spawn, exit, tile_grid, ... }
+/// Python/TS analogy: Like a config dict { spawn_points, exit_points, tile_grid, ... }
 /// that a Map class reads to build a 2D grid.
 /// </summary>
 public record MapData(
     string Name, // Map display name
     string Id, // Unique identifier
-    Point SpawnPoint, // Where enemies enter the map
-    Point ExitPoint, // Where enemies leave the map
+    Dictionary<string, Point> SpawnPoints, // Named spawn points, e.g. "spawn" → (0, 7)
+    Dictionary<string, Point> ExitPoints, // Named exit points, e.g. "exit" → (19, 7)
     List<Rectangle> WalkableAreas, // Rectangles of Path tiles — unused when TileGrid is set
     int Columns = 20, // Grid width
     int Rows = 15, // Grid height
@@ -33,37 +33,61 @@ public record MapData(
     /// </summary>
     public void Validate()
     {
+        if (SpawnPoints.Count == 0)
+            throw new ArgumentException($"Map '{Name}': must have at least one spawn point");
+
+        if (ExitPoints.Count == 0)
+            throw new ArgumentException($"Map '{Name}': must have at least one exit point");
+
         if (TileGrid != null && (TileGrid.GetLength(0) != Columns || TileGrid.GetLength(1) != Rows))
             throw new ArgumentException(
                 $"Map '{Name}': TileGrid dimensions ({TileGrid.GetLength(0)}x{TileGrid.GetLength(1)}) "
                     + $"do not match Columns/Rows ({Columns}x{Rows})"
             );
 
-        if (SpawnPoint.X < 0 || SpawnPoint.X >= Columns || SpawnPoint.Y < 0 || SpawnPoint.Y >= Rows)
-            throw new ArgumentException(
-                $"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is out of bounds"
-            );
+        foreach (var (name, pt) in SpawnPoints)
+        {
+            if (pt.X < 0 || pt.X >= Columns || pt.Y < 0 || pt.Y >= Rows)
+                throw new ArgumentException(
+                    $"Map '{Name}': SpawnPoint '{name}' ({pt.X}, {pt.Y}) is out of bounds"
+                );
+        }
 
-        if (ExitPoint.X < 0 || ExitPoint.X >= Columns || ExitPoint.Y < 0 || ExitPoint.Y >= Rows)
-            throw new ArgumentException(
-                $"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is out of bounds"
-            );
+        foreach (var (name, pt) in ExitPoints)
+        {
+            if (pt.X < 0 || pt.X >= Columns || pt.Y < 0 || pt.Y >= Rows)
+                throw new ArgumentException(
+                    $"Map '{Name}': ExitPoint '{name}' ({pt.X}, {pt.Y}) is out of bounds"
+                );
+        }
 
-        if (SpawnPoint == ExitPoint)
-            throw new ArgumentException(
-                $"Map '{Name}': SpawnPoint and ExitPoint cannot be the same"
-            );
+        foreach (var (spawnName, spawnPt) in SpawnPoints)
+        {
+            foreach (var (exitName, exitPt) in ExitPoints)
+            {
+                if (spawnPt == exitPt)
+                    throw new ArgumentException(
+                        $"Map '{Name}': SpawnPoint '{spawnName}' and ExitPoint '{exitName}' cannot be the same tile"
+                    );
+            }
+        }
 
-        // Spawn and exit must be inside a walkable area
-        if (!IsInWalkableArea(SpawnPoint))
-            throw new ArgumentException(
-                $"Map '{Name}': SpawnPoint ({SpawnPoint.X}, {SpawnPoint.Y}) is not inside any WalkableArea"
-            );
+        // Spawn and exit points must be inside a walkable area
+        foreach (var (name, pt) in SpawnPoints)
+        {
+            if (!IsInWalkableArea(pt))
+                throw new ArgumentException(
+                    $"Map '{Name}': SpawnPoint '{name}' ({pt.X}, {pt.Y}) is not inside any WalkableArea"
+                );
+        }
 
-        if (!IsInWalkableArea(ExitPoint))
-            throw new ArgumentException(
-                $"Map '{Name}': ExitPoint ({ExitPoint.X}, {ExitPoint.Y}) is not inside any WalkableArea"
-            );
+        foreach (var (name, pt) in ExitPoints)
+        {
+            if (!IsInWalkableArea(pt))
+                throw new ArgumentException(
+                    $"Map '{Name}': ExitPoint '{name}' ({pt.X}, {pt.Y}) is not inside any WalkableArea"
+                );
+        }
 
         // All walkable areas must be in bounds
         foreach (var area in WalkableAreas)
@@ -122,8 +146,8 @@ public static class MapDataRepository
 
     /// <summary>
     /// Scans Content/Maps/ at runtime for .tmx files and returns their IDs (filename without extension), sorted.
-    /// No C# changes needed when maps are added or removed — just run sync_maps.sh.
-    /// </summary>
+    /// No C# changes needed when maps are added or removed.
+    ///</summary>
     public static List<string> GetAvailableMaps()
     {
         string mapsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "Maps");

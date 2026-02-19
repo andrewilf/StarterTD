@@ -51,7 +51,10 @@ public class GameplayScene : IScene
         _map = new Map(MapDataRepository.GetMap(_selectedMapId));
         _championManager = new ChampionManager();
         _towerManager = new TowerManager(_map, _championManager);
-        _waveManager = new WaveManager(() => _map.ActivePath);
+        _waveManager = new WaveManager(
+            spawnName => _map.ActivePaths.GetValueOrDefault(spawnName) ?? _map.ActivePath,
+            WaveLoader.TryLoad(_selectedMapId) ?? FallbackWaves()
+        );
         _inputManager = new InputManager();
         _uiPanel = new UIPanel(
             GameSettings.ScreenWidth,
@@ -644,21 +647,68 @@ public class GameplayScene : IScene
     }
 
     /// <summary>
-    /// Spawns a debug enemy at the spawn point using current wave stats.
+    /// Spawns a debug enemy at the first available spawn point using fixed stats.
     /// </summary>
     private void SpawnDebugEnemy()
     {
-        var waveDef = _waveManager.CurrentWaveDefinition;
+        var path = _map.ActivePath;
+        if (path.Count == 0)
+            return;
+
         var enemy = new Enemy(
             "Debug Enemy",
-            waveDef.EnemyHealth,
-            waveDef.EnemySpeed,
-            waveDef.EnemyBounty,
-            _map.ActivePath,
+            health: 300,
+            speed: 90,
+            bounty: 5,
+            path,
             Color.Purple,
-            waveDef.AttackDamage
+            attackDamage: 5
         );
 
         _enemies.Add(enemy);
+    }
+
+    /// <summary>
+    /// Hardcoded wave definitions used when no Content/Waves/{mapId}.json exists.
+    /// Mirrors the original 5-wave progression so existing maps work without a JSON file.
+    /// </summary>
+    private static List<WaveData> FallbackWaves()
+    {
+        static List<SpawnEntry> MakeWave(
+            int count,
+            float health,
+            float speed,
+            int bounty,
+            float interval,
+            int damage
+        )
+        {
+            var entries = new List<SpawnEntry>(count);
+            for (int i = 0; i < count; i++)
+            {
+                entries.Add(
+                    new SpawnEntry(
+                        At: i * interval,
+                        SpawnPoint: "spawn",
+                        Name: "Enemy",
+                        Health: health,
+                        Speed: speed,
+                        Bounty: bounty,
+                        AttackDamage: damage,
+                        Color: "Purple"
+                    )
+                );
+            }
+            return entries;
+        }
+
+        return new List<WaveData>
+        {
+            new(1, MakeWave(5, 300, 90, 5, 1.0f, 5)),
+            new(2, MakeWave(8, 400, 95, 5, 0.9f, 5)),
+            new(3, MakeWave(10, 600, 100, 8, 0.8f, 8)),
+            new(4, MakeWave(12, 800, 110, 8, 0.8f, 8)),
+            new(5, MakeWave(15, 1000, 120, 10, 0.7f, 12)),
+        };
     }
 }

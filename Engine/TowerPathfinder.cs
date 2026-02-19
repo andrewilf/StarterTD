@@ -71,8 +71,8 @@ public static class TowerPathfinder
         var mapData = new MapData(
             Name: "Debug",
             Id: "debug",
-            SpawnPoint: new Point(0, 0),
-            ExitPoint: new Point(4, 4),
+            SpawnPoints: new Dictionary<string, Point> { ["spawn"] = new Point(0, 0) },
+            ExitPoints: new Dictionary<string, Point> { ["exit"] = new Point(4, 4) },
             WalkableAreas: walkable,
             Columns: 5,
             Rows: 5,
@@ -102,8 +102,8 @@ public static class TowerPathfinder
         var blockedData = new MapData(
             Name: "Blocked",
             Id: "blocked",
-            SpawnPoint: new Point(0, 0),
-            ExitPoint: new Point(4, 4),
+            SpawnPoints: new Dictionary<string, Point> { ["spawn"] = new Point(0, 0) },
+            ExitPoints: new Dictionary<string, Point> { ["exit"] = new Point(4, 4) },
             WalkableAreas: walkable,
             Columns: 5,
             Rows: 5,

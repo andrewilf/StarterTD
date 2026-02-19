@@ -26,10 +26,10 @@
 </data>
  </layer>
  <objectgroup id="2" name="Markers">
-  <object id="1" name="spawn" x="0" y="280">
+  <object id="1" name="spawn_a" x="0" y="280">
    <point/>
   </object>
-  <object id="2" name="exit" x="760" y="280">
+  <object id="2" name="exit_a" x="760" y="280">
    <point/>
   </object>
  </objectgroup>

@@ -1,0 +1,79 @@
+{
+  "waves": [
+    {
+      "wave": 1,
+      "spawns": [
+        { "at": 0.0, "spawnPoint": "spawn", "name": "Goblin", "health": 300, "speed": 90, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 1.0, "spawnPoint": "spawn", "name": "Goblin", "health": 300, "speed": 90, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 2.0, "spawnPoint": "spawn", "name": "Goblin", "health": 300, "speed": 90, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 3.0, "spawnPoint": "spawn", "name": "Goblin", "health": 300, "speed": 90, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 4.0, "spawnPoint": "spawn", "name": "Goblin", "health": 300, "speed": 90, "bounty": 5, "attackDamage": 5, "color": "Purple" }
+      ]
+    },
+    {
+      "wave": 2,
+      "spawns": [
+        { "at": 0.0, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 0.9, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 1.8, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 2.7, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 3.6, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 4.5, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 5.4, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" },
+        { "at": 6.3, "spawnPoint": "spawn", "name": "Goblin", "health": 400, "speed": 95, "bounty": 5, "attackDamage": 5, "color": "Purple" }
+      ]
+    },
+    {
+      "wave": 3,
+      "spawns": [
+        { "at": 0.0, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 0.8, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 1.6, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 2.4, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 3.2, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 4.0, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 4.8, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 5.6, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 6.4, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" },
+        { "at": 7.2, "spawnPoint": "spawn", "name": "Orc",    "health": 600, "speed": 100, "bounty": 8, "attackDamage": 8, "color": "Green" }
+      ]
+    },
+    {
+      "wave": 4,
+      "spawns": [
+        { "at": 0.0, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 0.8, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 1.6, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 2.4, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 3.2, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 4.0, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 4.8, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 5.6, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 6.4, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 7.2, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 8.0, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" },
+        { "at": 8.8, "spawnPoint": "spawn", "name": "Troll",  "health": 800, "speed": 110, "bounty": 8, "attackDamage": 8, "color": "DarkGreen" }
+      ]
+    },
+    {
+      "wave": 5,
+      "spawns": [
+        { "at": 0.0,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 0.7,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 1.4,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 2.1,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 2.8,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 3.5,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 4.2,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 4.9,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 5.6,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 6.3,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 7.0,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 7.7,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 8.4,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 9.1,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" },
+        { "at": 9.8,  "spawnPoint": "spawn", "name": "Giant", "health": 1000, "speed": 120, "bounty": 10, "attackDamage": 12, "color": "Red" }
+      ]
+    }
+  ]
+}

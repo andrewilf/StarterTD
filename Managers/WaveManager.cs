@@ -1,100 +1,49 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
+using StarterTD.Engine;
 using StarterTD.Entities;
 using StarterTD.Interfaces;
 
 namespace StarterTD.Managers;
 
 /// <summary>
-/// Manages wave progression: spawning enemies in timed intervals.
-/// Hardcoded for 10 waves with increasing difficulty.
+/// Manages wave progression: spawning enemies according to timed SpawnEntry events.
+///
+/// Each wave is a list of SpawnEntry records sorted by the 'At' field (seconds from wave start).
+/// On each Update(), elapsed time is accumulated and any entries whose 'At' time has passed
+/// are dequeued and spawned immediately — allowing multiple enemies to spawn in the same frame
+/// if a wave is unpaused or starts with simultaneous entries (At == 0).
 /// </summary>
 public class WaveManager
 {
-    /// <summary>Definition of a single wave.</summary>
-    public record WaveDefinition(
-        int EnemyCount,
-        float EnemyHealth,
-        float EnemySpeed,
-        int EnemyBounty,
-        float SpawnInterval,
-        int AttackDamage
-    );
-
     public int CurrentWave { get; private set; }
     public int TotalWaves => _waves.Count;
     public bool AllWavesComplete { get; private set; }
     public bool WaveInProgress { get; private set; }
 
-    /// <summary>
-    /// Get the current wave definition, or the first wave if no wave has started yet.
-    /// </summary>
-    public WaveDefinition CurrentWaveDefinition =>
-        _currentWaveDef ?? _waves[CurrentWave < TotalWaves ? CurrentWave : TotalWaves - 1];
+    // Key = spawn point name (matches Map.ActivePaths key), Value = path provider for that spawn
+    private readonly Func<string, List<Point>?> _pathProvider;
+    private readonly List<WaveData> _waves;
 
-    private readonly List<WaveDefinition> _waves;
-    private readonly Func<List<Point>> _pathProvider;
-    private float _spawnTimer;
-    private int _enemiesSpawned;
-    private WaveDefinition? _currentWaveDef;
+    // Spawns remaining in the current wave, ordered ascending by At time
+    private List<SpawnEntry> _pendingSpawns = new();
+    private float _waveElapsed;
 
-    /// <summary>Callback invoked when an enemy is spawned.</summary>
+    /// <summary>Callback invoked each time an enemy is spawned.</summary>
     public Action<IEnemy>? OnEnemySpawned;
 
-    /// <summary>
-    /// Constructor takes a Func that returns the current path.
-    /// This way each spawned enemy gets the latest ActivePath (including maze reroutes).
-    /// </summary>
-    public WaveManager(Func<List<Point>> pathProvider)
+    /// <param name="pathProvider">
+    /// Given a spawn-point name (e.g. "spawn", "spawn_a"), returns the current path for that
+    /// lane. Returns null if the name is unknown — enemy will not be spawned.
+    /// </param>
+    /// <param name="waves">Wave definitions loaded from JSON or a hardcoded fallback.</param>
+    public WaveManager(Func<string, List<Point>?> pathProvider, List<WaveData> waves)
     {
         _pathProvider = pathProvider;
+        _waves = waves;
         CurrentWave = 0;
-
-        // Define 10 waves with increasing difficulty
-        _waves = new List<WaveDefinition>
-        {
-            new(
-                EnemyCount: 5,
-                EnemyHealth: 300,
-                EnemySpeed: 90,
-                EnemyBounty: 5,
-                SpawnInterval: 1.0f,
-                AttackDamage: 5
-            ),
-            new(
-                EnemyCount: 8,
-                EnemyHealth: 400,
-                EnemySpeed: 95,
-                EnemyBounty: 5,
-                SpawnInterval: 0.9f,
-                AttackDamage: 5
-            ),
-            new(
-                EnemyCount: 10,
-                EnemyHealth: 600,
-                EnemySpeed: 100,
-                EnemyBounty: 8,
-                SpawnInterval: 0.8f,
-                AttackDamage: 8
-            ),
-            new(
-                EnemyCount: 12,
-                EnemyHealth: 800,
-                EnemySpeed: 110,
-                EnemyBounty: 8,
-                SpawnInterval: 0.8f,
-                AttackDamage: 8
-            ),
-            new(
-                EnemyCount: 15,
-                EnemyHealth: 1000,
-                EnemySpeed: 120,
-                EnemyBounty: 10,
-                SpawnInterval: 0.7f,
-                AttackDamage: 12
-            ),
-        };
     }
 
     /// <summary>
@@ -108,10 +57,11 @@ public class WaveManager
             return false;
         }
 
-        _currentWaveDef = _waves[CurrentWave];
+        // Sort ascending by At so we can dequeue front-to-back in Update()
+        _pendingSpawns = _waves[CurrentWave].Spawns.OrderBy(e => e.At).ToList();
+
         CurrentWave++;
-        _enemiesSpawned = 0;
-        _spawnTimer = 0;
+        _waveElapsed = 0;
         WaveInProgress = true;
         return true;
     }
@@ -121,34 +71,39 @@ public class WaveManager
     /// </summary>
     public void Update(GameTime gameTime)
     {
-        if (!WaveInProgress || _currentWaveDef == null)
+        if (!WaveInProgress)
             return;
 
-        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _spawnTimer -= dt;
+        _waveElapsed += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        if (_spawnTimer <= 0 && _enemiesSpawned < _currentWaveDef.EnemyCount)
+        // Dequeue all entries whose scheduled time has arrived
+        // Iterate from front; list is sorted ascending so we stop at first future entry
+        while (_pendingSpawns.Count > 0 && _pendingSpawns[0].At <= _waveElapsed)
         {
-            // Spawn an enemy
-            var enemy = new Enemy(
-                $"Wave {CurrentWave} Enemy",
-                _currentWaveDef.EnemyHealth,
-                _currentWaveDef.EnemySpeed,
-                _currentWaveDef.EnemyBounty,
-                _pathProvider(),
-                Color.Purple,
-                _currentWaveDef.AttackDamage
-            );
-
-            OnEnemySpawned?.Invoke(enemy);
-            _enemiesSpawned++;
-            _spawnTimer = _currentWaveDef.SpawnInterval;
+            SpawnEnemy(_pendingSpawns[0]);
+            _pendingSpawns.RemoveAt(0);
         }
 
-        // Wave is done spawning when all enemies have been spawned
-        if (_enemiesSpawned >= _currentWaveDef.EnemyCount)
-        {
+        if (_pendingSpawns.Count == 0)
             WaveInProgress = false;
-        }
+    }
+
+    private void SpawnEnemy(SpawnEntry entry)
+    {
+        var path = _pathProvider(entry.SpawnPoint);
+        if (path == null || path.Count == 0)
+            return;
+
+        var enemy = new Enemy(
+            entry.Name,
+            entry.Health,
+            entry.Speed,
+            entry.Bounty,
+            path,
+            WaveLoader.ParseColor(entry.Color),
+            entry.AttackDamage
+        );
+
+        OnEnemySpawned?.Invoke(enemy);
     }
 }
