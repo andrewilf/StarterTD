@@ -17,6 +17,8 @@ public static class TowerData
             TowerType.Cannon => CannonTower.Stats,
             TowerType.ChampionGun => ChampionGunTower.Stats,
             TowerType.ChampionCannon => ChampionCannonTower.Stats,
+            TowerType.ChampionWalling => ChampionWallingTower.Stats,
+            TowerType.WallSegment => WallSegmentTower.Stats,
             _ => throw new ArgumentException($"No stats for {type}"),
         };
     }

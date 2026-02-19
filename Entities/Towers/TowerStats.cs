@@ -37,7 +37,13 @@ public record TowerStats(
 public static class TowerTypeExtensions
 {
     public static bool IsChampion(this TowerType type) =>
-        type == TowerType.ChampionGun || type == TowerType.ChampionCannon;
+        type == TowerType.ChampionGun
+        || type == TowerType.ChampionCannon
+        || type == TowerType.ChampionWalling;
+
+    public static bool IsWallingChampion(this TowerType type) => type == TowerType.ChampionWalling;
+
+    public static bool IsWallSegment(this TowerType type) => type == TowerType.WallSegment;
 
     /// <summary>
     /// Get the Generic variant of a Champion type.

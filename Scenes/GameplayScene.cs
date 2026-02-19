@@ -40,6 +40,12 @@ public class GameplayScene : IScene
     private float _selectedTowerRange;
     private List<Point>? _towerMovePreviewPath;
 
+    /// <summary>
+    /// True when the player has activated wall-placement mode by clicking the world-space "+"
+    /// button on a selected walling champion. Clicks on the grid place wall segments.
+    /// </summary>
+    private bool _wallPlacementMode;
+
     public GameplayScene(Game1 game, string mapId)
     {
         _game = game;
@@ -126,22 +132,35 @@ public class GameplayScene : IScene
             _towerManager.SelectedTower = null;
             _selectedEnemy = null;
             _towerMovePreviewPath = null;
+            _wallPlacementMode = false;
         }
 
         if (_inputManager.IsLeftClick())
         {
             Point mousePos = _inputManager.MousePosition;
 
+            // Check if the world-space wall placement button was clicked.
+            // This takes priority over grid clicks so it is checked before panel/grid routing.
+            var wallingChampion = _towerManager.SelectedTower;
+            if (
+                wallingChampion != null
+                && wallingChampion.TowerType == TowerType.ChampionWalling
+                && GetWallPlacementButtonRect(wallingChampion).Contains(mousePos)
+            )
+            {
+                _wallPlacementMode = !_wallPlacementMode;
+            }
             // Check if click is on UI panel first
-            if (_uiPanel.ContainsPoint(mousePos))
+            else if (_uiPanel.ContainsPoint(mousePos))
             {
                 _uiPanel.HandleClick(mousePos, _money);
 
-                // Selecting a tower to place clears the inspected tower and enemy
+                // Selecting a tower to place clears the inspected tower, enemy, and wall mode
                 if (_uiPanel.SelectedTowerType.HasValue)
                 {
                     _towerManager.SelectedTower = null;
                     _selectedEnemy = null;
+                    _wallPlacementMode = false;
                 }
 
                 // Cache selected tower range to avoid per-frame GetStats allocation in Draw
@@ -165,7 +184,15 @@ public class GameplayScene : IScene
                 // Click on the game grid
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
 
-                if (_uiPanel.SelectionMode == UISelectionMode.PlaceHighGround)
+                if (
+                    _wallPlacementMode
+                    && _towerManager.SelectedTower?.TowerType == TowerType.ChampionWalling
+                )
+                {
+                    // Place a wall segment adjacent to the walling network
+                    _towerManager.TryPlaceWall(gridPos, _towerManager.SelectedTower);
+                }
+                else if (_uiPanel.SelectionMode == UISelectionMode.PlaceHighGround)
                 {
                     // Place high ground tile
                     if (
@@ -208,11 +235,14 @@ public class GameplayScene : IScene
                     {
                         _selectedEnemy = enemy;
                         _towerManager.SelectedTower = null;
+                        _wallPlacementMode = false;
                     }
                     else
                     {
-                        // Select existing tower
+                        // Select existing tower; clear wall mode if selection changes
                         var tower = _towerManager.GetTowerAt(gridPos);
+                        if (tower != _towerManager.SelectedTower)
+                            _wallPlacementMode = false;
                         _towerManager.SelectedTower = tower;
                         _selectedEnemy = null;
                     }
@@ -229,12 +259,14 @@ public class GameplayScene : IScene
                 Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
                 var tower = _towerManager.GetTowerAt(gridPos);
 
-                // Move command: selected walkable tower + right-click on empty buildable tile
+                // Move command: selected walkable tower + right-click on empty buildable tile.
+                // Blocked when wall placement mode is active so the champion stays put.
                 var selected = _towerManager.SelectedTower;
                 if (
                     selected != null
                     && selected.CanWalk
                     && selected.CurrentState == TowerState.Active
+                    && !_wallPlacementMode
                     && tower == null
                     && _map.CanBuild(gridPos)
                 )
@@ -246,7 +278,10 @@ public class GameplayScene : IScene
                 else if (tower != null)
                 {
                     if (_towerManager.SelectedTower == tower)
+                    {
                         _towerManager.SelectedTower = null;
+                        _wallPlacementMode = false;
+                    }
 
                     int refund = _towerManager.SellTower(tower);
                     _money += refund;
@@ -310,7 +345,10 @@ public class GameplayScene : IScene
         _hoveredTower = _towerManager.GetTowerAt(_mouseGrid);
 
         // --- Compute tower movement path preview when a walkable tower is selected ---
-        _towerMovePreviewPath = _towerManager.GetPreviewPath(_mouseGrid);
+        // Suppressed in wall placement mode since the champion can't move while placing walls.
+        _towerMovePreviewPath = _wallPlacementMode
+            ? null
+            : _towerManager.GetPreviewPath(_mouseGrid);
 
         // --- Update AoE effects ---
         for (int i = _aoeEffects.Count - 1; i >= 0; i--)
@@ -393,9 +431,21 @@ public class GameplayScene : IScene
 
             bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
             bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
+            bool isWallMode =
+                _wallPlacementMode
+                && _towerManager.SelectedTower?.TowerType == TowerType.ChampionWalling;
 
             Color hoverColor;
-            if (canPlaceTower)
+            if (isWallMode)
+            {
+                // Green if the tile is a valid wall placement, red otherwise
+                var walling = _towerManager.SelectedTower!;
+                bool canPlaceWall =
+                    _map.CanBuild(_mouseGrid)
+                    && _towerManager.IsAdjacentToWallingNetwork(_mouseGrid, walling);
+                hoverColor = canPlaceWall ? Color.DarkGreen * 0.5f : Color.Red * 0.3f;
+            }
+            else if (canPlaceTower)
                 hoverColor = Color.White * 0.24f;
             else if (isHighGroundMode)
                 hoverColor = Color.ForestGreen * 0.3f;
@@ -418,7 +468,7 @@ public class GameplayScene : IScene
             TextureManager.DrawRectOutline(
                 spriteBatch,
                 hoverRect,
-                isHighGroundMode ? Color.ForestGreen : Color.White,
+                isWallMode || isHighGroundMode ? Color.DarkGreen : Color.White,
                 1
             );
         }
@@ -537,6 +587,20 @@ public class GameplayScene : IScene
     }
 
     /// <summary>
+    /// Returns the screen-space rectangle for the world-space wall placement button
+    /// shown top-right of the walling champion sprite when it is selected.
+    /// </summary>
+    private static Rectangle GetWallPlacementButtonRect(Tower wallingTower)
+    {
+        const int btnSize = 18;
+        const float spriteHalfWidth = 15f; // SpriteSize(30) / 2
+        Vector2 pos = wallingTower.DrawPosition;
+        int bx = (int)(pos.X + spriteHalfWidth + 4);
+        int by = (int)(pos.Y - spriteHalfWidth - btnSize - 2);
+        return new Rectangle(bx, by, btnSize, btnSize);
+    }
+
+    /// <summary>
     /// Spawns a floating text at the specified world position.
     /// </summary>
     private void SpawnFloatingText(Vector2 worldPos, string text, Color color)
@@ -547,6 +611,7 @@ public class GameplayScene : IScene
     /// <summary>
     /// Draw a red rectangle outline around the selected tower or enemy.
     /// Sized dynamically based on the object's visual dimensions.
+    /// For the walling champion, also draws the world-space wall placement toggle button.
     /// </summary>
     private void DrawSelectionIndicators(SpriteBatch spriteBatch)
     {
@@ -568,6 +633,31 @@ public class GameplayScene : IScene
                 h
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
+
+            // World-space wall placement button: shown when the walling champion is selected.
+            // Active (wall mode on) = dark green filled; inactive = dark outline only.
+            if (tower.TowerType == TowerType.ChampionWalling)
+            {
+                var btnRect = GetWallPlacementButtonRect(tower);
+                Color btnBg = _wallPlacementMode ? Color.DarkGreen : new Color(20, 60, 20);
+                Color btnOutline = _wallPlacementMode ? Color.LimeGreen : Color.DarkGreen;
+                TextureManager.DrawRect(spriteBatch, btnRect, btnBg);
+                TextureManager.DrawRectOutline(spriteBatch, btnRect, btnOutline, 2);
+
+                // Draw "+" symbol using two thin rectangles (horizontal and vertical bars)
+                int cx = btnRect.X + btnRect.Width / 2;
+                int cy = btnRect.Y + btnRect.Height / 2;
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    new Rectangle(cx - 4, cy - 1, 8, 3),
+                    Color.White
+                );
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    new Rectangle(cx - 1, cy - 4, 3, 8),
+                    Color.White
+                );
+            }
         }
 
         if (_selectedEnemy != null)

@@ -289,11 +289,9 @@ public class Map
             return false;
 
         var tile = Tiles[gridPos.X, gridPos.Y];
-        bool isBuildableTerrain = TileData.GetStats(tile.Type).IsBuildable;
-        bool notOccupied = tile.OccupyingTower == null;
-        bool notReserved = tile.ReservedByTower == null;
-
-        return isBuildableTerrain && notOccupied && notReserved;
+        return TileData.GetStats(tile.Type).IsBuildable
+            && tile.OccupyingTower == null
+            && tile.ReservedByTower == null;
     }
 
     /// <summary>

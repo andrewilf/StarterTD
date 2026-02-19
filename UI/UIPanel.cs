@@ -47,6 +47,10 @@ public class UIPanel
     private readonly Rectangle _gunAbilityButton;
     private readonly Rectangle _cannonTowerButton;
     private readonly Rectangle _cannonAbilityButton;
+
+    // Walling tower button (champion-only; wall placement is handled via world-space button)
+    private readonly Rectangle _wallTowerButton;
+
     private readonly Rectangle _startWaveButton;
 
     /// <summary>
@@ -97,6 +101,9 @@ public class UIPanel
             buttonWidth,
             abilityButtonHeight
         );
+
+        int wallStartY = cannonStartY + buttonHeight + abilityGap + abilityButtonHeight + gap;
+        _wallTowerButton = new Rectangle(_x + 10, wallStartY, buttonWidth, buttonHeight);
 
         // Debug buttons positioned below instructions (above Start Wave button)
         int debugStartY = _height - 200;
@@ -174,6 +181,12 @@ public class UIPanel
             return true;
         }
 
+        if (_wallTowerButton.Contains(mousePos))
+        {
+            HandleWallChampionClick();
+            return true;
+        }
+
         // Wave start button
         if (_startWaveButton.Contains(mousePos))
         {
@@ -182,6 +195,18 @@ public class UIPanel
         }
 
         return false;
+    }
+
+    // Walling champion has no generic variant — button only places/re-places the champion.
+    private void HandleWallChampionClick()
+    {
+        bool championAlive = _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
+        if (championAlive)
+            return; // Already on field; player uses world-space button to place walls
+
+        bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionWalling) ?? true;
+        SelectedTowerType = canPlace ? TowerType.ChampionWalling : null;
+        SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
     }
 
     // Champion dead → place champion. Champion alive → place generic.
@@ -281,29 +306,31 @@ public class UIPanel
             );
             DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
 
+            DrawWallChampionButton(spriteBatch, _wallTowerButton);
+
             // --- Info text ---
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 15),
+                new Vector2(_x + 10, _wallTowerButton.Bottom + 15),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "R-Click: Sell",
-                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 35),
+                new Vector2(_x + 10, _wallTowerButton.Bottom + 35),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "P: Pause",
-                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 55),
+                new Vector2(_x + 10, _wallTowerButton.Bottom + 55),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _cannonAbilityButton.Bottom + 75),
+                new Vector2(_x + 10, _wallTowerButton.Bottom + 75),
                 Color.LightGray
             );
 
@@ -363,6 +390,7 @@ public class UIPanel
                 _cannonTowerButton,
                 cannonChampAlive ? TowerType.Cannon : TowerType.ChampionCannon
             );
+            DrawButtonNoFont(spriteBatch, _wallTowerButton, TowerType.ChampionWalling);
 
             TextureManager.DrawRect(
                 spriteBatch,
@@ -625,6 +653,88 @@ public class UIPanel
         // Attack Damage
         string dmgText = $"Attack Dmg: {enemy.AttackDamage}";
         spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
+    }
+
+    /// <summary>
+    /// Draws the walling champion button. Since it has no generic variant, the button always
+    /// shows champion placement state (ready, on cooldown, or already placed).
+    /// </summary>
+    private void DrawWallChampionButton(SpriteBatch spriteBatch, Rectangle rect)
+    {
+        bool championAlive = _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
+        bool isSelected = SelectedTowerType == TowerType.ChampionWalling;
+
+        Color bgColor = isSelected ? Color.SlateGray : Color.DarkSlateGray;
+        Color textColor = Color.White;
+        string mainLabel = "Walling (Free)";
+        string? subLabel;
+
+        if (championAlive)
+        {
+            subLabel = "On Field";
+            textColor = Color.DarkGray;
+            bgColor = Color.DarkSlateGray;
+        }
+        else
+        {
+            float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
+            float respawnCooldown =
+                _championManager?.GetRespawnCooldown(TowerType.ChampionWalling) ?? 0f;
+
+            if (globalCooldown > 0)
+            {
+                subLabel = $"Global: {globalCooldown:F1}s";
+                textColor = Color.DarkGray;
+            }
+            else if (respawnCooldown > 0)
+            {
+                subLabel = $"Respawn: {respawnCooldown:F1}s";
+                textColor = Color.DarkGray;
+            }
+            else
+            {
+                subLabel = "Place Champion";
+            }
+        }
+
+        TextureManager.DrawRect(spriteBatch, rect, bgColor);
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            rect,
+            isSelected ? Color.Yellow : Color.Gray,
+            2
+        );
+
+        var stats = TowerData.GetStats(TowerType.ChampionWalling);
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
+            stats.Color
+        );
+
+        if (_font != null)
+        {
+            spriteBatch.DrawString(
+                _font,
+                mainLabel,
+                new Vector2(rect.X + 50, rect.Y + 10),
+                textColor
+            );
+
+            Color subColor;
+            if (subLabel == "Place Champion")
+                subColor = Color.LightGreen;
+            else if (subLabel == "On Field")
+                subColor = Color.DarkGray;
+            else
+                subColor = Color.Yellow;
+            spriteBatch.DrawString(
+                _font,
+                subLabel,
+                new Vector2(rect.X + 50, rect.Y + 28),
+                subColor
+            );
+        }
     }
 
     private void DrawAbilityButton(SpriteBatch spriteBatch, Rectangle rect, TowerType championType)
