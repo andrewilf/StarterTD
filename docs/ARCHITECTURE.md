@@ -39,6 +39,7 @@
 - `MapDataRepository.GetAvailableMaps()` scans `Content/Maps/*.tmx` at runtime — no C# changes needed when adding/removing maps
 - `Map.InitializeTiles()`: TileGrid fast-path fills directly; legacy rectangle path still supported
 - `TextureManager.DrawTile()`: draws from `terrain.png` spritesheet (col = `(int)TileType`); falls back to colored rect
+- **Multi-spawn/exit**: `MapData` holds `Dictionary<string, Point> SpawnPoints` and `ExitPoints`. Objects named `spawn*`/`exit*` in the Tiled Markers layer are collected. Lane pairing: `spawn_a` → `exit_a` by suffix match; falls back to first exit. `Map` computes one heatmap per exit; `Map.ActivePaths` maps each spawn name to its path. `Map.ActivePath` (singular) returns first path for legacy callers
 
 ## Tile System
 - `TileType` enum: HighGround, Path, Rock
@@ -62,6 +63,11 @@
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower selection. Auto-clears on death/end
 
+## Wave System
+- Wave definitions loaded from `Content/Waves/{mapId}.json` via `WaveLoader.TryLoad()` (`System.Text.Json`). Falls back to `FallbackWaves()` in `GameplayScene` if no JSON file exists
+- Schema: `{ waves: [ { wave, spawns: [ { at, spawnPoint, name, health, speed, bounty, attackDamage, color } ] } ] }`. `at` = seconds from wave start; `spawnPoint` must match a key in `Map.ActivePaths`
+- `WaveManager` takes `Func<string, List<Point>?>` (spawn name → path) and `List<WaveData>`. Dequeues entries by elapsed time each frame; wave ends when pending list is empty
+- `WaveLoader.ParseColor(string)`: resolves XNA `Color` property by name via reflection
+
 ## Other
 - `TextureManager.DrawSprite()`: optional `origin` param (default 0.5,0.5 centered)
-- `WaveManager`: takes `Func<List<Point>>` for latest path per spawn

@@ -13,6 +13,11 @@ namespace StarterTD.Engine;
 /// GID convention (matches tileset order in Tiled):
 ///   0 = empty → HighGround, 1 = HighGround, 2 = Path, 3 = Rock
 ///
+/// Spawn/exit convention for named objects in the Markers objectgroup:
+///   Names starting with "spawn" are collected as spawn points (e.g. "spawn", "spawn_a", "spawn_b").
+///   Names starting with "exit" are collected as exit points (e.g. "exit", "exit_a", "exit_b").
+///   Lane pairing: spawn_a → exit_a (matching suffix). Falls back to first exit if no match.
+///
 /// Pixel coordinates in Tiled Object layers are divided by TileSize to get grid coords.
 /// Only CSV encoding is supported — re-save in Tiled with Layer Format = CSV if this throws.
 /// </summary>
@@ -79,37 +84,32 @@ public static class TmxLoader
                     + "Add an Object Layer named 'Markers' with 'spawn' and 'exit' point objects."
             );
 
-        Point spawnPoint = default;
-        Point exitPoint = default;
-        bool foundSpawn = false;
-        bool foundExit = false;
+        var spawnPoints = new Dictionary<string, Point>();
+        var exitPoints = new Dictionary<string, Point>();
 
         foreach (var obj in objectGroup.Elements("object"))
         {
             string? name = (string?)obj.Attribute("name");
+            if (name == null)
+                continue;
+
             // Tiled stores top-left pixel coords; integer-divide by TileSize for grid coords
             int gridX = (int)(float.Parse((string)obj.Attribute("x")!) / GameSettings.TileSize);
             int gridY = (int)(float.Parse((string)obj.Attribute("y")!) / GameSettings.TileSize);
 
-            if (name == "spawn")
-            {
-                spawnPoint = new Point(gridX, gridY);
-                foundSpawn = true;
-            }
-            if (name == "exit")
-            {
-                exitPoint = new Point(gridX, gridY);
-                foundExit = true;
-            }
+            if (name.StartsWith("spawn", StringComparison.OrdinalIgnoreCase))
+                spawnPoints[name] = new Point(gridX, gridY);
+            else if (name.StartsWith("exit", StringComparison.OrdinalIgnoreCase))
+                exitPoints[name] = new Point(gridX, gridY);
         }
 
-        if (!foundSpawn)
+        if (spawnPoints.Count == 0)
             throw new InvalidOperationException(
-                $"TMX '{filePath}': no point object named 'spawn' in the object layer"
+                $"TMX '{filePath}': no point objects starting with 'spawn' found in the object layer"
             );
-        if (!foundExit)
+        if (exitPoints.Count == 0)
             throw new InvalidOperationException(
-                $"TMX '{filePath}': no point object named 'exit' in the object layer"
+                $"TMX '{filePath}': no point objects starting with 'exit' found in the object layer"
             );
 
         string mapName = ReadNameProperty(root) ?? mapId;
@@ -117,8 +117,8 @@ public static class TmxLoader
         var mapData = new MapData(
             Name: mapName,
             Id: mapId,
-            SpawnPoint: spawnPoint,
-            ExitPoint: exitPoint,
+            SpawnPoints: spawnPoints,
+            ExitPoints: exitPoints,
             WalkableAreas: new List<Rectangle>(),
             Columns: columns,
             Rows: rows

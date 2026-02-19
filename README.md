@@ -5,7 +5,9 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 ## Current Features
 * **Dynamic Mazing**: Dijkstra pathfinding with per-tower movement costs for strategic maze control.
 * **Tiled Maps**: Maps are `.tmx` files in `Content/Maps/`, edited in [Tiled map editor](https://www.mapeditor.org).
-* **Tower System**: 2 tower types (Gun, Cannon) with blocking capacity.
+* **Multi-Spawn Lanes**: Maps support multiple named spawn/exit points (`spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc.), each with an independent path.
+* **JSON Wave Config**: Waves are defined in `Content/Waves/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to hardcoded waves if no file exists.
+* **Tower System**: 2 Generic (Gun, Cannon) + 2 Champion tower types with walking, abilities, and blocking capacity.
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.
 * **Game Loop**: Map Selection → Gameplay → Victory/Defeat.
 
@@ -19,7 +21,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
     # Run the game
     dotnet run
 
-    # Lint the code with CSharpier
+    # Format with CSharpier
     dotnet csharpier format .
 
 ## Controls
@@ -48,41 +50,58 @@ The tileset is `Content/Maps/terrain.png` — a horizontal spritesheet, 40×40px
    - Map size: **20 × 15** tiles, Tile size: **40 × 40** px
 2. Add the tileset: click **+** in the Tilesets panel → choose `Content/Maps/terrain.png`, tile size 40×40
 3. Paint a **Terrain** tile layer using GIDs 1/2/3
-4. Add an **Object Layer** named `Markers` with two point objects:
-   - Name `spawn` — top-left corner of the spawn tile (pixel = `col × 40`, `row × 40`)
-   - Name `exit` — top-left corner of the exit tile
+4. Add an **Object Layer** named `Markers` with point objects for spawn and exit tiles:
+   - At minimum: one object named `spawn` and one named `exit`
+   - For multiple lanes: use `spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc. Lane pairing is by suffix — `spawn_a` routes to `exit_a`
+   - Pixel coords = `col × 40`, `row × 40` (top-left of tile)
 5. Optionally set a display name: **Map → Map Properties → +** → string property `name`
 6. Save as `Content/Maps/<your_id>.tmx`
-7. Run `bash sync_maps.sh` to register the map (see below)
-8. Run `dotnet build` to verify
+7. Run `dotnet build` — the file is picked up automatically via the `*.tmx` glob in the project
 
-### Edit an existing map
+### Edit or remove a map
 
-Open the `.tmx` file in Tiled, make changes, save. Run the game — changes are picked up immediately on next build (the file is copied to the output directory automatically). No script needed.
+Open the `.tmx` in Tiled, save, then build. To remove a map, delete its `.tmx` file. No other changes needed.
 
-### Remove a map
+## Wave Workflow
 
-1. Delete the `.tmx` file from `Content/Maps/`
-2. Run `bash sync_maps.sh` to deregister it
+Each map can have a matching wave file at `Content/Waves/{mapId}.json`. Drop the file in and rebuild — it is picked up automatically via the `*.json` glob.
 
-### sync_maps.sh
+### Schema
 
-`sync_maps.sh` automatically syncs `StarterTD.csproj` and `Engine/MapData.cs` to match whatever `.tmx` files are present in `Content/Maps/`. Run it any time you add or remove a map file.
-
-The script requires **bash** (not `sh`). Use `bash sync_maps.sh` or run it directly with `./` (which reads the shebang). Do **not** use `sh sync_maps.sh` — macOS's default `sh` is POSIX-only and will error.
-
-```bash
-# Preview changes without writing anything
-bash sync_maps.sh --dry-run
-
-# Apply changes
-bash sync_maps.sh
+```json
+{
+  "waves": [
+    {
+      "wave": 1,
+      "spawns": [
+        {
+          "at": 0.0,
+          "spawnPoint": "spawn_a",
+          "name": "Goblin",
+          "health": 300,
+          "speed": 90,
+          "bounty": 5,
+          "attackDamage": 5,
+          "color": "Purple"
+        }
+      ]
+    }
+  ]
+}
 ```
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `at` | float | Seconds from wave start when this enemy spawns |
+| `spawnPoint` | string | Must match a named spawn object in the map's Markers layer |
+| `color` | string | Any `Microsoft.Xna.Framework.Color` property name (e.g. `"Red"`, `"Cyan"`) |
+
+If no JSON file exists for the selected map, the game falls back to 5 built-in waves spawning from `"spawn"`.
 
 ### Tileset tips
 
 - Keep the tileset image at exactly **120 × 40 px** (3 tiles of 40×40). Adding tile types requires updating `TileType.cs`, `TileData.cs`, and `TmxLoader.cs`.
-- `terrain.png` is embedded in each `.tmx` via the tileset reference — the image path (`terrain.png`) is only used by Tiled's editor display and is not loaded at runtime.
+- `terrain.png` is embedded in each `.tmx` via the tileset reference — the image path is only used by Tiled's editor display and is not loaded at runtime.
 
 ## License
 MIT

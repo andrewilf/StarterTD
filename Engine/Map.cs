@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Entities;
@@ -53,6 +54,10 @@ public class Tile
 /// <summary>
 /// The game map: a 2D grid of tiles with Dijkstra-based pathfinding.
 /// Terrain is loaded from a Tiled .tmx TileGrid; enemies find their own route at runtime.
+///
+/// Multi-lane support: each exit has its own heatmap. Each spawn is paired with the exit
+/// that shares the same name suffix (e.g. "spawn_a" → "exit_a"). If no suffix match exists,
+/// the spawn falls back to the first exit.
 /// </summary>
 public class Map
 {
@@ -60,28 +65,23 @@ public class Map
     public int Columns { get; }
     public int Rows { get; }
 
-    /// <summary>Where enemies enter the map.</summary>
-    public Point SpawnPoint { get; }
-
-    /// <summary>Where enemies leave the map.</summary>
-    public Point ExitPoint { get; }
+    /// <summary>The map data used to create this map.</summary>
+    public MapData MapData { get; }
 
     /// <summary>
-    /// The active path enemies follow. Extracted from the heat map via gradient descent.
+    /// Pre-computed paths per spawn point. Key = spawn name (e.g. "spawn", "spawn_a").
     /// Recomputed whenever towers change.
     /// </summary>
-    public List<Point> ActivePath { get; private set; }
+    public Dictionary<string, List<Point>> ActivePaths { get; private set; }
 
     /// <summary>
-    /// Cost-to-exit for every tile. Recomputed when towers are placed.
-    /// heatMap[x, y] = minimum total movement cost from (x,y) to the exit.
+    /// Convenience accessor for single-spawn-point maps and legacy callers.
+    /// Returns the first path, or an empty list if none computed yet.
     /// </summary>
-    public int[,]? HeatMap { get; private set; }
+    public List<Point> ActivePath => ActivePaths.Values.FirstOrDefault() ?? new List<Point>();
 
-    /// <summary>
-    /// The map data used to create this map.
-    /// </summary>
-    public MapData MapData { get; }
+    // One heatmap per exit. Key = exit name. Filled by RecomputeAllPaths().
+    private readonly Dictionary<string, int[,]> _heatMaps = new();
 
     /// <summary>
     /// Primary constructor accepting MapData.
@@ -94,12 +94,10 @@ public class Map
         Columns = mapData.Columns;
         Rows = mapData.Rows;
         Tiles = new Tile[Columns, Rows];
-        SpawnPoint = mapData.SpawnPoint;
-        ExitPoint = mapData.ExitPoint;
-        ActivePath = new List<Point>();
+        ActivePaths = new Dictionary<string, List<Point>>();
 
         InitializeTiles();
-        RecomputeHeatMap();
+        RecomputeAllPaths();
     }
 
     /// <summary>
@@ -193,43 +191,92 @@ public class Map
     }
 
     /// <summary>
-    /// Recompute the heat map from the exit and extract a new ActivePath.
-    /// Towers are expensive (cost 500) but passable, so this always succeeds.
+    /// Recompute all heatmaps (one per exit) and extract paths for every spawn.
+    /// Called on init and whenever towers are placed or removed.
     /// </summary>
     public bool RecomputeActivePath()
     {
-        return RecomputeHeatMap();
+        return RecomputeAllPaths();
     }
 
     /// <summary>
-    /// Compute a path from a custom start position to the exit (using the current heat map).
-    /// Like ExtractPath but from an arbitrary grid position instead of just the spawn point.
-    /// Used when enemies need to pathfind from their current location after the map changes.
+    /// Compute a path from a custom start position to the exit paired with the given exit name.
+    /// If exitName is null, uses the first exit. Used when enemies reroute from their current position.
     /// </summary>
-    public List<Point>? ComputePathFromPosition(Point startPos)
+    public List<Point>? ComputePathFromPosition(Point startPos, string? exitName = null)
     {
-        if (HeatMap == null)
+        string resolvedExit = ResolveExitName(exitName);
+
+        if (!_heatMaps.TryGetValue(resolvedExit, out var heatMap))
             return null;
 
-        return Pathfinder.ExtractPath(startPos, HeatMap, Columns, Rows);
+        return Pathfinder.ExtractPath(startPos, heatMap, Columns, Rows);
     }
 
     /// <summary>
-    /// Dijkstra flood fill from exit, then extract optimal path from spawn.
+    /// Dijkstra flood fill from each exit, then extract optimal path from each spawn.
+    /// Lane pairing: "spawn_a" → "exit_a" by matching suffix after first underscore.
+    /// Falls back to first exit if no suffix match exists.
     /// </summary>
-    private bool RecomputeHeatMap()
+    private bool RecomputeAllPaths()
     {
-        HeatMap = Pathfinder.ComputeHeatMap(
-            ExitPoint,
-            Columns,
-            Rows,
-            p => Tiles[p.X, p.Y].MovementCost
-        );
+        _heatMaps.Clear();
 
-        var extracted = Pathfinder.ExtractPath(SpawnPoint, HeatMap, Columns, Rows);
+        // Build one heatmap per exit
+        foreach (var (exitName, exitPoint) in MapData.ExitPoints)
+        {
+            _heatMaps[exitName] = Pathfinder.ComputeHeatMap(
+                exitPoint,
+                Columns,
+                Rows,
+                p => Tiles[p.X, p.Y].MovementCost
+            );
+        }
 
-        ActivePath = extracted ?? new List<Point>();
-        return extracted != null;
+        // Extract a path for each spawn using its paired exit's heatmap
+        var newPaths = new Dictionary<string, List<Point>>();
+        bool allSucceeded = true;
+
+        foreach (var (spawnName, spawnPoint) in MapData.SpawnPoints)
+        {
+            string exitName = ResolveExitName(spawnName);
+            var heatMap = _heatMaps[exitName];
+            var path = Pathfinder.ExtractPath(spawnPoint, heatMap, Columns, Rows);
+
+            newPaths[spawnName] = path ?? new List<Point>();
+            if (path == null)
+                allSucceeded = false;
+        }
+
+        ActivePaths = newPaths;
+        return allSucceeded;
+    }
+
+    /// <summary>
+    /// Given a spawn name or explicit exit name, return the exit name to use.
+    /// Pairing rule: strip "spawn" prefix from the spawn name to get the suffix,
+    /// then look for "exit" + suffix. Example: "spawn_a" → suffix "_a" → looks for "exit_a".
+    /// Falls back to the first exit if no match.
+    /// </summary>
+    private string ResolveExitName(string? nameHint)
+    {
+        if (nameHint != null)
+        {
+            // Direct hit: the hint is already an exit name
+            if (MapData.ExitPoints.ContainsKey(nameHint))
+                return nameHint;
+
+            // Derive suffix from spawn name and look for matching exit
+            if (nameHint.StartsWith("spawn", StringComparison.OrdinalIgnoreCase))
+            {
+                string suffix = nameHint["spawn".Length..]; // e.g. "_a" from "spawn_a"
+                string candidate = "exit" + suffix; // e.g. "exit_a"
+                if (MapData.ExitPoints.ContainsKey(candidate))
+                    return candidate;
+            }
+        }
+
+        return MapData.ExitPoints.Keys.First();
     }
 
     /// <summary>
@@ -274,20 +321,26 @@ public class Map
     }
 
     /// <summary>
-    /// Debug visualization: draws the ActivePath as a connected line.
+    /// Debug visualization: draws all active paths as connected lines.
     /// </summary>
     private void DrawActivePathOverlay(SpriteBatch spriteBatch)
     {
-        if (ActivePath.Count == 0)
+        foreach (var path in ActivePaths.Values)
+            DrawPath(spriteBatch, path);
+    }
+
+    private void DrawPath(SpriteBatch spriteBatch, List<Point> path)
+    {
+        if (path.Count == 0)
             return;
 
         const int dotSize = 8;
         int halfDot = dotSize / 2;
         var pathColor = Color.DeepSkyBlue * 0.63f;
 
-        for (int i = 0; i < ActivePath.Count; i++)
+        for (int i = 0; i < path.Count; i++)
         {
-            var point = ActivePath[i];
+            var point = path[i];
             if (point.X < 0 || point.X >= Columns || point.Y < 0 || point.Y >= Rows)
                 continue;
 
@@ -300,9 +353,9 @@ public class Map
                 pathColor
             );
 
-            if (i < ActivePath.Count - 1)
+            if (i < path.Count - 1)
             {
-                var next = ActivePath[i + 1];
+                var next = path[i + 1];
                 int nextCenterX = next.X * GameSettings.TileSize + GameSettings.TileSize / 2;
                 int nextCenterY = next.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
 
