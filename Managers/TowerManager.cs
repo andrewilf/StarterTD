@@ -221,9 +221,8 @@ public class TowerManager
     }
 
     /// <summary>
-    /// Applies the champion super ability buff to all relevant towers.
-    /// The champion gets 2x damage and 40% faster attack.
-    /// All generic towers of the matching type get 20% faster attack.
+    /// Dispatches the champion super ability to all relevant towers.
+    /// Each tower type's AbilityEffect delegate (defined in its own stats file) handles what the buff does.
     /// </summary>
     public void TriggerChampionAbility(TowerType championType)
     {
@@ -231,10 +230,8 @@ public class TowerManager
 
         foreach (var tower in _towers)
         {
-            if (tower.TowerType == championType)
-                tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f);
-            else if (tower.TowerType == genericType)
-                tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1.2f);
+            if (tower.TowerType == championType || tower.TowerType == genericType)
+                TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
         }
     }
 

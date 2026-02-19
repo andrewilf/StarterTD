@@ -17,6 +17,7 @@ public static class CannonTower
         MaxHealth: 150,
         BlockCapacity: 2,
         DrawScale: new Vector2(1.0f, 1.0f),
-        CanWalk: false
+        CanWalk: false,
+        AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1.2f)
     );
 }
