@@ -20,6 +20,8 @@ public static class ChampionGunTower
         CanWalk: true,
         MoveSpeed: 80f,
         CooldownDuration: 2.0f,
+        AbilityDuration: 5f,
+        AbilityCooldown: 15f,
         AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f)
     );
 }

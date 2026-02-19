@@ -66,9 +66,9 @@ public class Tower : ITower
     private float _cooldownDuration;
 
     private float _abilityTimer;
+    private float _abilityDuration;
     private float _originalDamage;
     private float _originalFireRate;
-    private const float AbilityDuration = 5f;
 
     /// <summary>True while the super ability buff is active on this tower.</summary>
     public bool IsAbilityBuffActive { get; private set; }
@@ -193,6 +193,7 @@ public class Tower : ITower
         DrawScale = stats.DrawScale;
         MoveSpeed = stats.MoveSpeed;
         _cooldownDuration = stats.CooldownDuration;
+        _abilityDuration = stats.AbilityDuration;
         CanWalk = stats.CanWalk;
     }
 
@@ -219,7 +220,7 @@ public class Tower : ITower
         // Lower FireRate value = faster attack (seconds between shots)
         FireRate /= fireRateSpeedMult;
         IsAbilityBuffActive = true;
-        _abilityTimer = AbilityDuration;
+        _abilityTimer = _abilityDuration;
     }
 
     private void DeactivateAbilityBuff()

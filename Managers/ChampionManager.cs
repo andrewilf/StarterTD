@@ -34,7 +34,6 @@ public class ChampionManager
 
     private const float GLOBAL_PLACEMENT_COOLDOWN = 10.0f;
     private const float RESPAWN_COOLDOWN = 15.0f;
-    private const float ABILITY_COOLDOWN = 15.0f;
 
     /// <summary>
     /// Check if a champion tower can be placed.
@@ -94,7 +93,7 @@ public class ChampionManager
     /// <summary>Start the 15s ability cooldown after the player triggers the super ability.</summary>
     public void StartAbilityCooldown(TowerType championType)
     {
-        _abilityCooldowns[championType] = ABILITY_COOLDOWN;
+        _abilityCooldowns[championType] = TowerData.GetStats(championType).AbilityCooldown;
     }
 
     /// <summary>Remaining seconds before the ability can be used again (0 if ready).</summary>
