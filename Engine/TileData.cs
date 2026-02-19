@@ -14,6 +14,7 @@ public static class TileData
         return type switch
         {
             TileType.HighGround => HighGroundTile.Stats,
+            TileType.HighGroundVariant => HighGroundVariantTile.Stats,
             TileType.Path => PathTile.Stats,
             TileType.Rock => RockTile.Stats,
             _ => throw new ArgumentException($"No stats for {type}"),

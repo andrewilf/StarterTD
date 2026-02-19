@@ -13,4 +13,7 @@ public enum TileType
 
     /// <summary>Impassable and unbuildable rock terrain.</summary>
     Rock,
+
+    /// <summary>High ground variant: identical behaviour to HighGround but uses a different sprite.</summary>
+    HighGroundVariant,
 }

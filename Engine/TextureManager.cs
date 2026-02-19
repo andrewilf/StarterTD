@@ -16,7 +16,7 @@ public static class TextureManager
 
     /// <summary>
     /// Terrain spritesheet from Maps/terrain.png.
-    /// Each tile is TileSize × TileSize pixels, laid out horizontally: HighGround, Path, Rock.
+    /// Each tile is TileSize × TileSize pixels, laid out horizontally: HighGround, Path, Rock, HighGroundVariant.
     /// Null if the texture failed to load (falls back to colored rects).
     /// </summary>
     public static Texture2D? TerrainTileset { get; private set; }
@@ -191,7 +191,7 @@ public static class TextureManager
 
     /// <summary>
     /// Draw a terrain tile using the spritesheet, falling back to a colored rect if unavailable.
-    /// The spritesheet column index matches TileType ordinal value (HighGround=0, Path=1, Rock=2).
+    /// The spritesheet column index matches TileType ordinal value (HighGround=0, Path=1, Rock=2, HighGroundVariant=3).
     /// </summary>
     public static void DrawTile(SpriteBatch spriteBatch, Rectangle destRect, TileType tileType)
     {

@@ -126,6 +126,7 @@ public static class TowerPathfinder
         {
             TileType.Path => PathCost,
             TileType.HighGround => HighGroundCost,
+            TileType.HighGroundVariant => HighGroundCost,
             TileType.Rock => int.MaxValue,
             _ => int.MaxValue,
         };
