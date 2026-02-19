@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -359,13 +358,6 @@ public class GameplayScene : IScene
         {
             floatingText.Draw(spriteBatch, _uiPanel.GetFont());
         }
-
-        // Validate selected tower still exists
-        if (
-            _towerManager.SelectedTower != null
-            && !_towerManager.Towers.Any(t => t == _towerManager.SelectedTower)
-        )
-            _towerManager.SelectedTower = null;
 
         // Draw UI panel
         bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;

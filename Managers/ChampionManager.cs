@@ -149,26 +149,28 @@ public class ChampionManager
         if (_globalPlacementCooldown > 0)
             _globalPlacementCooldown -= dt;
 
-        var keysToRemove = new List<TowerType>();
+        List<TowerType>? keysToRemove = null;
         foreach (var type in _respawnCooldowns.Keys)
         {
             _respawnCooldowns[type] -= dt;
             if (_respawnCooldowns[type] <= 0)
-                keysToRemove.Add(type);
+                (keysToRemove ??= []).Add(type);
         }
 
-        foreach (var type in keysToRemove)
-            _respawnCooldowns.Remove(type);
+        if (keysToRemove != null)
+            foreach (var type in keysToRemove)
+                _respawnCooldowns.Remove(type);
 
-        var abilityKeysToRemove = new List<TowerType>();
+        List<TowerType>? abilityKeysToRemove = null;
         foreach (var type in _abilityCooldowns.Keys)
         {
             _abilityCooldowns[type] -= dt;
             if (_abilityCooldowns[type] <= 0)
-                abilityKeysToRemove.Add(type);
+                (abilityKeysToRemove ??= []).Add(type);
         }
 
-        foreach (var type in abilityKeysToRemove)
-            _abilityCooldowns.Remove(type);
+        if (abilityKeysToRemove != null)
+            foreach (var type in abilityKeysToRemove)
+                _abilityCooldowns.Remove(type);
     }
 }
