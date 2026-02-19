@@ -11,7 +11,7 @@ namespace StarterTD.Engine;
 /// Parses a Tiled .tmx XML file and produces a MapData with a pre-built TileGrid.
 ///
 /// GID convention (matches tileset order in Tiled):
-///   0 = empty → HighGround, 1 = HighGround, 2 = Path, 3 = Rock, 4 = HighGroundVariant
+///   0 = empty → HighGround, 1 = HighGround, 2 = HighGroundVariant, 3 = Path, 4 = Rock
 ///
 /// Pixel coordinates in Tiled Object layers are divided by TileSize to get grid coords.
 /// Only CSV encoding is supported — re-save in Tiled with Layer Format = CSV if this throws.
@@ -22,9 +22,9 @@ public static class TmxLoader
     {
         { 0, TileType.HighGround },
         { 1, TileType.HighGround },
-        { 2, TileType.Path },
-        { 3, TileType.Rock },
-        { 4, TileType.HighGroundVariant },
+        { 2, TileType.HighGroundVariant },
+        { 3, TileType.Path },
+        { 4, TileType.Rock },
     };
 
     /// <summary>
