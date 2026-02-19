@@ -401,8 +401,18 @@ public class Tower : ITower
         // Ability aura: two concentric circles give a soft glow effect
         if (IsAbilityBuffActive)
         {
-            TextureManager.DrawFilledCircle(spriteBatch, _drawPosition, SpriteSize * 1.4f, Color.Gold * 0.25f);
-            TextureManager.DrawFilledCircle(spriteBatch, _drawPosition, SpriteSize * 0.9f, Color.Gold * 0.45f);
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                _drawPosition,
+                SpriteSize * 1.4f,
+                Color.Gold * 0.25f
+            );
+            TextureManager.DrawFilledCircle(
+                spriteBatch,
+                _drawPosition,
+                SpriteSize * 0.9f,
+                Color.Gold * 0.45f
+            );
         }
 
         // Semi-transparent when moving so tower looks ghostly (non-blocking)

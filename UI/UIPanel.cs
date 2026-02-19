@@ -631,7 +631,6 @@ public class UIPanel
     {
         bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
         float cooldown = _championManager?.GetAbilityCooldownRemaining(championType) ?? 0f;
-        bool ready = championAlive && cooldown <= 0f;
 
         Color bgColor;
         string label;

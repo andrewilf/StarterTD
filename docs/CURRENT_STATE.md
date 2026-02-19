@@ -7,8 +7,9 @@
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
 - `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 2 Champions (ChampionGun, ChampionCannon, free)
-- ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion
-- UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/affordability sub-labels
+- ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion; 15s per-champion ability CD
+- Champion super abilities: click ability button → 5s buff (damage × mult, fire rate × mult) on champion + all its generics; 15s CD after use
+- UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/affordability sub-labels; ability button per tower type (disabled/CD/ready states)
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
 - Enemy FSM (Moving/Attacking), 5 hardcoded waves
 - Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection

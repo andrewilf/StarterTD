@@ -26,6 +26,9 @@
 - `CanWalk` flag on `TowerStats` (and mirrored on `Tower`) gates movement. Champions: `true`; Generics: `false`. `MoveSpeed`/`CooldownDuration` are optional stats (default `0f`) — only specified when `CanWalk: true`
 - State machine: `TowerState` (Active/Moving/Cooldown). Moving: `_drawPosition` interpolates tile-to-tile, `GridPosition` updates on cell arrival, origin tile cleared (ghost). Cooldown: move-ready timer only — tower still fires. Both Active+Cooldown run `UpdateActive()`. `OnMovementComplete` callback lets `TowerManager` re-occupy destination tile and trigger reroute
 - `TowerManager.GetPreviewPath(dest)`: returns `List<Point>?` for hover preview — checks `CanWalk`, `Active` state, `CanBuild`. `GameplayScene` calls per-frame, draws gold dot+line path overlay between map and tower layers
+- `TowerStats.AbilityEffect: Action<Tower>?`: delegate stored per tower type in its stats file. Called by `TowerManager.TriggerChampionAbility()` on the champion and all matching generics
+- `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals, applies multipliers, sets `IsAbilityBuffActive = true`, runs for `AbilityDuration` (5s). Re-triggering resets timer without stacking. Gold aura circles drawn while active
+- Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
 - `Tower.DrawPosition`: smooth visual position during movement (use instead of `WorldPosition` for visual tracking). `WorldPosition` always snapped to grid
 - `TowerManager.MoveTower(tower, dest)`: ghost origin tile → set `destTile.ReservedByTower = tower` → reroute enemies → `StartMoving()`. `HandleMovementComplete`: clear reservation → re-occupy dest → reroute enemies. `RemoveTower()` calls `ClearReservationFor()` on mid-movement death to free the reserved tile
 - `TowerPathfinder`: tower-specific Dijkstra via `Pathfinder.ComputeHeatMap()` with custom cost function (Path=1, HighGround=2, occupied tower=10, Rock=impassable). Ignores enemies
@@ -46,13 +49,14 @@
 - Individual 15s respawn cooldown per type after death
 - Generics placeable only if their champion variant alive
 - Champion death calls `UpdateChampionStatus(false)` on matching generics
-- Public API: `GlobalCooldownRemaining`, `GetRespawnCooldown(type)`, `IsChampionAlive(type)`
+- Public API: `GlobalCooldownRemaining`, `GetRespawnCooldown(type)`, `IsChampionAlive(type)`, `StartAbilityCooldown(type)`, `GetAbilityCooldownRemaining(type)`, `IsAbilityReady(type)`
 
 ## UIPanel
 - `UISelectionMode` enum: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
 - Consolidated buttons (one per tower type): champion mode when champion dead (free, shows cooldown), generic mode when champion alive (costs gold). `HandleConsolidatedTowerClick()` dispatches to champion or generic placement logic.
 - Button sub-labels: "Place Champion" (green), "Global: X.Xs" / "Respawn: X.Xs" (yellow, cooldown active), "Can't Afford" (red)
 - Debug buttons: Place High Ground (grid click mode), Spawn Enemy (instant, uses `WaveManager.CurrentWaveDefinition`)
+- Ability buttons: one per tower type, below the tower button. States: disabled (no champion), CD with timer, ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower selection. Auto-clears on death/end
