@@ -325,21 +325,87 @@ public class TowerManager
     }
 
     /// <summary>
-    /// Apply 1 HP/sec decay damage to wall segments that are not chain-connected to the walling champion.
-    /// Disconnected walls occur when the champion is dead or a wall chain is broken.
+    /// Apply decay damage to wall segments when the walling champion is not connected to any wall.
+    /// If the champion is alive and adjacent to at least one wall segment, no decay occurs.
+    /// Once disconnected (champion dead or moved away), each wall segment decays at 1 HP/sec
+    /// per exposed cardinal side (sides not sheltered by another wall segment).
     /// </summary>
     private void UpdateWallDecay(GameTime gameTime, Tower? wallingChampion)
     {
-        var connected = BuildConnectedWallSet(wallingChampion);
+        // Champion touching any wall suppresses all decay
+        if (ChampionIsConnectedToWalls(wallingChampion))
+            return;
+
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
 
         foreach (var tower in _towers)
         {
             if (!tower.TowerType.IsWallSegment())
                 continue;
-            if (!connected.Contains(tower.GridPosition))
-                tower.ApplyDecayDamage(dt);
+
+            int exposedSides = 0;
+            foreach (var dir in dirs)
+            {
+                var neighbor = new Point(
+                    tower.GridPosition.X + dir.X,
+                    tower.GridPosition.Y + dir.Y
+                );
+
+                if (
+                    neighbor.X < 0
+                    || neighbor.X >= _map.Columns
+                    || neighbor.Y < 0
+                    || neighbor.Y >= _map.Rows
+                )
+                {
+                    exposedSides++;
+                    continue;
+                }
+
+                var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
+                bool sheltered = occupant != null && occupant.TowerType.IsWallSegment();
+
+                if (!sheltered)
+                    exposedSides++;
+            }
+
+            if (exposedSides > 0)
+                tower.ApplyDecayDamage(dt * exposedSides);
         }
+    }
+
+    /// <summary>
+    /// Returns true if the walling champion is alive and at least one of its 4 cardinal
+    /// neighbors is occupied by a wall segment (champion is "touching" the wall group).
+    /// </summary>
+    private bool ChampionIsConnectedToWalls(Tower? wallingChampion)
+    {
+        if (wallingChampion == null)
+            return false;
+
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        foreach (var dir in dirs)
+        {
+            var neighbor = new Point(
+                wallingChampion.GridPosition.X + dir.X,
+                wallingChampion.GridPosition.Y + dir.Y
+            );
+
+            if (
+                neighbor.X < 0
+                || neighbor.X >= _map.Columns
+                || neighbor.Y < 0
+                || neighbor.Y >= _map.Rows
+            )
+                continue;
+
+            var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
+            if (occupant != null && occupant.TowerType.IsWallSegment())
+                return true;
+        }
+
+        return false;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)

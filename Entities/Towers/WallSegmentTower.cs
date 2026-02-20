@@ -14,7 +14,7 @@ public static class WallSegmentTower
         IsAOE: false,
         AOERadius: 0f,
         Color: Color.DarkGreen,
-        MaxHealth: 10,
+        MaxHealth: 30,
         BlockCapacity: 20,
         DrawScale: new Vector2(1.0f, 1.0f),
         CanWalk: false,

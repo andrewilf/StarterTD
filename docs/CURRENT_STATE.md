@@ -7,7 +7,7 @@
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
 - `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 3 Champions (ChampionGun, ChampionCannon, ChampionWalling, free)
-- ChampionWalling: no attack, no generic variant. Places wall segments (10 HP, 10k movement cost) adjacent to its network. Disconnected walls decay 1 HP/sec. World-space "+" button on champion toggles wall-placement mode
+- ChampionWalling: no attack, no generic variant. Places wall segments (30 HP, 10k movement cost) adjacent to its network. While champion directly touches any wall, all decay is suppressed. When champion detaches or dies, each wall decays at 1 HP/sec per exposed cardinal side (max 4 HP/sec). World-space "+" button on champion toggles wall-placement mode
 - ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion; per-champion ability CD (from `TowerStats.AbilityCooldown`)
 - Champion super abilities: click ability button → per-type buff duration (from `TowerStats.AbilityDuration`) on champion + all its generics; per-champion CD after use
 - UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/affordability sub-labels; ability button per tower type (disabled/CD/ready states); walling champion has dedicated button (no generic/ability)

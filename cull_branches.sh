@@ -3,7 +3,7 @@
 # 1. Ensure we are on the main branch first
 git checkout main
 
-2. Pull latest changes
+# 2. Pull latest changes
 git pull --rebase
 
 # 3. Update local list of remote branches (optional but recommended)
