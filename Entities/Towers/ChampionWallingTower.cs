@@ -7,8 +7,8 @@ public static class ChampionWallingTower
     public static readonly TowerStats Stats = new(
         Name: "Champion Wall",
         Range: 0f,
-        Damage: 0f,
-        FireRate: float.MaxValue, // never fires
+        Damage: 3f,
+        FireRate: 1.5f,
         Cost: 0,
         MovementCost: 500,
         IsAOE: false,

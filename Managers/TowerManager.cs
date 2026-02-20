@@ -49,6 +49,12 @@ public class TowerManager
     /// </summary>
     public Action<Vector2, float>? OnAOEImpact;
 
+    /// <summary>
+    /// Callback fired when the walling champion's spike attack lands on an enemy.
+    /// Passes the enemy's world position. GameplayScene uses this to spawn SpikeEffect.
+    /// </summary>
+    public Action<Vector2>? OnWallAttack;
+
     public TowerManager(Map map, ChampionManager championManager)
     {
         _map = map;
@@ -412,13 +418,21 @@ public class TowerManager
     {
         _championManager.Update(gameTime);
 
+        // Assign wall-network targeting delegate each frame (network topology can change)
+        var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+        if (wallingChampion != null)
+        {
+            wallingChampion.WallNetworkTargetFinder = e =>
+                FindWallNetworkTarget(e, wallingChampion);
+            wallingChampion.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
+        }
+
         foreach (var tower in _towers)
         {
             tower.Update(gameTime, enemies);
         }
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
-        var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
         UpdateWallDecay(gameTime, wallingChampion);
 
         // Remove destroyed towers (iterate backwards to safely remove during iteration)
@@ -443,6 +457,108 @@ public class TowerManager
         }
 
         // Draw range indicator for hovered tower
-        hoveredTower?.DrawRangeIndicator(spriteBatch);
+        if (hoveredTower != null)
+        {
+            if (hoveredTower.TowerType == TowerType.ChampionWalling)
+                DrawWallRangeIndicator(spriteBatch, hoveredTower);
+            else
+                hoveredTower.DrawRangeIndicator(spriteBatch);
+        }
+    }
+
+    /// <summary>
+    /// Highlights all tiles that are 1 tile deep perpendicularly adjacent to the walling network
+    /// (champion position + all connected wall segments). With no walls placed, only the 4 tiles
+    /// adjacent to the champion are highlighted.
+    /// </summary>
+    private void DrawWallRangeIndicator(SpriteBatch spriteBatch, Tower wallingChampion)
+    {
+        var wallSet = BuildConnectedWallSet(wallingChampion);
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        int tileSize = GameSettings.TileSize;
+
+        foreach (var wallPos in wallSet)
+        {
+            foreach (var dir in dirs)
+            {
+                var neighbor = new Point(wallPos.X + dir.X, wallPos.Y + dir.Y);
+
+                if (
+                    neighbor.X < 0
+                    || neighbor.X >= _map.Columns
+                    || neighbor.Y < 0
+                    || neighbor.Y >= _map.Rows
+                )
+                    continue;
+
+                // Only highlight tiles outside the wall network (the attack zone)
+                if (wallSet.Contains(neighbor))
+                    continue;
+
+                // Top-left origin for DrawRect
+                Vector2 center = Map.GridToWorld(neighbor);
+                var rect = new Rectangle(
+                    (int)(center.X - tileSize / 2f),
+                    (int)(center.Y - tileSize / 2f),
+                    tileSize,
+                    tileSize
+                );
+                TextureManager.DrawRect(spriteBatch, rect, Color.LimeGreen * 0.3f);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Finds the closest enemy in the wall-network attack zone.
+    /// The attack zone is all tiles 1 step outside the connected wall set (champion + wall segments).
+    /// Enemies must be on one of these tiles to be targeted.
+    /// </summary>
+    private IEnemy? FindWallNetworkTarget(List<IEnemy> enemies, Tower wallingChampion)
+    {
+        var wallSet = BuildConnectedWallSet(wallingChampion);
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+
+        // Build the attack zone: neighbors of the wall set that are not themselves in the wall set
+        var attackZone = new HashSet<Point>();
+        foreach (var wallPos in wallSet)
+        {
+            foreach (var dir in dirs)
+            {
+                var neighbor = new Point(wallPos.X + dir.X, wallPos.Y + dir.Y);
+
+                if (
+                    neighbor.X < 0
+                    || neighbor.X >= _map.Columns
+                    || neighbor.Y < 0
+                    || neighbor.Y >= _map.Rows
+                )
+                    continue;
+
+                if (!wallSet.Contains(neighbor))
+                    attackZone.Add(neighbor);
+            }
+        }
+
+        IEnemy? target = null;
+        float closestDist = float.MaxValue;
+
+        foreach (var enemy in enemies)
+        {
+            if (enemy.IsDead || enemy.ReachedEnd)
+                continue;
+
+            Point enemyGrid = Map.WorldToGrid(enemy.Position);
+            if (!attackZone.Contains(enemyGrid))
+                continue;
+
+            float dist = Vector2.Distance(wallingChampion.WorldPosition, enemy.Position);
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                target = enemy;
+            }
+        }
+
+        return target;
     }
 }

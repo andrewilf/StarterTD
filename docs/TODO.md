@@ -81,14 +81,18 @@
 
 ### 3.2 Wall Attack Range (Along-Wall Targeting)
 - **Priority**: P1 | **Effort**: M
-- **Status**: [ ] **Not started**
-- **Concept**: Wall segments have a short-range attack hitting enemies **adjacent to the wall line**. Range extends along connected walls, not in a circle.
-- **Tasks**:
-  - [ ] Give `WallSegmentTower` a non-zero `Damage` and `FireRate` in stats
-  - [ ] Define "wall line" range: BFS/linear scan along connected wall segments up to N tiles in each direction
-  - [ ] Target selection within wall-line range (prefer non-slowed — see 3.5)
-  - [ ] Visual: draw range indicator as a highlighted strip along the wall, not a circle
-- **Design Decision Needed**: Does the attack hit *only* enemies on the wall tile, or also 1 tile deep perpendicularly?
+- **Status**: [x] **Done**
+- **What was built**:
+  - Attack originates from `ChampionWallingTower`, not individual wall segments (Damage: 3, FireRate: 1.5s)
+  - Attack zone: all tiles 1 step outside the connected wall network (champion + wall segments). With no walls, only the 4 tiles adjacent to the champion are in range.
+  - Design decision resolved: attack hits enemies **1 tile deep perpendicularly** adjacent to any tile in the network
+  - Instant spike damage (no projectile) — `SpikeEffect` visual spawns at enemy position on hit
+  - Range indicator: semi-transparent green strip drawn over all attack-zone tiles when champion is hovered
+
+### 3.2.1 Wall Attack — Slow-Aggro Priority
+- **Priority**: P2 | **Effort**: S
+- **Status**: [ ] **Not started** (blocked — depends on 3.4 slow effect)
+- **Concept**: Wall attack should prefer targeting non-slowed enemies so the slow effect isn't wasted on already-slowed targets.
 
 ### 3.3 Wall Decay — Exposure-Based Degradation
 - **Priority**: P2 | **Effort**: M
@@ -103,7 +107,7 @@
 
 ### 3.4 Wall Tower — Slow Effect on Attack
 - **Priority**: P2 | **Effort**: M
-- **Status**: [ ] **Not started** (wall has no attack yet — depends on 3.2)
+- **Status**: [ ] **Not started**
 - **Concept**: Wall segment attacks apply a **slow debuff** to hit enemies.
 - **Tasks**:
   - [ ] Implement `SlowEffect` on `Enemy`: speed multiplier (0.5x) + duration. Non-stacking (refresh on re-apply)
