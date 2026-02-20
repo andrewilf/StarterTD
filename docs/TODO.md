@@ -72,60 +72,63 @@
 
 ### 3.1 Core Wall Tower Implementation
 - **Priority**: P1 | **Effort**: L
-- **Concept**: A new tower type that acts as a **physical barrier** on Path tiles. Enemies must attack through it or path around it. Unlike HighGround (which is impassable terrain), wall towers are destructible obstacles that interact with combat.
-- **Tasks**:
-  - [ ] Create `WallTower` type (new enum value, stats file, registration)
-  - [ ] Define base stats: high HP, zero damage, low/zero cost(?), no projectile
-  - [ ] Walls should have a pathfinding cost that makes enemies *prefer* to path around but *can* path through (attack to destroy) if no alternative. Tune the movement cost to balance between "enemies always go around" and "enemies smash through"
-  - [ ] Visual: distinct from combat towers — suggest a fortification/barrier sprite
+- **Status**: [x] **Done**
+- **What was built**:
+  - `ChampionWallingTower`: free, walkable, no attack. Toggles wall-placement mode via world-space "+" button
+  - `WallSegmentTower`: free, 30 HP, movement cost 10,000 (enemies strongly avoid but can attack through)
+  - BFS-based connectivity (`BuildConnectedWallSet()`) determines which segments are in the champion's network
+  - `TowerType` enum, stats files, and `TowerData` registration all in place
 
 ### 3.2 Wall Attack Range (Along-Wall Targeting)
 - **Priority**: P1 | **Effort**: M
-- **Concept**: Wall towers have a short-range attack that hits enemies **adjacent to the wall line**. Range extends along connected walls, not in a circle.
+- **Status**: [ ] **Not started**
+- **Concept**: Wall segments have a short-range attack hitting enemies **adjacent to the wall line**. Range extends along connected walls, not in a circle.
 - **Tasks**:
-  - [ ] Define "wall line" detection: check orthogonal neighbors for other wall towers to determine connected wall segments
-  - [ ] Attack range = N tiles along the connected wall in both directions (configurable in stats)
-  - [ ] Target selection within wall-line range (see 3.5 for slow priority)
+  - [ ] Give `WallSegmentTower` a non-zero `Damage` and `FireRate` in stats
+  - [ ] Define "wall line" range: BFS/linear scan along connected wall segments up to N tiles in each direction
+  - [ ] Target selection within wall-line range (prefer non-slowed — see 3.5)
   - [ ] Visual: draw range indicator as a highlighted strip along the wall, not a circle
-- **Design Decision Needed**: Does the wall attack *only* hit enemies adjacent to the wall, or does it have a small perpendicular range too (e.g., 1 tile deep)?
+- **Design Decision Needed**: Does the attack hit *only* enemies on the wall tile, or also 1 tile deep perpendicularly?
 
 ### 3.3 Wall Decay — Exposure-Based Degradation
 - **Priority**: P2 | **Effort**: M
-- **Concept**: Walls that are **exposed** (3 or more sides not adjacent to another wall) decay over time. This encourages building connected wall formations rather than isolated barriers.
-- **Tasks**:
-  - [ ] Define "exposure" calculation: count orthogonal neighbors (4-directional) that contain a wall tower. Exposed = (4 - wallNeighborCount) >= 3, i.e., only 0 or 1 wall neighbors
-  - [ ] Implement decay tick: exposed walls lose HP over time (e.g., X HP/second)
-  - [ ] Recalculate exposure when walls are built or destroyed (neighbor changes affect adjacent walls)
-  - [ ] Visual feedback: tint exposed walls red/orange, show a crumbling particle effect
-  - [ ] Edge case: a wall becomes exposed mid-wave because an adjacent wall was destroyed — should start decaying immediately
-- **Balance Note**: Decay rate should be slow enough that isolated walls are *viable* for short-term emergency blocking but not a permanent strategy.
+- **Status**: [x] **Done**
+- **What was built**:
+  - Decay rate: 1 HP/sec per exposed cardinal side (max 4 HP/sec fully isolated)
+  - Map boundaries count as exposed sides
+  - **Suppressed** while champion is alive and directly adjacent to any wall in its network
+  - BFS recalculates connectivity each frame — orphaned walls from mid-wave destruction decay immediately
+- **Remaining**:
+  - [ ] Visual feedback: tint decaying walls red/orange, particle crumble effect
 
 ### 3.4 Wall Tower — Slow Effect on Attack
 - **Priority**: P2 | **Effort**: M
-- **Concept**: Wall tower attacks apply a **slow debuff** to hit enemies, reducing their movement speed for a duration.
+- **Status**: [ ] **Not started** (wall has no attack yet — depends on 3.2)
+- **Concept**: Wall segment attacks apply a **slow debuff** to hit enemies.
 - **Tasks**:
-  - [ ] Implement `SlowEffect` on `Enemy`: speed multiplier (e.g., 0.5x) + duration timer. Non-stacking (refresh duration on re-application)
-  - [ ] Wall tower attack applies slow on hit
-  - [ ] Visual: tint slowed enemies blue (or add a frost/chain particle)
-  - [ ] Ensure slow interacts correctly with enemy FSM (slowed enemy still attacks towers at normal rate, only movement speed reduced)
-- **Prerequisite**: This is the game's first status effect system. Design it to be extensible for future effects (poison, stun, etc.) — consider a `StatusEffect` base class or a list of active effects on `Enemy`.
+  - [ ] Implement `SlowEffect` on `Enemy`: speed multiplier (0.5x) + duration. Non-stacking (refresh on re-apply)
+  - [ ] Apply slow on wall attack hit
+  - [ ] Visual: tint slowed enemies blue
+  - [ ] Slow only affects movement speed, not attack rate
+- **Note**: First status effect in the game — design for extensibility (poison, stun future candidates)
+- **Depends On**: 3.2 (Wall Attack)
 
 ### 3.5 Wall Tower — Prioritize Non-Slowed Enemies
 - **Priority**: P2 | **Effort**: S
-- **Concept**: Wall towers should prefer targeting enemies that are **not already slowed**, to maximize slow uptime across the enemy wave.
+- **Status**: [ ] **Not started**
+- **Concept**: Wall segments prefer targeting enemies not already slowed to maximize slow coverage.
 - **Tasks**:
-  - [ ] Implement `PreferNonSlowed` targeting: filter non-slowed enemies first; if all in range are slowed, target lowest remaining slow duration
-  - [ ] Assign this strategy to wall tower stats
+  - [ ] `PreferNonSlowed` targeting: non-slowed enemies first; fallback to lowest remaining slow duration
+  - [ ] Assign to `WallSegmentTower` stats
 - **Depends On**: 3.4 (Slow Effect)
 
-### 3.6 Wall Tower — Add Generics (Champion/Generic Pairing)
+### 3.6 Wall Champion Ability ("Fortify")
 - **Priority**: P2 | **Effort**: S
-- **Concept**: Follow the existing champion/generic pattern. Create a `ChampionWallTower` (free, walkable, ability) and make `WallTower` the generic variant.
+- **Status**: [ ] **Not started** (`AbilityEffect` is `null` in current stats)
 - **Tasks**:
-  - [ ] Create `ChampionWallTower` stats (higher HP, walkable, ability)
-  - [ ] Define wall champion ability (e.g., "Fortify" — all walls gain temporary invulnerability or massive HP regen for a duration)
-  - [ ] Register variant mappings in `TowerType.GetChampionVariant()` / `GetGenericVariant()`
-  - [ ] Add UI button + ability button for wall tower type
+  - [ ] Define "Fortify": all walls in network gain temporary HP regen or invulnerability for `AbilityDuration` seconds
+  - [ ] Wire into existing champion ability button system
+- **Note**: No generic wall variant is planned — walling champion has no generic counterpart by design
 
 ---
 
@@ -298,7 +301,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 |-------|-------|-----------|
 | **Phase 1: Foundation** | 1.1 (pathing bug), 2.1 (rename/rebalance), 6.1 (auto-waves) | Fix the critical bug, establish final tower identity, improve game flow |
 | **Phase 2: Combat Depth** | 2.2 (gun aggro), 2.3 (cannon aggro), 9.1 (champion debuff) | Towers feel distinct and strategic |
-| **Phase 3: Wall System** | 3.1 (core walls), 3.2 (wall range), 3.3 (wall decay), 3.4 (slow effect) | Major new mechanic, creates chokepoint gameplay |
+| **Phase 3: Wall System** | ~~3.1~~ ~~3.3~~ (done), 3.2 (wall range), 3.4 (slow effect) | Major new mechanic, creates chokepoint gameplay |
 | **Phase 4: Visual Upgrade** | 8.1 (tile pack), 5.1 (auto-tiling), 7.1 (UI stats) | Game looks and reads better |
 | **Phase 5: Polish & Expand** | 3.5 (slow priority), 3.6 (wall generics), 4.1 (heal tower), 2.4 (cannon super) | Deepen mechanics |
 | **Phase 6: Nice-to-Haves** | 6.2 (crowding), 5.2 (Tiled properties), 7.2 (wave preview), 9.2 (sound), 4.2 (heal champion) | Polish and completeness |

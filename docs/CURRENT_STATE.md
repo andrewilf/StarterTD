@@ -21,20 +21,4 @@
 
 ## Backlog
 
-### High Priority
-- [ ] Champion debuff: implement `Tower.UpdateChampionStatus()` stat changes
-- [x] Sprite integration: terrain tiles use `terrain.png` spritesheet via `TextureManager.DrawTile()`
-- [ ] Sound: SFX + BGM manager
-
-### Gameplay
-- [x] Tower walking: walkable towers (`CanWalk: true`) move on right-click (select → right-click empty buildable tile). Gold path preview on hover. Destination is reserved at commit time (`Tile.ReservedByTower`) — blocks placement and second-walker targeting mid-transit
-
-- [ ] Enemy variants: Fast (low HP), Tank (high HP)
-- [ ] Tower abilities: Slow, Splash, Poison
-- [x] Sell: right-click (60% base refund scaled by HP). Champions trigger death CD
-- [x] Pause
-
-### UI Polish
-- [ ] Enemy health bars
-- [x] Range rings on hover/placement
-- [ ] Wave preview
+See `docs/TODO.md` for the full prioritized backlog.
