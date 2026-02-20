@@ -91,8 +91,8 @@
 
 ### 3.2.1 Wall Attack — Slow-Aggro Priority
 - **Priority**: P2 | **Effort**: S
-- **Status**: [ ] **Not started** (blocked — depends on 3.4 slow effect)
-- **Concept**: Wall attack should prefer targeting non-slowed enemies so the slow effect isn't wasted on already-slowed targets.
+- **Status**: [x] **Done**
+- **What was built**: `FindWallNetworkTarget()` uses two-pass selection — closest non-slowed enemy first, falls back to closest slowed enemy if none available.
 
 ### 3.3 Wall Decay — Exposure-Based Degradation
 - **Priority**: P2 | **Effort**: M
@@ -107,15 +107,12 @@
 
 ### 3.4 Wall Tower — Slow Effect on Attack
 - **Priority**: P2 | **Effort**: M
-- **Status**: [ ] **Not started**
-- **Concept**: Wall segment attacks apply a **slow debuff** to hit enemies.
-- **Tasks**:
-  - [ ] Implement `SlowEffect` on `Enemy`: speed multiplier (0.5x) + duration. Non-stacking (refresh on re-apply)
-  - [ ] Apply slow on wall attack hit
-  - [ ] Visual: tint slowed enemies blue
-  - [ ] Slow only affects movement speed, not attack rate
-- **Note**: First status effect in the game — design for extensibility (poison, stun future candidates)
-- **Depends On**: 3.2 (Wall Attack)
+- **Status**: [x] **Done**
+- **What was built**:
+  - `Enemy.ApplySlow(float duration)` on `IEnemy` interface — timer-based, refreshes on re-hit
+  - 40% speed (60% reduction), 5-second duration
+  - Slowed enemies tinted blue (`Color.CornflowerBlue` blended 50%)
+  - Slow only affects movement speed, not attack rate
 
 ### 3.5 Wall Tower — Prioritize Non-Slowed Enemies
 - **Priority**: P2 | **Effort**: S

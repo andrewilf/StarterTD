@@ -39,6 +39,12 @@ public interface IEnemy
     /// <summary>Apply damage to this enemy.</summary>
     void TakeDamage(float amount);
 
+    /// <summary>True while a speed slow debuff is active on this enemy.</summary>
+    bool IsSlowed { get; }
+
+    /// <summary>Apply a speed slow debuff. Re-applying refreshes the timer.</summary>
+    void ApplySlow(float duration);
+
     /// <summary>Called when enemy is about to be removed. Cleanup hook.</summary>
     void OnDestroy();
 

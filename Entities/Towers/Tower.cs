@@ -323,6 +323,7 @@ public class Tower : ITower
             {
                 // Instant spike damage — no projectile; visual spawned via OnWallAttack callback
                 target.TakeDamage((int)Damage);
+                target.ApplySlow(_abilityDuration);
                 OnWallAttack?.Invoke(target.Position);
             }
             else

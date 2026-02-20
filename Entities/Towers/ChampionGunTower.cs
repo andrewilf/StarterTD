@@ -18,7 +18,7 @@ public static class ChampionGunTower
         BlockCapacity: 2,
         DrawScale: new Vector2(1.0f, 1.5f),
         CanWalk: true,
-        MoveSpeed: 80f,
+        MoveSpeed: 150f,
         CooldownDuration: 2.0f,
         AbilityDuration: 5f,
         AbilityCooldown: 15f,

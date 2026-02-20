@@ -467,59 +467,78 @@ public class TowerManager
     }
 
     /// <summary>
-    /// Highlights all tiles that are 1 tile deep perpendicularly adjacent to the walling network
-    /// (champion position + all connected wall segments). With no walls placed, only the 4 tiles
-    /// adjacent to the champion are highlighted.
+    /// Highlights all tiles in the wall attack zone (1 tile outside the connected wall network).
     /// </summary>
     private void DrawWallRangeIndicator(SpriteBatch spriteBatch, Tower wallingChampion)
     {
         var wallSet = BuildConnectedWallSet(wallingChampion);
-        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        var attackZone = BuildAttackZone(wallSet);
         int tileSize = GameSettings.TileSize;
 
-        foreach (var wallPos in wallSet)
+        foreach (var tile in attackZone)
         {
-            foreach (var dir in dirs)
-            {
-                var neighbor = new Point(wallPos.X + dir.X, wallPos.Y + dir.Y);
-
-                if (
-                    neighbor.X < 0
-                    || neighbor.X >= _map.Columns
-                    || neighbor.Y < 0
-                    || neighbor.Y >= _map.Rows
-                )
-                    continue;
-
-                // Only highlight tiles outside the wall network (the attack zone)
-                if (wallSet.Contains(neighbor))
-                    continue;
-
-                // Top-left origin for DrawRect
-                Vector2 center = Map.GridToWorld(neighbor);
-                var rect = new Rectangle(
-                    (int)(center.X - tileSize / 2f),
-                    (int)(center.Y - tileSize / 2f),
-                    tileSize,
-                    tileSize
-                );
-                TextureManager.DrawRect(spriteBatch, rect, Color.LimeGreen * 0.3f);
-            }
+            Vector2 center = Map.GridToWorld(tile);
+            var rect = new Rectangle(
+                (int)(center.X - tileSize / 2f),
+                (int)(center.Y - tileSize / 2f),
+                tileSize,
+                tileSize
+            );
+            TextureManager.DrawRect(spriteBatch, rect, Color.LimeGreen * 0.3f);
         }
     }
 
     /// <summary>
-    /// Finds the closest enemy in the wall-network attack zone.
-    /// The attack zone is all tiles 1 step outside the connected wall set (champion + wall segments).
-    /// Enemies must be on one of these tiles to be targeted.
+    /// Finds the best enemy to attack in the wall-network attack zone.
+    /// Prefers non-slowed enemies; falls back to the closest slowed enemy.
     /// </summary>
     private IEnemy? FindWallNetworkTarget(List<IEnemy> enemies, Tower wallingChampion)
     {
         var wallSet = BuildConnectedWallSet(wallingChampion);
-        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        var attackZone = BuildAttackZone(wallSet);
 
-        // Build the attack zone: neighbors of the wall set that are not themselves in the wall set
+        // Prefer non-slowed enemies so the slow debuff isn't wasted on already-slowed targets.
+        // Fall back to closest slowed enemy if no unslowed targets are in range.
+        IEnemy? bestUnslowed = null;
+        float closestUnslow = float.MaxValue;
+        IEnemy? bestSlowed = null;
+        float closestSlow = float.MaxValue;
+
+        foreach (var enemy in enemies)
+        {
+            if (enemy.IsDead || enemy.ReachedEnd)
+                continue;
+
+            Point enemyGrid = Map.WorldToGrid(enemy.Position);
+            if (!attackZone.Contains(enemyGrid))
+                continue;
+
+            float dist = Vector2.Distance(wallingChampion.WorldPosition, enemy.Position);
+            if (!enemy.IsSlowed && dist < closestUnslow)
+            {
+                closestUnslow = dist;
+                bestUnslowed = enemy;
+            }
+            else if (enemy.IsSlowed && dist < closestSlow)
+            {
+                closestSlow = dist;
+                bestSlowed = enemy;
+            }
+        }
+
+        return bestUnslowed ?? bestSlowed;
+    }
+
+    /// <summary>
+    /// Returns the set of in-bounds tiles that are 1 step outside the given wall set —
+    /// i.e. all cardinal neighbours of wall tiles that are not themselves in the wall set.
+    /// Used by both DrawWallRangeIndicator and FindWallNetworkTarget.
+    /// </summary>
+    private HashSet<Point> BuildAttackZone(HashSet<Point> wallSet)
+    {
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
         var attackZone = new HashSet<Point>();
+
         foreach (var wallPos in wallSet)
         {
             foreach (var dir in dirs)
@@ -539,26 +558,6 @@ public class TowerManager
             }
         }
 
-        IEnemy? target = null;
-        float closestDist = float.MaxValue;
-
-        foreach (var enemy in enemies)
-        {
-            if (enemy.IsDead || enemy.ReachedEnd)
-                continue;
-
-            Point enemyGrid = Map.WorldToGrid(enemy.Position);
-            if (!attackZone.Contains(enemyGrid))
-                continue;
-
-            float dist = Vector2.Distance(wallingChampion.WorldPosition, enemy.Position);
-            if (dist < closestDist)
-            {
-                closestDist = dist;
-                target = enemy;
-            }
-        }
-
-        return target;
+        return attackZone;
     }
 }
