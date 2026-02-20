@@ -53,11 +53,13 @@ public class Tower : ITower
     /// <summary>Scale factor for visual rendering (X, Y). Generics default to (1.0, 1.0), Champions to (1.0, 1.5).</summary>
     public Vector2 DrawScale { get; private set; }
 
+    /// <summary>0→1 progress of post-move cooldown. 1 means ready to move again. Read by TowerDrawingHelper.</summary>
+    public float MoveCooldownProgress => 1f - (_cooldownTimer / _cooldownDuration);
+
     public TowerType TowerType { get; }
 
     private CountdownTimer? _fireCooldown;
     private int _currentEngagedCount;
-    private const float SpriteSize = 30f;
     private const float ProjectileSpeed = 400f;
 
     private Vector2 _drawPosition;
@@ -151,62 +153,6 @@ public class Tower : ITower
     {
         if (_currentEngagedCount > 0)
             _currentEngagedCount--;
-    }
-
-    private void DrawMoveCooldownBar(SpriteBatch spriteBatch, Vector2 drawPosition)
-    {
-        float barWidth = SpriteSize;
-        float barHeight = 3f;
-        // Fills from 0% (just arrived) to 100% (ready to move again)
-        float progress = 1f - (_cooldownTimer / _cooldownDuration);
-
-        int barX = (int)(drawPosition.X - barWidth / 2f);
-        // Position below capacity bar: health bar is at -8f offset, capacity at -3f, this at +2f
-        int barY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f + 10f);
-
-        // Dark gray background
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(barX, barY, (int)barWidth, (int)barHeight),
-            Color.DarkGray
-        );
-
-        // Yellow foreground (progress toward move-ready)
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(barX, barY, (int)(barWidth * progress), (int)barHeight),
-            Color.Gold
-        );
-    }
-
-    private void DrawCapacityBar(SpriteBatch spriteBatch, Vector2 drawPosition)
-    {
-        float capacityBarWidth = SpriteSize;
-        float capacityBarHeight = 3f; // Slightly thinner than health bar
-        float remainingPercent = (float)(BlockCapacity - CurrentEngagedCount) / BlockCapacity;
-
-        int capBarX = (int)(drawPosition.X - capacityBarWidth / 2f);
-        // Scale Y offset by DrawScale.Y so bars stay at top of scaled tower
-        int capBarY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f + 5f); // 5px below health bar
-
-        // Dark gray background (full bar)
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(capBarX, capBarY, (int)capacityBarWidth, (int)capacityBarHeight),
-            Color.DarkGray
-        );
-
-        // Blue foreground (remaining capacity)
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(
-                capBarX,
-                capBarY,
-                (int)(capacityBarWidth * remainingPercent),
-                (int)capacityBarHeight
-            ),
-            Color.CornflowerBlue
-        );
     }
 
     private void ApplyStats(TowerStats stats)
@@ -435,112 +381,11 @@ public class Tower : ITower
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null)
-    {
-        // Determine origin and draw position based on vertical scaling.
-        // Champions (DrawScale.Y > 1.0) use bottom-center origin so they grow upward.
-        // Generic towers use centered origin (default behavior).
-        Vector2 spriteOrigin;
-        Vector2 drawPosition = _drawPosition;
+    public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null) =>
+        TowerDrawingHelper.Draw(spriteBatch, this);
 
-        if (DrawScale.Y > 1.0f)
-        {
-            // Champion tower: bottom-center origin.
-            // Position so bottom sits at same level as generic tower's bottom.
-            // Generic bottom = WorldPosition.Y + SpriteSize/2
-            spriteOrigin = new Vector2(0.5f, 1.0f);
-            drawPosition.Y += SpriteSize / 2f;
-        }
-        else
-        {
-            // Generic tower: centered origin
-            spriteOrigin = new Vector2(0.5f, 0.5f);
-        }
-
-        // Ability aura: two concentric circles give a soft glow effect
-        if (IsAbilityBuffActive)
-        {
-            TextureManager.DrawFilledCircle(
-                spriteBatch,
-                _drawPosition,
-                SpriteSize * 1.4f,
-                Color.Gold * 0.25f
-            );
-            TextureManager.DrawFilledCircle(
-                spriteBatch,
-                _drawPosition,
-                SpriteSize * 0.9f,
-                Color.Gold * 0.45f
-            );
-        }
-
-        // Semi-transparent when moving so tower looks ghostly (non-blocking)
-        Color bodyColor = CurrentState == TowerState.Moving ? TowerColor * 0.5f : TowerColor;
-
-        // Draw tower body (centered via DrawSprite), scaled by DrawScale
-        TextureManager.DrawSprite(
-            spriteBatch,
-            drawPosition,
-            new Vector2(SpriteSize * DrawScale.X, SpriteSize * DrawScale.Y),
-            bodyColor,
-            rotation: 0f,
-            origin: spriteOrigin
-        );
-
-        // Draw health bar above tower (always visible for now)
-        if ((CurrentHealth < MaxHealth))
-        {
-            float healthBarWidth = SpriteSize;
-            float healthBarHeight = 4f;
-            float healthPercent = (float)CurrentHealth / MaxHealth;
-
-            // DrawRect uses top-left origin
-            // Use drawPosition (adjusted for champion scaling) to position bar at tower top
-            int barX = (int)(drawPosition.X - healthBarWidth / 2f);
-            int barY = (int)(drawPosition.Y - (SpriteSize * DrawScale.Y) / 2f - 8f);
-
-            // Red background (full bar)
-            TextureManager.DrawRect(
-                spriteBatch,
-                new Rectangle(barX, barY, (int)healthBarWidth, (int)healthBarHeight),
-                Color.Red
-            );
-
-            // Green foreground (current health)
-            TextureManager.DrawRect(
-                spriteBatch,
-                new Rectangle(
-                    barX,
-                    barY,
-                    (int)(healthBarWidth * healthPercent),
-                    (int)healthBarHeight
-                ),
-                Color.LimeGreen
-            );
-        }
-
-        // Draw capacity bar below health bar (always visible)
-        DrawCapacityBar(spriteBatch, drawPosition);
-
-        // Draw movement cooldown bar (fills 0→100%, disappears when ready to move again)
-        if (CurrentState == TowerState.Cooldown)
-            DrawMoveCooldownBar(spriteBatch, drawPosition);
-
-        // Draw projectiles
-        foreach (var proj in Projectiles)
-        {
-            proj.Draw(spriteBatch);
-        }
-    }
-
-    /// <summary>
-    /// Draw the range circle indicator (called when tower is hovered or during placement preview).
-    /// Uses a pre-generated filled circle texture from TextureManager cache.
-    /// </summary>
-    public void DrawRangeIndicator(SpriteBatch spriteBatch)
-    {
-        TextureManager.DrawFilledCircle(spriteBatch, WorldPosition, Range, Color.White * 0.15f);
-    }
+    public void DrawRangeIndicator(SpriteBatch spriteBatch) =>
+        TowerDrawingHelper.DrawRangeIndicator(spriteBatch, this);
 
     /// <summary>
     /// Hook for future debuff system. Called when a champion's alive state changes.
