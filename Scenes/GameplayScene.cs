@@ -28,6 +28,7 @@ public class GameplayScene : IScene
     private readonly List<IEnemy> _enemies = new();
     private readonly List<FloatingText> _floatingTexts = new();
     private readonly List<AoEEffect> _aoeEffects = new();
+    private readonly List<SpikeEffect> _spikeEffects = new();
     private int _money;
     private int _lives;
     private bool _gameOver;
@@ -86,6 +87,9 @@ public class GameplayScene : IScene
 
         // Subscribe to AoE impact events to spawn visual effects
         _towerManager.OnAOEImpact = (pos, radius) => _aoeEffects.Add(new AoEEffect(pos, radius));
+
+        // Subscribe to wall spike attacks to spawn visual effects
+        _towerManager.OnWallAttack = pos => _spikeEffects.Add(new SpikeEffect(pos));
 
         // Champion super ability: start cooldown and apply buff to relevant towers
         _uiPanel.OnAbilityTriggered = championType =>
@@ -358,6 +362,14 @@ public class GameplayScene : IScene
                 _aoeEffects.RemoveAt(i);
         }
 
+        // --- Update spike effects ---
+        for (int i = _spikeEffects.Count - 1; i >= 0; i--)
+        {
+            _spikeEffects[i].Update(gameTime);
+            if (!_spikeEffects[i].IsActive)
+                _spikeEffects.RemoveAt(i);
+        }
+
         // --- Update floating texts ---
         for (int i = _floatingTexts.Count - 1; i >= 0; i--)
         {
@@ -392,6 +404,12 @@ public class GameplayScene : IScene
         foreach (var effect in _aoeEffects)
         {
             effect.Draw(spriteBatch);
+        }
+
+        // Draw spike effects
+        foreach (var spike in _spikeEffects)
+        {
+            spike.Draw(spriteBatch);
         }
 
         // Draw floating texts

@@ -12,7 +12,7 @@
 - **Rendering**: `SpriteBatch`/fonts passed via `Draw()`
 
 ## GameplayScene Owns
-`Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `FloatingTexts`, `AoEEffects`
+`Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `FloatingTexts`, `AoEEffects`, `SpikeEffects`
 
 ## Tower System
 - `TowerType` enum: Generic (Gun, Cannon) + Champion (ChampionGun, ChampionCannon, ChampionWalling) + WallSegment
@@ -24,12 +24,14 @@
 - `Tower.Draw()`: origin conditional on `DrawScale.Y > 1.0f`; champions offset Y by `SpriteSize / 2f`
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
 - AoE chain: `Projectile.OnAOEImpact` → `Tower` → `TowerManager` → `GameplayScene` spawns visual
+- Wall-attack chain: `Tower.WallNetworkTargetFinder` (set by `TowerManager` each frame) selects target; on fire: instant `TakeDamage` + `ApplySlow(_abilityDuration)`, then `Tower.OnWallAttack` → `TowerManager.OnWallAttack` → `GameplayScene` spawns `SpikeEffect`. `_abilityDuration` sourced from `TowerStats.AbilityDuration` (5s for `ChampionWalling`)
 - `CanWalk` flag on `TowerStats` (and mirrored on `Tower`) gates movement. Champions: `true`; Generics: `false`. `MoveSpeed`/`CooldownDuration` are optional stats (default `0f`) — only specified when `CanWalk: true`
 - State machine: `TowerState` (Active/Moving/Cooldown). Moving: `_drawPosition` interpolates tile-to-tile, `GridPosition` updates on cell arrival, origin tile cleared (ghost). Cooldown: move-ready timer only — tower still fires. Both Active+Cooldown run `UpdateActive()`. `OnMovementComplete` callback lets `TowerManager` re-occupy destination tile and trigger reroute
 - `TowerManager.GetPreviewPath(dest)`: returns `List<Point>?` for hover preview — checks `CanWalk`, `Active` state, `CanBuild`. `GameplayScene` calls per-frame, draws gold dot+line path overlay between map and tower layers
-- `Tower.UpdateActive()`: guarded by `Range <= 0f` early return — towers with no range (walls, walling champion) skip the fire loop entirely to prevent `CountdownTimer` overflow from `float.MaxValue` FireRate
+- `Tower.UpdateActive()`: guarded by `Range <= 0f && WallNetworkTargetFinder == null` — towers with no range and no wall delegate skip the fire loop entirely (prevents `CountdownTimer` overflow from `float.MaxValue` FireRate). Wall targeting bypasses circular range: uses `WallNetworkTargetFinder` delegate (set per-frame by `TowerManager`) and deals instant damage instead of spawning a projectile
+- `TowerManager.BuildAttackZone(wallSet)`: shared helper returning all in-bounds tiles 1 step outside the connected wall set. Used by `DrawWallRangeIndicator` (hover preview) and `FindWallNetworkTarget` (targeting). `FindWallNetworkTarget` prefers closest non-slowed enemy; falls back to closest slowed enemy
 - `Tower.ApplyDecayDamage(float dt)`: accumulates fractional HP loss; used by wall segments decaying at 1 HP/sec
-- Wall segments: `TowerType.WallSegment`, 30 HP, 10k movement cost, placed by `TowerManager.TryPlaceWall()`. Must be 4-directionally adjacent to the walling champion or a connected wall (BFS). `BuildConnectedWallSet()` used by placement validation only. `ChampionIsConnectedToWalls()` checks if champion directly touches any wall (4-directional); if true, all decay is suppressed. Otherwise `UpdateWallDecay()` applies 1 HP/sec per exposed cardinal side to each wall segment (sides not occupied by another wall). Runs before the dead-tower sweep in `TowerManager.Update()`
+- Wall segments: `TowerType.WallSegment`, 30 HP, 10k movement cost, placed by `TowerManager.TryPlaceWall()`. Must be 4-directionally adjacent to the walling champion or a connected wall (BFS). `BuildConnectedWallSet()` used by placement validation, decay suppression, and attack zone computation. `ChampionIsConnectedToWalls()` checks if champion directly touches any wall (4-directional); if true, all decay is suppressed. Otherwise `UpdateWallDecay()` applies 1 HP/sec per exposed cardinal side to each wall segment (sides not occupied by another wall). Runs before the dead-tower sweep in `TowerManager.Update()`
 - `TowerManager.IsAdjacentToWallingNetwork()`: public so `GameplayScene` can use it for per-frame hover feedback without duplicating BFS
 - `TowerStats.AbilityEffect: Action<Tower>?`: delegate stored per tower type in its stats file. Called by `TowerManager.TriggerChampionAbility()` on the champion and all matching generics. Skipped for `ChampionWalling` (no generics, no ability)
 - `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals, applies multipliers, sets `IsAbilityBuffActive = true`, runs for `TowerStats.AbilityDuration` (per-type). Re-triggering resets timer without stacking. Gold aura circles drawn while active

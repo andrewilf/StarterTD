@@ -7,8 +7,8 @@ public static class ChampionWallingTower
     public static readonly TowerStats Stats = new(
         Name: "Champion Wall",
         Range: 0f,
-        Damage: 0f,
-        FireRate: float.MaxValue, // never fires
+        Damage: 3f,
+        FireRate: 1.5f,
         Cost: 0,
         MovementCost: 500,
         IsAOE: false,
@@ -20,7 +20,7 @@ public static class ChampionWallingTower
         CanWalk: true,
         MoveSpeed: 80f,
         CooldownDuration: 2.0f,
-        AbilityDuration: 0f,
+        AbilityDuration: 5f, // Slow duration in seconds applied to enemies hit by spike attack
         AbilityCooldown: 0f,
         AbilityEffect: null
     );

@@ -85,6 +85,19 @@ public class Tower : ITower
     /// </summary>
     public Action<Vector2, float>? OnAOEImpact;
 
+    /// <summary>
+    /// If set, replaces circular range targeting with wall-network targeting.
+    /// Returns the best enemy to attack from within the wall attack zone.
+    /// Set each frame by TowerManager for ChampionWalling towers.
+    /// </summary>
+    public Func<List<IEnemy>, IEnemy?>? WallNetworkTargetFinder;
+
+    /// <summary>
+    /// Fires with the target's world position when a wall spike attack lands.
+    /// Bubbles up to TowerManager → GameplayScene to spawn SpikeEffect.
+    /// </summary>
+    public Action<Vector2>? OnWallAttack;
+
     public Tower(TowerType type, Point gridPosition)
     {
         TowerType = type;
@@ -282,16 +295,59 @@ public class Tower : ITower
 
     /// <summary>
     /// Normal targeting and firing logic. Only runs when CurrentState == Active.
-    /// Skipped entirely for towers with no range (walls, walling champion) to avoid
-    /// passing float.MaxValue FireRate into CountdownTimer, which overflows TimeSpan.
+    /// Skipped entirely for towers with no range and no wall targeting delegate,
+    /// to avoid passing float.MaxValue FireRate into CountdownTimer (TimeSpan overflow).
+    /// Wall-network targeting (ChampionWalling) uses WallNetworkTargetFinder instead of circular range,
+    /// and deals instant spike damage rather than spawning a projectile.
     /// </summary>
     private void UpdateActive(GameTime gameTime, List<IEnemy> enemies)
     {
-        if (Range <= 0f)
+        bool hasWallTargeting = WallNetworkTargetFinder != null;
+        if (Range <= 0f && !hasWallTargeting)
             return;
 
         _fireCooldown?.Update(gameTime);
 
+        IEnemy? target = hasWallTargeting
+            ? WallNetworkTargetFinder!(enemies)
+            : FindClosestInRange(enemies);
+
+        bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
+
+        if (target != null && canFire)
+        {
+            _fireCooldown = new CountdownTimer(FireRate);
+            _fireCooldown.Start();
+
+            if (hasWallTargeting)
+            {
+                // Instant spike damage — no projectile; visual spawned via OnWallAttack callback
+                target.TakeDamage((int)Damage);
+                target.ApplySlow(_abilityDuration);
+                OnWallAttack?.Invoke(target.Position);
+            }
+            else
+            {
+                var projectile = new Projectile(
+                    WorldPosition,
+                    target,
+                    Damage,
+                    ProjectileSpeed,
+                    IsAOE,
+                    AOERadius,
+                    Color.Yellow
+                );
+
+                // Wire up projectile's AoE impact callback to bubble up to TowerManager → GameplayScene
+                projectile.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
+
+                Projectiles.Add(projectile);
+            }
+        }
+    }
+
+    private IEnemy? FindClosestInRange(List<IEnemy> enemies)
+    {
         IEnemy? target = null;
         float closestDist = float.MaxValue;
 
@@ -308,28 +364,7 @@ public class Tower : ITower
             }
         }
 
-        bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
-
-        if (target != null && canFire)
-        {
-            _fireCooldown = new CountdownTimer(FireRate);
-            _fireCooldown.Start();
-
-            var projectile = new Projectile(
-                WorldPosition,
-                target,
-                Damage,
-                ProjectileSpeed,
-                IsAOE,
-                AOERadius,
-                Color.Yellow
-            );
-
-            // Wire up projectile's AoE impact callback to bubble up to TowerManager → GameplayScene
-            projectile.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
-
-            Projectiles.Add(projectile);
-        }
+        return target;
     }
 
     /// <summary>

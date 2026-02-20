@@ -44,6 +44,11 @@ public class Enemy : IEnemy
     private CountdownTimer? _attackTimer;
     private const float AttackInterval = 1.0f;
 
+    private float _slowTimer;
+    private const float SlowFactor = 0.4f; // Move at 40% of base speed while slowed
+
+    public bool IsSlowed => _slowTimer > 0f;
+
     public Enemy(
         string name,
         float health,
@@ -73,6 +78,11 @@ public class Enemy : IEnemy
         Health -= amount;
         if (Health < 0)
             Health = 0;
+    }
+
+    public void ApplySlow(float duration)
+    {
+        _slowTimer = duration;
     }
 
     /// <summary>
@@ -129,6 +139,9 @@ public class Enemy : IEnemy
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        if (_slowTimer > 0f)
+            _slowTimer -= dt;
+
         switch (_state)
         {
             case EnemyState.Moving:
@@ -180,7 +193,8 @@ public class Enemy : IEnemy
         Vector2 target = Map.GridToWorld(_path[_currentPathIndex]);
         Vector2 direction = target - Position;
         float distance = direction.Length();
-        float moveAmount = Speed * dt;
+        float effectiveSpeed = IsSlowed ? Speed * SlowFactor : Speed;
+        float moveAmount = effectiveSpeed * dt;
 
         if (distance <= moveAmount)
         {
@@ -223,8 +237,10 @@ public class Enemy : IEnemy
         if (IsDead)
             return;
 
-        // Use red tint when attacking, original color when moving
+        // Use red tint when attacking, original color when moving; mix in blue when slowed
         Color spriteColor = _state == EnemyState.Attacking ? Color.Red : _color;
+        if (IsSlowed)
+            spriteColor = Color.Lerp(spriteColor, Color.CornflowerBlue, 0.5f);
 
         TextureManager.DrawSprite(
             spriteBatch,
