@@ -226,6 +226,10 @@ public class TowerManager
     /// </summary>
     public void TriggerChampionAbility(TowerType championType)
     {
+        // ChampionWalling has no generic variant and no ability effect.
+        if (championType.IsWallingChampion())
+            return;
+
         var genericType = championType.GetGenericVariant();
 
         foreach (var tower in _towers)
@@ -233,6 +237,175 @@ public class TowerManager
             if (tower.TowerType == championType || tower.TowerType == genericType)
                 TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
         }
+    }
+
+    /// <summary>
+    /// Place a wall segment adjacent to the walling champion's network.
+    /// Bypasses the terrain buildability check so walls can go on any non-tower tile.
+    /// Returns true if the wall was placed successfully.
+    /// </summary>
+    public bool TryPlaceWall(Point gridPos, Tower wallingTower)
+    {
+        if (!_map.CanBuild(gridPos))
+            return false;
+
+        if (!IsAdjacentToWallingNetwork(gridPos, wallingTower))
+            return false;
+
+        var wall = new Tower(TowerType.WallSegment, gridPos);
+        _towers.Add(wall);
+        _map.Tiles[gridPos.X, gridPos.Y].OccupyingTower = wall;
+        OnTowerPlaced?.Invoke(gridPos);
+        return true;
+    }
+
+    /// <summary>
+    /// Returns true if gridPos is adjacent (4-directional) to a tile occupied by
+    /// the walling champion or any wall segment that is chain-connected back to the champion.
+    /// Uses BFS from the champion's position across wall segment tiles.
+    /// Public so GameplayScene can use it for hover feedback during wall placement mode.
+    /// </summary>
+    public bool IsAdjacentToWallingNetwork(Point gridPos, Tower wallingTower)
+    {
+        var connected = BuildConnectedWallSet(wallingTower);
+
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        foreach (var dir in dirs)
+        {
+            var neighbor = new Point(gridPos.X + dir.X, gridPos.Y + dir.Y);
+            if (connected.Contains(neighbor))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// BFS from the walling champion's position across adjacent wall segment tiles.
+    /// Returns the set of grid positions that are connected to the champion (including the champion's own position).
+    /// If wallingChampion is null (champion is dead), returns an empty set.
+    /// </summary>
+    private HashSet<Point> BuildConnectedWallSet(Tower? wallingChampion)
+    {
+        var connected = new HashSet<Point>();
+        if (wallingChampion == null)
+            return connected;
+
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        var queue = new Queue<Point>();
+
+        connected.Add(wallingChampion.GridPosition);
+        queue.Enqueue(wallingChampion.GridPosition);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var dir in dirs)
+            {
+                var neighbor = new Point(current.X + dir.X, current.Y + dir.Y);
+                if (connected.Contains(neighbor))
+                    continue;
+                if (
+                    neighbor.X < 0
+                    || neighbor.X >= _map.Columns
+                    || neighbor.Y < 0
+                    || neighbor.Y >= _map.Rows
+                )
+                    continue;
+
+                var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
+                if (occupant != null && occupant.TowerType.IsWallSegment())
+                {
+                    connected.Add(neighbor);
+                    queue.Enqueue(neighbor);
+                }
+            }
+        }
+
+        return connected;
+    }
+
+    /// <summary>
+    /// Apply decay damage to wall segments when the walling champion is not connected to any wall.
+    /// If the champion is alive and adjacent to at least one wall segment, no decay occurs.
+    /// Once disconnected (champion dead or moved away), each wall segment decays at 1 HP/sec
+    /// per exposed cardinal side (sides not sheltered by another wall segment).
+    /// </summary>
+    private void UpdateWallDecay(GameTime gameTime, Tower? wallingChampion)
+    {
+        // Champion touching any wall suppresses all decay
+        if (ChampionIsConnectedToWalls(wallingChampion))
+            return;
+
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+
+        foreach (var tower in _towers)
+        {
+            if (!tower.TowerType.IsWallSegment())
+                continue;
+
+            int exposedSides = 0;
+            foreach (var dir in dirs)
+            {
+                var neighbor = new Point(
+                    tower.GridPosition.X + dir.X,
+                    tower.GridPosition.Y + dir.Y
+                );
+
+                if (
+                    neighbor.X < 0
+                    || neighbor.X >= _map.Columns
+                    || neighbor.Y < 0
+                    || neighbor.Y >= _map.Rows
+                )
+                {
+                    exposedSides++;
+                    continue;
+                }
+
+                var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
+                bool sheltered = occupant != null && occupant.TowerType.IsWallSegment();
+
+                if (!sheltered)
+                    exposedSides++;
+            }
+
+            if (exposedSides > 0)
+                tower.ApplyDecayDamage(dt * exposedSides);
+        }
+    }
+
+    /// <summary>
+    /// Returns true if the walling champion is alive and at least one of its 4 cardinal
+    /// neighbors is occupied by a wall segment (champion is "touching" the wall group).
+    /// </summary>
+    private bool ChampionIsConnectedToWalls(Tower? wallingChampion)
+    {
+        if (wallingChampion == null)
+            return false;
+
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        foreach (var dir in dirs)
+        {
+            var neighbor = new Point(
+                wallingChampion.GridPosition.X + dir.X,
+                wallingChampion.GridPosition.Y + dir.Y
+            );
+
+            if (
+                neighbor.X < 0
+                || neighbor.X >= _map.Columns
+                || neighbor.Y < 0
+                || neighbor.Y >= _map.Rows
+            )
+                continue;
+
+            var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
+            if (occupant != null && occupant.TowerType.IsWallSegment())
+                return true;
+        }
+
+        return false;
     }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
@@ -243,6 +416,10 @@ public class TowerManager
         {
             tower.Update(gameTime, enemies);
         }
+
+        // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
+        var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+        UpdateWallDecay(gameTime, wallingChampion);
 
         // Remove destroyed towers (iterate backwards to safely remove during iteration)
         for (int i = _towers.Count - 1; i >= 0; i--)

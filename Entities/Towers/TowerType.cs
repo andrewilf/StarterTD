@@ -11,4 +11,6 @@ public enum TowerType
     Cannon,
     ChampionGun,
     ChampionCannon,
+    ChampionWalling,
+    WallSegment,
 }

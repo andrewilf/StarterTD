@@ -129,6 +129,10 @@ public class ChampionManager
         _aliveChampions.Remove(type);
         _respawnCooldowns[type] = RESPAWN_COOLDOWN;
 
+        // Champions without a generic variant (e.g. ChampionWalling) have no towers to debuff.
+        if (type.IsWallingChampion())
+            return;
+
         var genericVariant = type.GetGenericVariant();
 
         foreach (var tower in allTowers)

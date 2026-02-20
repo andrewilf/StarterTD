@@ -70,6 +70,9 @@ public class Tower : ITower
     private float _originalDamage;
     private float _originalFireRate;
 
+    // Accumulates fractional decay damage for wall segments so 1 HP/sec is applied precisely.
+    private float _decayAccumulator;
+
     /// <summary>True while the super ability buff is active on this tower.</summary>
     public bool IsAbilityBuffActive { get; private set; }
 
@@ -98,6 +101,21 @@ public class Tower : ITower
         CurrentHealth -= amount;
         if (CurrentHealth < 0)
             CurrentHealth = 0;
+    }
+
+    /// <summary>
+    /// Accumulates decay damage over time (1 HP/sec for disconnected wall segments).
+    /// Uses an accumulator so fractional seconds don't get lost between frames.
+    /// </summary>
+    public void ApplyDecayDamage(float deltaSeconds)
+    {
+        _decayAccumulator += deltaSeconds;
+        int damage = (int)_decayAccumulator;
+        if (damage > 0)
+        {
+            TakeDamage(damage);
+            _decayAccumulator -= damage;
+        }
     }
 
     /// <summary>
@@ -264,9 +282,14 @@ public class Tower : ITower
 
     /// <summary>
     /// Normal targeting and firing logic. Only runs when CurrentState == Active.
+    /// Skipped entirely for towers with no range (walls, walling champion) to avoid
+    /// passing float.MaxValue FireRate into CountdownTimer, which overflows TimeSpan.
     /// </summary>
     private void UpdateActive(GameTime gameTime, List<IEnemy> enemies)
     {
+        if (Range <= 0f)
+            return;
+
         _fireCooldown?.Update(gameTime);
 
         IEnemy? target = null;
