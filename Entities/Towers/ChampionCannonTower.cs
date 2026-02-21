@@ -22,6 +22,7 @@ public static class ChampionCannonTower
         CooldownDuration: 2.0f,
         AbilityDuration: 7f,
         AbilityCooldown: 12f,
+        Targeting: TargetingStrategy.MostGrouped,
         AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f)
     );
 }

@@ -22,6 +22,7 @@ public static class ChampionGunTower
         CooldownDuration: 2.0f,
         AbilityDuration: 5f,
         AbilityCooldown: 15f,
+        Targeting: TargetingStrategy.LowestHP,
         AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 2f, fireRateSpeedMult: 1.4f)
     );
 }

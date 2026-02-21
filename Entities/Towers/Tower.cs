@@ -76,6 +76,8 @@ public class Tower : ITower
     // Accumulates fractional decay damage for wall segments so 1 HP/sec is applied precisely.
     private float _decayAccumulator;
 
+    private TargetingStrategy _targeting; // set once in ApplyStats; not readonly because ApplyStats is called after field init
+
     /// <summary>True while the super ability buff is active on this tower.</summary>
     public bool IsAbilityBuffActive { get; private set; }
 
@@ -173,6 +175,7 @@ public class Tower : ITower
         _cooldownDuration = stats.CooldownDuration;
         _abilityDuration = stats.AbilityDuration;
         CanWalk = stats.CanWalk;
+        _targeting = stats.Targeting;
     }
 
     /// <summary>
@@ -273,7 +276,7 @@ public class Tower : ITower
 
         IEnemy? target = hasWallTargeting
             ? WallNetworkTargetFinder!(enemies)
-            : FindClosestInRange(enemies);
+            : SelectTarget(enemies);
 
         bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
 
@@ -309,7 +312,15 @@ public class Tower : ITower
         }
     }
 
-    private IEnemy? FindClosestInRange(List<IEnemy> enemies)
+    private IEnemy? SelectTarget(List<IEnemy> enemies) =>
+        _targeting switch
+        {
+            TargetingStrategy.LowestHP => FindLowestHP(enemies),
+            TargetingStrategy.MostGrouped => FindMostGrouped(enemies),
+            _ => FindClosest(enemies),
+        };
+
+    private IEnemy? FindClosest(List<IEnemy> enemies)
     {
         IEnemy? target = null;
         float closestDist = float.MaxValue;
@@ -324,6 +335,72 @@ public class Tower : ITower
             {
                 closestDist = dist;
                 target = enemy;
+            }
+        }
+
+        return target;
+    }
+
+    // Among all alive enemies in range, pick the one with the lowest current HP.
+    // Finishing weak enemies reduces total threat count faster than pure DPS optimisation.
+    private IEnemy? FindLowestHP(List<IEnemy> enemies)
+    {
+        IEnemy? target = null;
+        float lowestHP = float.MaxValue;
+
+        foreach (var enemy in enemies)
+        {
+            if (enemy.IsDead || enemy.ReachedEnd)
+                continue;
+
+            float dist = Vector2.Distance(WorldPosition, enemy.Position);
+            if (dist <= Range && enemy.Health < lowestHP)
+            {
+                lowestHP = enemy.Health;
+                target = enemy;
+            }
+        }
+
+        return target;
+    }
+
+    // For each alive enemy in range, count how many other alive enemies sit within AOERadius
+    // of that enemy's position. Pick the candidate with the highest neighbour count.
+    // Tie-break: lowest HP (mirrors LowestHP priority for consistency).
+    // O(n * m) per call where n = in-range enemies, m = total enemies; acceptable at <100 enemies.
+    private IEnemy? FindMostGrouped(List<IEnemy> enemies)
+    {
+        IEnemy? target = null;
+        int bestCount = -1;
+        float bestHP = float.MaxValue;
+
+        foreach (var candidate in enemies)
+        {
+            if (candidate.IsDead || candidate.ReachedEnd)
+                continue;
+
+            float dist = Vector2.Distance(WorldPosition, candidate.Position);
+            if (dist > Range)
+                continue;
+
+            int neighbourCount = 0;
+            foreach (var other in enemies)
+            {
+                if (other.IsDead || other.ReachedEnd)
+                    continue;
+
+                if (Vector2.Distance(candidate.Position, other.Position) <= AOERadius)
+                    neighbourCount++;
+            }
+
+            if (
+                neighbourCount > bestCount
+                || (neighbourCount == bestCount && candidate.Health < bestHP)
+            )
+            {
+                bestCount = neighbourCount;
+                bestHP = candidate.Health;
+                target = candidate;
             }
         }
 

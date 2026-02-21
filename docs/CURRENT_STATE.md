@@ -4,7 +4,7 @@
 - Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — drop files in `Content/Maps/`, no code changes)
 - Pause: P to toggle, ESC/Resume button
 - MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
-- Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
+- Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers). Enemies store `_spawnName` and pass it on reroute so multi-lane maps keep correct exit assignment after tower changes
 - `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 3 Champions (ChampionGun, ChampionCannon, ChampionWalling, free)
 - ChampionWalling: no generic variant. Places wall segments (30 HP, 10k movement cost) adjacent to its network. Segments BFS-connected to the champion are protected from decay; orphaned segments (disconnected by selling a bridging tile) decay at 1 HP/sec per exposed cardinal side (max 4 HP/sec). World-space "+" button on champion toggles wall-placement mode
@@ -15,6 +15,7 @@
 - Champion super abilities: click ability button → per-type buff duration (from `TowerStats.AbilityDuration`) on champion + all its generics; per-champion CD after use
 - UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/affordability sub-labels; ability button per tower type (disabled/CD/ready states); walling champion has dedicated tower button + ability button
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
+- Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
 - Enemy FSM (Moving/Attacking); waves driven by `Content/Waves/{mapId}.json` (fallback to 5 hardcoded waves if no file)
 - Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Wave JSON assigns each enemy to a named spawn point
 - Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection
