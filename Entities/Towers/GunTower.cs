@@ -19,6 +19,7 @@ public static class GunTower
         DrawScale: new Vector2(1.0f, 1.0f),
         CanWalk: false,
         AbilityDuration: 4f,
+        Targeting: TargetingStrategy.LowestHP,
         AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1.2f)
     );
 }

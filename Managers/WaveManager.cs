@@ -100,6 +100,7 @@ public class WaveManager
             entry.Speed,
             entry.Bounty,
             path,
+            entry.SpawnPoint,
             WaveLoader.ParseColor(entry.Color),
             entry.AttackDamage
         );

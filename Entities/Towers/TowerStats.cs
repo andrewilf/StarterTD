@@ -25,6 +25,7 @@ public record TowerStats(
     float CooldownDuration = 0f, // Seconds in Cooldown state after movement finishes (only used when CanWalk is true)
     float AbilityDuration = 5f, // How long the ability buff lasts in seconds (all towers that can receive the buff)
     float AbilityCooldown = 0f, // Seconds before the ability can be triggered again (champions only; generics omit this)
+    TargetingStrategy Targeting = TargetingStrategy.Closest, // Which enemy-selection strategy this tower uses
     // Called on this tower instance when the champion super ability fires.
     // Action<Tower> is a C# delegate — like a typed function pointer or Python callable.
     // Storing it here keeps each tower type's ability self-contained in its own file.

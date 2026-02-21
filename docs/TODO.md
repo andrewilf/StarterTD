@@ -10,11 +10,8 @@
 ## 1. Bug Fixes
 
 ### 1.1 Enemy Pathing — Exit Selection After Tile Destruction
-- **Priority**: P0 | **Effort**: S
-- **Problem**: When a HighGround tile is destroyed, enemies reroute to the *closest* exit instead of staying committed to their original spawn-lane exit (e.g., `spawn_a → exit_a`).
-- **Root Cause**: The reroute call likely recalculates using a global heatmap rather than the enemy's assigned lane heatmap.
-- **Fix**: When calling `enemy.UpdatePath(map)`, ensure each enemy uses the heatmap for its *original* exit assignment (stored on the enemy at spawn time), not the nearest exit.
-- **Acceptance Criteria**: An enemy spawned from `spawn_a` always paths to `exit_a`, even after terrain changes mid-wave.
+- **Priority**: P0 | **Effort**: S | **Status**: [x] **Done**
+- **What was built**: `Enemy._spawnName` stores the spawn name at construction; passed to `Map.ComputePathFromPosition()` on reroute so `ResolveExitName` always resolves the correct lane exit (e.g. `spawn_a → exit_a`), even after tower placement/removal mid-wave.
 
 ---
 
@@ -31,23 +28,12 @@
 - **Note**: Coordinate with wave rebalance (section 6.1) — changing tower DPS affects wave difficulty curves.
 
 ### 2.2 Gun Tower — Lowest HP Targeting (Aggro Logic)
-- **Priority**: P1 | **Effort**: S
-- **Current Behavior**: Towers target enemies but targeting priority is not specialized.
-- **Change**: Gun-type towers should prioritize the enemy with the **lowest current HP** within range (finish off weak enemies to reduce total enemy count quickly).
-- **Tasks**:
-  - [ ] Add a `TargetingStrategy` enum or delegate to `TowerStats` (e.g., `LowestHP`, `MostGrouped`, `First`, `Closest`)
-  - [ ] Implement `LowestHP` selection: filter enemies in range, sort by `CurrentHealth` ascending, pick first
-  - [ ] Assign `LowestHP` to Gun and ChampionGun tower stats
-  - [ ] Unit-testable: targeting logic should be a pure function over a list of enemies + tower position + range
+- **Priority**: P1 | **Effort**: S | **Status**: [x] **Done**
+- **What was built**: `TargetingStrategy` enum (`Closest`, `LowestHP`, `MostGrouped`) on `TowerStats`; `Tower.SelectTarget()` dispatches to pure helper methods. Gun + ChampionGun assigned `LowestHP`.
 
 ### 2.3 Cannon Tower — Most Grouped Targeting (Aggro Logic)
-- **Priority**: P1 | **Effort**: M
-- **Change**: Cannon-type towers should target the enemy that has the **most other enemies within the cannon's AoE radius** around it — maximizing splash value.
-- **Tasks**:
-  - [ ] Implement `MostGrouped` selection: for each enemy in range, count how many *other* enemies fall within `AoERadius` of that enemy's position, pick the one with the highest count (tie-break: lowest HP)
-  - [ ] Assign `MostGrouped` to Cannon and ChampionCannon tower stats
-  - [ ] Performance consideration: this is O(n*m) per tower per frame where n=enemies in range, m=total enemies. If enemy count is high (50+), consider spatial partitioning or only recalculating every few frames
-- **Design Note**: This makes cannons *feel* strategic — players will see cannons waiting for clumps rather than wasting splash on lone targets.
+- **Priority**: P1 | **Effort**: M | **Status**: [x] **Done**
+- **What was built**: `MostGrouped` counts alive enemies within `AOERadius` of each in-range candidate; picks highest count, tie-break lowest HP. Cannon + ChampionCannon assigned `MostGrouped`.
 
 ### 2.4 Cannon Champion Super Ability — "Orbital Strike"
 - **Priority**: P2 | **Effort**: M

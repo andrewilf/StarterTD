@@ -251,6 +251,7 @@ public partial class GameplayScene : IScene
             speed: 90,
             bounty: 5,
             path,
+            spawnName: "",
             Color.Purple,
             attackDamage: 5
         );

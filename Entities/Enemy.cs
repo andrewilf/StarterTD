@@ -37,6 +37,7 @@ public class Enemy : IEnemy
 
     private List<Point> _path;
     private int _currentPathIndex;
+    private readonly string _spawnName;
     private readonly Color _color;
     private const float SpriteSize = 20f;
     private EnemyState _state;
@@ -55,6 +56,7 @@ public class Enemy : IEnemy
         float speed,
         int bounty,
         List<Point> path,
+        string spawnName,
         Color color,
         int attackDamage
     )
@@ -65,6 +67,7 @@ public class Enemy : IEnemy
         Speed = speed;
         Bounty = bounty;
         _path = path;
+        _spawnName = spawnName;
         _currentPathIndex = 0;
         _color = color;
         AttackDamage = attackDamage;
@@ -101,8 +104,9 @@ public class Enemy : IEnemy
         // Convert current world position to grid cell
         Point currentGridPos = Map.WorldToGrid(Position);
 
-        // Compute a fresh path from the enemy's current grid position to the exit
-        var freshPath = map.ComputePathFromPosition(currentGridPos);
+        // Compute a fresh path from the enemy's current grid position to the exit.
+        // Pass _spawnName so ResolveExitName pairs it back to the correct exit (e.g. "spawn_a" → "exit_a").
+        var freshPath = map.ComputePathFromPosition(currentGridPos, _spawnName);
 
         if (freshPath != null && freshPath.Count > 0)
         {
