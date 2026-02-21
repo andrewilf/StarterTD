@@ -7,7 +7,7 @@
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers)
 - `TowerPathfinder`: tower-specific Dijkstra (Path=1, HighGround=2, occupied=10, Rock=impassable; ignores enemies)
 - 4 towers: 2 Generic (Gun, Cannon, cost gold) + 3 Champions (ChampionGun, ChampionCannon, ChampionWalling, free)
-- ChampionWalling: no generic variant. Places wall segments (30 HP, 10k movement cost) adjacent to its network. While champion directly touches any wall, all decay is suppressed. When champion detaches or dies, each wall decays at 1 HP/sec per exposed cardinal side (max 4 HP/sec). World-space "+" button on champion toggles wall-placement mode
+- ChampionWalling: no generic variant. Places wall segments (30 HP, 10k movement cost) adjacent to its network. Segments BFS-connected to the champion are protected from decay; orphaned segments (disconnected by selling a bridging tile) decay at 1 HP/sec per exposed cardinal side (max 4 HP/sec). World-space "+" button on champion toggles wall-placement mode
 - ChampionWalling attack: Damage 3, FireRate 1.5s. Attack zone = all tiles 1 step outside the connected wall network (champion + segments); with no walls, just the 4 adjacent tiles. Instant spike damage + 5s slow (40% speed) on hit. Prefers non-slowed targets. `SpikeEffect` visual spawns at hit tile. Hover shows green strip over attack zone
 - Enemy slow debuff: `IEnemy.ApplySlow(float)` / `IsSlowed`. Timer-based, refreshes on re-hit. Slowed enemies move at 40% speed and render with a blue tint (`CornflowerBlue` 50% blend)
 - ChampionManager: global 10s CD, 15s respawn CD, one-per-type limit, generics require alive champion; per-champion ability CD (from `TowerStats.AbilityCooldown`)
