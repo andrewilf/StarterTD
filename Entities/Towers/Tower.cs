@@ -71,6 +71,7 @@ public class Tower : ITower
     private float _abilityDuration;
     private float _originalDamage;
     private float _originalFireRate;
+    private bool _hasStoredAbilityStats;
 
     // Accumulates fractional decay damage for wall segments so 1 HP/sec is applied precisely.
     private float _decayAccumulator;
@@ -181,10 +182,11 @@ public class Tower : ITower
     /// </summary>
     public void ActivateAbilityBuff(float damageMult, float fireRateSpeedMult)
     {
-        if (!IsAbilityBuffActive)
+        if (!IsAbilityBuffActive || !_hasStoredAbilityStats)
         {
             _originalDamage = Damage;
             _originalFireRate = FireRate;
+            _hasStoredAbilityStats = true;
         }
         else
         {
@@ -200,10 +202,25 @@ public class Tower : ITower
         _abilityTimer = _abilityDuration;
     }
 
+    /// <summary>
+    /// Activates the wall frenzy mode without modifying Damage or FireRate.
+    /// The frenzy attack loop in TowerManager handles multi-target spike hits.
+    /// </summary>
+    public void ActivateFrenzy(float duration)
+    {
+        IsAbilityBuffActive = true;
+        _abilityTimer = duration;
+    }
+
     private void DeactivateAbilityBuff()
     {
-        Damage = _originalDamage;
-        FireRate = _originalFireRate;
+        if (_hasStoredAbilityStats)
+        {
+            Damage = _originalDamage;
+            FireRate = _originalFireRate;
+            _hasStoredAbilityStats = false;
+        }
+
         IsAbilityBuffActive = false;
         _abilityTimer = 0f;
     }

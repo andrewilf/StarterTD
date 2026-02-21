@@ -49,6 +49,7 @@ public partial class UIPanel
 
     // Walling tower button (champion-only; wall placement is handled via world-space button)
     private readonly Rectangle _wallTowerButton;
+    private readonly Rectangle _wallAbilityButton;
 
     private readonly Rectangle _startWaveButton;
 
@@ -103,6 +104,12 @@ public partial class UIPanel
 
         int wallStartY = cannonStartY + buttonHeight + abilityGap + abilityButtonHeight + gap;
         _wallTowerButton = new Rectangle(_x + 10, wallStartY, buttonWidth, buttonHeight);
+        _wallAbilityButton = new Rectangle(
+            _x + 10,
+            wallStartY + buttonHeight + abilityGap,
+            buttonWidth,
+            abilityButtonHeight
+        );
 
         // Debug buttons positioned below instructions (above Start Wave button)
         int debugStartY = _height - 200;
@@ -183,6 +190,12 @@ public partial class UIPanel
         if (_wallTowerButton.Contains(mousePos))
         {
             HandleWallChampionClick();
+            return true;
+        }
+        if (_wallAbilityButton.Contains(mousePos))
+        {
+            if (_championManager?.IsAbilityReady(TowerType.ChampionWalling) ?? false)
+                OnAbilityTriggered?.Invoke(TowerType.ChampionWalling);
             return true;
         }
 

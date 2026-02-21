@@ -84,10 +84,9 @@
 - **Status**: [x] **Done**
 - **What was built**:
   - Attack originates from `ChampionWallingTower`, not individual wall segments (Damage: 3, FireRate: 1.5s)
-  - Attack zone: all tiles 1 step outside the connected wall network (champion + wall segments). With no walls, only the 4 tiles adjacent to the champion are in range.
-  - Design decision resolved: attack hits enemies **1 tile deep perpendicularly** adjacent to any tile in the network
+  - Attack zone: all tiles 1 step outside the connected wall network in all 8 directions. With no walls, the 8 tiles surrounding the champion are in range.
   - Instant spike damage (no projectile) — `SpikeEffect` visual spawns at enemy position on hit
-  - Range indicator: semi-transparent green strip drawn over all attack-zone tiles when champion is hovered
+  - Range indicator: semi-transparent white strip drawn over all attack-zone tiles when champion is hovered
 
 ### 3.2.1 Wall Attack — Slow-Aggro Priority
 - **Priority**: P2 | **Effort**: S
@@ -116,20 +115,16 @@
 
 ### 3.5 Wall Tower — Prioritize Non-Slowed Enemies
 - **Priority**: P2 | **Effort**: S
-- **Status**: [ ] **Not started**
-- **Concept**: Wall segments prefer targeting enemies not already slowed to maximize slow coverage.
-- **Tasks**:
-  - [ ] `PreferNonSlowed` targeting: non-slowed enemies first; fallback to lowest remaining slow duration
-  - [ ] Assign to `WallSegmentTower` stats
-- **Depends On**: 3.4 (Slow Effect)
+- **Status**: [x] **Done** (see 3.2.1)
 
-### 3.6 Wall Champion Ability ("Fortify")
+### 3.6 Wall Champion Ability ("Spike Frenzy")
 - **Priority**: P2 | **Effort**: S
-- **Status**: [ ] **Not started** (`AbilityEffect` is `null` in current stats)
-- **Tasks**:
-  - [ ] Define "Fortify": all walls in network gain temporary HP regen or invulnerability for `AbilityDuration` seconds
-  - [ ] Wire into existing champion ability button system
-- **Note**: No generic wall variant is planned — walling champion has no generic counterpart by design
+- **Status**: [x] **Done**
+- **What was built**:
+  - 20s cooldown, 10s duration. All enemies in the attack zone hit at normal fire rate (every 1.5s) simultaneously
+  - Single-target attack suppressed during frenzy to avoid double-hits
+  - Gold aura visual while active (reuses existing `IsAbilityBuffActive` rendering)
+  - Triggered via `_wallAbilityButton` in the UI panel (same pattern as Gun/Cannon abilities)
 
 ---
 
@@ -302,9 +297,9 @@ A recommended sequence that respects dependencies and delivers playable value ea
 |-------|-------|-----------|
 | **Phase 1: Foundation** | 1.1 (pathing bug), 2.1 (rename/rebalance), 6.1 (auto-waves) | Fix the critical bug, establish final tower identity, improve game flow |
 | **Phase 2: Combat Depth** | 2.2 (gun aggro), 2.3 (cannon aggro), 9.1 (champion debuff) | Towers feel distinct and strategic |
-| **Phase 3: Wall System** | ~~3.1~~ ~~3.3~~ (done), 3.2 (wall range), 3.4 (slow effect) | Major new mechanic, creates chokepoint gameplay |
+| **Phase 3: Wall System** | ~~3.1~~ ~~3.2~~ ~~3.3~~ ~~3.4~~ ~~3.5~~ ~~3.6~~ (all done), 3.3 decay visuals remaining | Major new mechanic, creates chokepoint gameplay |
 | **Phase 4: Visual Upgrade** | 8.1 (tile pack), 5.1 (auto-tiling), 7.1 (UI stats) | Game looks and reads better |
-| **Phase 5: Polish & Expand** | 3.5 (slow priority), 3.6 (wall generics), 4.1 (heal tower), 2.4 (cannon super) | Deepen mechanics |
+| **Phase 5: Polish & Expand** | 4.1 (heal tower), 2.4 (cannon super) | Deepen mechanics |
 | **Phase 6: Nice-to-Haves** | 6.2 (crowding), 5.2 (Tiled properties), 7.2 (wave preview), 9.2 (sound), 4.2 (heal champion) | Polish and completeness |
 
 ---

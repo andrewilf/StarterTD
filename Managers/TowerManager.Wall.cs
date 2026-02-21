@@ -172,7 +172,7 @@ public partial class TowerManager
                 tileSize,
                 tileSize
             );
-            TextureManager.DrawRect(spriteBatch, rect, Color.LimeGreen * 0.3f);
+            TextureManager.DrawRect(spriteBatch, rect, Color.White * 0.3f);
         }
     }
 
@@ -217,13 +217,53 @@ public partial class TowerManager
     }
 
     /// <summary>
+    /// When the walling champion's frenzy is active, hits every enemy in the attack zone
+    /// at the champion's normal fire rate. Each hit deals spike damage and applies slow,
+    /// same as the regular single-target attack — but targeting all enemies simultaneously.
+    /// </summary>
+    internal void UpdateWallFrenzy(GameTime gameTime, List<IEnemy> enemies, Tower champion)
+    {
+        _frenzyFireTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        if (_frenzyFireTimer < champion.FireRate)
+            return;
+
+        _frenzyFireTimer = 0f;
+
+        var attackZone = BuildAttackZone(_cachedWallConnectedSet);
+        float slowDuration = TowerData.GetStats(TowerType.ChampionWalling).AbilityDuration;
+
+        foreach (var enemy in enemies)
+        {
+            if (enemy.IsDead || enemy.ReachedEnd)
+                continue;
+
+            if (!attackZone.Contains(Map.WorldToGrid(enemy.Position)))
+                continue;
+
+            enemy.TakeDamage((int)champion.Damage);
+            enemy.ApplySlow(slowDuration);
+            OnWallAttack?.Invoke(enemy.Position);
+        }
+    }
+
+    /// <summary>
     /// Returns the set of in-bounds tiles that are 1 step outside the given wall set —
-    /// i.e. all cardinal neighbours of wall tiles that are not themselves in the wall set.
+    /// i.e. all 8-directional neighbours of wall tiles that are not themselves in the wall set.
     /// Used by both DrawWallRangeIndicator and FindWallNetworkTarget.
     /// </summary>
     private HashSet<Point> BuildAttackZone(HashSet<Point> wallSet)
     {
-        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        Point[] dirs =
+        [
+            new(0, -1),
+            new(0, 1),
+            new(-1, 0),
+            new(1, 0),
+            new(-1, -1),
+            new(1, -1),
+            new(-1, 1),
+            new(1, 1),
+        ];
         var attackZone = new HashSet<Point>();
 
         foreach (var wallPos in wallSet)
