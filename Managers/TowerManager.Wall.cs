@@ -41,7 +41,12 @@ public partial class TowerManager
     /// </summary>
     public bool IsAdjacentToWallingNetwork(Point gridPos, Tower wallingTower)
     {
-        var connected = BuildConnectedWallSet(wallingTower);
+        // Use the per-frame cache when available; fall back to a fresh BFS only if called
+        // before the first Update (e.g. during initial placement validation).
+        var connected =
+            _cachedWallConnectedSet.Count > 0
+                ? _cachedWallConnectedSet
+                : BuildConnectedWallSet(wallingTower);
 
         Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
         foreach (var dir in dirs)
@@ -99,15 +104,13 @@ public partial class TowerManager
     }
 
     /// <summary>
-    /// Apply decay damage to wall segments when the walling champion is not connected to any wall.
-    /// Once disconnected (champion dead or moved away), each wall segment decays at 1 HP/sec
-    /// per exposed cardinal side (sides not sheltered by another wall segment).
+    /// Apply decay damage to wall segments not reachable from the walling champion.
+    /// Segments in the connected set are protected; orphaned segments (disconnected by selling
+    /// an intermediate tile) decay at 1 HP/sec per exposed cardinal side.
     /// </summary>
-    internal void UpdateWallDecay(GameTime gameTime, Tower? wallingChampion)
+    internal void UpdateWallDecay(GameTime gameTime)
     {
-        // Champion touching any wall suppresses all decay
-        if (ChampionIsConnectedToWalls(wallingChampion))
-            return;
+        var connectedSet = _cachedWallConnectedSet;
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
@@ -115,6 +118,10 @@ public partial class TowerManager
         foreach (var tower in _towers)
         {
             if (!tower.TowerType.IsWallSegment())
+                continue;
+
+            // Skip segments still connected to the champion
+            if (connectedSet.Contains(tower.GridPosition))
                 continue;
 
             int exposedSides = 0;
@@ -149,45 +156,11 @@ public partial class TowerManager
     }
 
     /// <summary>
-    /// Returns true if the walling champion is alive and at least one of its 4 cardinal
-    /// neighbors is occupied by a wall segment (champion is "touching" the wall group).
-    /// </summary>
-    private bool ChampionIsConnectedToWalls(Tower? wallingChampion)
-    {
-        if (wallingChampion == null)
-            return false;
-
-        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
-        foreach (var dir in dirs)
-        {
-            var neighbor = new Point(
-                wallingChampion.GridPosition.X + dir.X,
-                wallingChampion.GridPosition.Y + dir.Y
-            );
-
-            if (
-                neighbor.X < 0
-                || neighbor.X >= _map.Columns
-                || neighbor.Y < 0
-                || neighbor.Y >= _map.Rows
-            )
-                continue;
-
-            var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
-            if (occupant != null && occupant.TowerType.IsWallSegment())
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// Highlights all tiles in the wall attack zone (1 tile outside the connected wall network).
     /// </summary>
-    internal void DrawWallRangeIndicator(SpriteBatch spriteBatch, Tower wallingChampion)
+    internal void DrawWallRangeIndicator(SpriteBatch spriteBatch)
     {
-        var wallSet = BuildConnectedWallSet(wallingChampion);
-        var attackZone = BuildAttackZone(wallSet);
+        var attackZone = BuildAttackZone(_cachedWallConnectedSet);
         int tileSize = GameSettings.TileSize;
 
         foreach (var tile in attackZone)
@@ -207,10 +180,9 @@ public partial class TowerManager
     /// Finds the best enemy to attack in the wall-network attack zone.
     /// Prefers non-slowed enemies; falls back to the closest slowed enemy.
     /// </summary>
-    internal IEnemy? FindWallNetworkTarget(List<IEnemy> enemies, Tower wallingChampion)
+    internal IEnemy? FindWallNetworkTarget(List<IEnemy> enemies, Vector2 championWorldPos)
     {
-        var wallSet = BuildConnectedWallSet(wallingChampion);
-        var attackZone = BuildAttackZone(wallSet);
+        var attackZone = BuildAttackZone(_cachedWallConnectedSet);
 
         // Prefer non-slowed enemies so the slow debuff isn't wasted on already-slowed targets.
         // Fall back to closest slowed enemy if no unslowed targets are in range.
@@ -228,7 +200,7 @@ public partial class TowerManager
             if (!attackZone.Contains(enemyGrid))
                 continue;
 
-            float dist = Vector2.Distance(wallingChampion.WorldPosition, enemy.Position);
+            float dist = Vector2.Distance(championWorldPos, enemy.Position);
             if (!enemy.IsSlowed && dist < closestUnslow)
             {
                 closestUnslow = dist;

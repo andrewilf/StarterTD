@@ -17,6 +17,9 @@ public partial class TowerManager
     private readonly Map _map;
     private readonly ChampionManager _championManager;
 
+    // Recomputed once per Update; shared by UpdateWallDecay, FindWallNetworkTarget, and DrawWallRangeIndicator.
+    private HashSet<Point> _cachedWallConnectedSet = new();
+
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
 
@@ -251,10 +254,14 @@ public partial class TowerManager
 
         // Assign wall-network targeting delegate each frame (network topology can change)
         var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+
+        // Build wall connected set once — reused by targeting delegate, decay, and draw
+        _cachedWallConnectedSet = BuildConnectedWallSet(wallingChampion);
+
         if (wallingChampion != null)
         {
-            wallingChampion.WallNetworkTargetFinder = e =>
-                FindWallNetworkTarget(e, wallingChampion);
+            var championPos = wallingChampion.WorldPosition;
+            wallingChampion.WallNetworkTargetFinder = e => FindWallNetworkTarget(e, championPos);
             wallingChampion.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
         }
 
@@ -264,7 +271,7 @@ public partial class TowerManager
         }
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
-        UpdateWallDecay(gameTime, wallingChampion);
+        UpdateWallDecay(gameTime);
 
         // Remove destroyed towers (iterate backwards to safely remove during iteration)
         for (int i = _towers.Count - 1; i >= 0; i--)
@@ -291,7 +298,7 @@ public partial class TowerManager
         if (hoveredTower != null)
         {
             if (hoveredTower.TowerType == TowerType.ChampionWalling)
-                DrawWallRangeIndicator(spriteBatch, hoveredTower);
+                DrawWallRangeIndicator(spriteBatch);
             else
                 hoveredTower.DrawRangeIndicator(spriteBatch);
         }
