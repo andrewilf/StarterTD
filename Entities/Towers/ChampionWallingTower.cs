@@ -21,7 +21,7 @@ public static class ChampionWallingTower
         MoveSpeed: 80f,
         CooldownDuration: 2.0f,
         AbilityDuration: 5f, // Slow duration in seconds applied to enemies hit by spike attack
-        AbilityCooldown: 0f,
-        AbilityEffect: null
+        AbilityCooldown: 20f,
+        AbilityEffect: tower => tower.ActivateFrenzy(10f)
     );
 }

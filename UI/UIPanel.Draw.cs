@@ -65,30 +65,31 @@ public partial class UIPanel
             DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
 
             DrawWallChampionButton(spriteBatch, _wallTowerButton);
+            DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
 
             // Instructions
             spriteBatch.DrawString(
                 _font,
                 "L-Click: Place",
-                new Vector2(_x + 10, _wallTowerButton.Bottom + 15),
+                new Vector2(_x + 10, _wallAbilityButton.Bottom + 15),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "R-Click: Sell",
-                new Vector2(_x + 10, _wallTowerButton.Bottom + 35),
+                new Vector2(_x + 10, _wallAbilityButton.Bottom + 35),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "P: Pause",
-                new Vector2(_x + 10, _wallTowerButton.Bottom + 55),
+                new Vector2(_x + 10, _wallAbilityButton.Bottom + 55),
                 Color.LightGray
             );
             spriteBatch.DrawString(
                 _font,
                 "ESC: Deselect",
-                new Vector2(_x + 10, _wallTowerButton.Bottom + 75),
+                new Vector2(_x + 10, _wallAbilityButton.Bottom + 75),
                 Color.LightGray
             );
 

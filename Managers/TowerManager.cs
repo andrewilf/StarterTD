@@ -20,6 +20,9 @@ public partial class TowerManager
     // Recomputed once per Update; shared by UpdateWallDecay, FindWallNetworkTarget, and DrawWallRangeIndicator.
     private HashSet<Point> _cachedWallConnectedSet = new();
 
+    // Tracks time since the last frenzy spike volley so it fires at the champion's fire rate.
+    private float _frenzyFireTimer;
+
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
 
@@ -235,9 +238,14 @@ public partial class TowerManager
     /// </summary>
     public void TriggerChampionAbility(TowerType championType)
     {
-        // ChampionWalling has no generic variant and no ability effect.
         if (championType.IsWallingChampion())
+        {
+            // Walling champion has no generic variant — invoke ability on the champion only
+            var champion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+            if (champion != null)
+                TowerData.GetStats(TowerType.ChampionWalling).AbilityEffect?.Invoke(champion);
             return;
+        }
 
         var genericType = championType.GetGenericVariant();
 
@@ -261,7 +269,10 @@ public partial class TowerManager
         if (wallingChampion != null)
         {
             var championPos = wallingChampion.WorldPosition;
-            wallingChampion.WallNetworkTargetFinder = e => FindWallNetworkTarget(e, championPos);
+            // During frenzy the multi-target loop handles all attacks; suppress single-target to avoid double-hits.
+            wallingChampion.WallNetworkTargetFinder = wallingChampion.IsAbilityBuffActive
+                ? null
+                : e => FindWallNetworkTarget(e, championPos);
             wallingChampion.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
         }
 
@@ -269,6 +280,9 @@ public partial class TowerManager
         {
             tower.Update(gameTime, enemies);
         }
+
+        if (wallingChampion is { IsAbilityBuffActive: true })
+            UpdateWallFrenzy(gameTime, enemies, wallingChampion);
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
         UpdateWallDecay(gameTime);
