@@ -24,6 +24,12 @@ public class Tile
     public Tower? ReservedByTower { get; set; }
 
     /// <summary>
+    /// Walling anchor that reserved this tile for a pending (not-yet-spawned) wall segment.
+    /// Blocks building until the segment spawns or the pending chain is cancelled.
+    /// </summary>
+    public Tower? ReservedForPendingWallBy { get; set; }
+
+    /// <summary>
     /// Movement cost for pathfinding. Towers add a cost penalty based on type.
     /// If a tower occupies this tile, use the higher of the tile's base cost and the tower's cost.
     /// Like a Python @property — recomputes from current state, no stored field.
@@ -291,7 +297,8 @@ public class Map
         var tile = Tiles[gridPos.X, gridPos.Y];
         return TileData.GetStats(tile.Type).IsBuildable
             && tile.OccupyingTower == null
-            && tile.ReservedByTower == null;
+            && tile.ReservedByTower == null
+            && tile.ReservedForPendingWallBy == null;
     }
 
     /// <summary>

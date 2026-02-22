@@ -17,7 +17,7 @@
 - Stats: `Entities/Towers/<Type>Tower.cs`; registry: `TowerData.GetStats()`
 - Variant mapping: `TowerType.GetChampionVariant()` / `GetGenericVariant()`
 - `TowerTypeExtensions`: `IsChampion()`, `IsWallingChampion()`, `IsWallingGeneric()`, `IsWallSegment()`
-- Tiles: `OccupyingTower` (present) + `ReservedByTower` (committed destination). `Map.CanBuild()` rejects if either non-null. `TileType` immutable after init
+- Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). `Map.CanBuild()` rejects if any reservation/occupant is non-null. `TileType` immutable after init
 - `DrawScale`: Generics {1,1}, Champions {1,1.5}. Champions: bottom-center origin (0.5,1.0), Y offset grows upward. Bars use `SpriteSize * DrawScale.Y`
 - `Tower.Draw()`: origin conditional on `DrawScale.Y > 1.0f`; champions offset Y by `SpriteSize / 2f`
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
@@ -30,9 +30,11 @@
 - `TargetingStrategy` enum (`Closest`, `LowestHP`, `MostGrouped`) on `TowerStats.Targeting`/`Tower._targeting`. Gun+ChampionGun: `LowestHP`. Cannon+ChampionCannon: `MostGrouped` (count alive enemies within `AOERadius`, tie-break lowest HP). Wall bypasses `SelectTarget`
 - `TowerManager.BuildAttackZone(wallSet)`: all in-bounds tiles 1 step outside `wallSet` in all 8 directions. Used by `DrawWallRangeIndicatorForSet`, `FindWallNetworkTarget`, `UpdateWallFrenzy`. Target preference: closest non-slowed → closest slowed
 - `Tower.ApplyDecayDamage(float dt)`: accumulates fractional HP; used by wall segment decay
-- Wall segments: `TowerType.WallSegment`, 30 HP, 10k movement cost, placed by `TryPlaceWall()`. Must be 4-directionally adjacent to placing tower's connected set. `_wallConnectedSets: Dictionary<Tower, HashSet<Point>>` — rebuilt each `Update` as single-root BFS per walling tower; disconnected towers don't share zones. `UpdateWallDecay()` unions all sets; orphaned segments decay 1 HP/sec per exposed cardinal side. Runs before dead-tower sweep
+- Wall segments: `TowerType.WallSegment`, 30 HP cap, 10k movement cost, deferred spawn pipeline. `TryPlaceWallPath()` reserves valid path tiles first (`ReservedForPendingWallBy`), then spawns segments sequentially as each prior segment reaches cap. Spawned segment starts at `1` max/current HP and grows at `20 HP/sec` via `Tower.InitializeWallGrowth()` + `StartWallGrowth()`. On anchor loss: pending reservations canceled and active segment growth stopped. If active segment dies pre-cap: remaining pending reservations in that chain are canceled. `_wallConnectedSets: Dictionary<Tower, HashSet<Point>>` — rebuilt each `Update` as single-root BFS per walling tower; disconnected towers don't share zones. `UpdateWallDecay()` unions all sets; orphaned segments decay 1 HP/sec per exposed cardinal side. Runs before dead-tower sweep
+- `TowerManager.DrawPendingWallReservations()`: renders ghost tiles for reserved-but-not-yet-spawned wall segments
 - `TowerManager.IsAdjacentToWallingNetwork(Point, Tower)`: public; uses `_wallConnectedSets[tower]` cache, falls back to fresh BFS if called before first `Update`
 - `TowerManager.TryPlaceWallPath(path, tower)`: sequentially places along ordered path and stops at first invalid tile. `GetWallPathValidPrefixLength(path, tower)` simulates contiguous prefix validity (no mutation) for preview/corner choice
+- `TowerManager.TryPlaceWallPath(path, tower)`: validates contiguous prefix, reserves pending path, and starts deferred sequential spawning. `GetWallPathValidPrefixLength(path, tower)` remains simulation-only for preview/corner choice
 - `TowerStats.AbilityEffect: Action<Tower>?`: called by `TriggerChampionAbility()` on champion + generics. ChampionWalling always buffs all Walling generics even if champion is dead
 - `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals via `_hasStoredAbilityStats` guard, sets `IsAbilityBuffActive = true`, runs for `AbilityDuration`. Re-trigger resets timer, no stacking. `DeactivateAbilityBuff()` only restores if guard set. Gold aura while active
 - `Tower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(tower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`; `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
@@ -64,7 +66,7 @@
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
 
 ## Wall Placement Mode
-- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path: candidate A = horizontal-then-vertical, candidate B = vertical-then-horizontal. Candidate with longer valid prefix is selected (ties: shorter path, then A). On release, `TryPlaceWallPath()` commits and stops at first invalid tile. Blocks right-click move
+- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path: candidate A = horizontal-then-vertical, candidate B = vertical-then-horizontal. Candidate with longer valid prefix is selected (ties: shorter path, then A). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move
 - `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` (tracks during cooldown movement)
 - Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise. During drag, preview draws valid prefix in dark green and blocked remainder in red
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold

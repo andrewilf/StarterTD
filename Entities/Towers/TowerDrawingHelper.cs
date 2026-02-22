@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -62,31 +63,51 @@ internal static class TowerDrawingHelper
             drawOutline: true
         );
 
-        // Health bar above tower (only when damaged)
-        if (tower.CurrentHealth < tower.MaxHealth)
+        bool isWallSegment = tower.TowerType.IsWallSegment();
+        bool showWallGrowthBar = isWallSegment && tower.MaxHealth < tower.HealthBarCapacity;
+        bool showHealthBar = tower.CurrentHealth < tower.MaxHealth || showWallGrowthBar;
+
+        // Health bar above tower.
+        // Wall segments use a split bar (green/red/orange) against their growth cap.
+        if (showHealthBar)
         {
             float healthBarWidth = SpriteSize;
             float healthBarHeight = 4f;
-            float healthPercent = (float)tower.CurrentHealth / tower.MaxHealth;
 
             int barX = (int)(drawPosition.X - healthBarWidth / 2f);
             int barY = (int)(drawPosition.Y - (SpriteSize * tower.DrawScale.Y) / 2f - 8f);
 
-            TextureManager.DrawRect(
-                spriteBatch,
-                new Rectangle(barX, barY, (int)healthBarWidth, (int)healthBarHeight),
-                Color.Red
-            );
-            TextureManager.DrawRect(
-                spriteBatch,
-                new Rectangle(
+            if (isWallSegment)
+            {
+                DrawWallSegmentHealthBar(
+                    spriteBatch,
+                    tower,
                     barX,
                     barY,
-                    (int)(healthBarWidth * healthPercent),
+                    (int)healthBarWidth,
                     (int)healthBarHeight
-                ),
-                Color.LimeGreen
-            );
+                );
+            }
+            else
+            {
+                float healthPercent = (float)tower.CurrentHealth / tower.MaxHealth;
+
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    new Rectangle(barX, barY, (int)healthBarWidth, (int)healthBarHeight),
+                    Color.Red
+                );
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    new Rectangle(
+                        barX,
+                        barY,
+                        (int)(healthBarWidth * healthPercent),
+                        (int)healthBarHeight
+                    ),
+                    Color.LimeGreen
+                );
+            }
         }
 
         DrawCapacityBar(spriteBatch, tower, drawPosition);
@@ -129,6 +150,62 @@ internal static class TowerDrawingHelper
             new Rectangle(barX, barY, (int)(barWidth * remainingPercent), (int)barHeight),
             Color.CornflowerBlue
         );
+    }
+
+    private static void DrawWallSegmentHealthBar(
+        SpriteBatch spriteBatch,
+        Tower tower,
+        int barX,
+        int barY,
+        int barWidth,
+        int barHeight
+    )
+    {
+        int cap = tower.HealthBarCapacity;
+        if (cap <= 0)
+            return;
+
+        int current = Math.Clamp(tower.CurrentHealth, 0, cap);
+        int max = Math.Clamp(tower.MaxHealth, 0, cap);
+        int missingCurrent = Math.Max(0, max - current);
+
+        int greenWidth = (int)MathF.Round(barWidth * (float)current / cap);
+        int redWidth = (int)MathF.Round(barWidth * (float)missingCurrent / cap);
+        int orangeWidth = Math.Max(0, barWidth - greenWidth - redWidth);
+
+        // Background for readability on bright tile colors.
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(barX, barY, barWidth, barHeight),
+            Color.DarkSlateGray
+        );
+
+        if (orangeWidth > 0)
+        {
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(barX + greenWidth + redWidth, barY, orangeWidth, barHeight),
+                Color.DarkOrange
+            );
+        }
+
+        if (redWidth > 0)
+        {
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(barX + greenWidth, barY, redWidth, barHeight),
+                Color.Red
+            );
+        }
+
+        if (greenWidth > 0)
+        {
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(barX, barY, greenWidth, barHeight),
+                Color.LimeGreen
+            );
+        }
     }
 
     private static void DrawMoveCooldownBar(

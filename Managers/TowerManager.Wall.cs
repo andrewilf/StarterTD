@@ -14,6 +14,20 @@ namespace StarterTD.Managers;
 /// </summary>
 public partial class TowerManager
 {
+    private sealed class WallGrowthChain(Tower anchor, List<Point> pendingPath)
+    {
+        public Tower Anchor { get; } = anchor;
+        public List<Point> PendingPath { get; } = pendingPath;
+        public int NextIndex { get; set; }
+        public Tower? ActiveSegment { get; set; }
+        public bool Cancelled { get; set; }
+    }
+
+    private readonly List<WallGrowthChain> _wallGrowthChains = [];
+
+    private const int WallGrowthStartMaxHealth = 1;
+    private const float WallGrowthPerSecond = 20f;
+
     /// <summary>
     /// Place a wall segment adjacent to the walling champion's network.
     /// Bypasses the terrain buildability check so walls can go on any non-tower tile.
@@ -21,13 +35,7 @@ public partial class TowerManager
     /// </summary>
     public bool TryPlaceWall(Point gridPos, Tower wallingTower)
     {
-        if (!_map.CanBuild(gridPos))
-            return false;
-
-        if (!IsAdjacentToWallingNetwork(gridPos, wallingTower))
-            return false;
-
-        return PlaceWallSegment(gridPos);
+        return TryPlaceWallPath([gridPos], wallingTower) > 0;
     }
 
     /// <summary>
@@ -37,7 +45,7 @@ public partial class TowerManager
     public int TryPlaceWallPath(IReadOnlyList<Point> orderedPath, Tower wallingTower)
     {
         var connected = GetConnectedSetForTower(wallingTower);
-        int placed = 0;
+        List<Point> pendingPath = [];
 
         foreach (var point in orderedPath)
         {
@@ -47,15 +55,21 @@ public partial class TowerManager
             if (!IsAdjacentToConnectedSet(point, connected))
                 break;
 
-            if (!PlaceWallSegment(point))
-                break;
-
             connected.Add(point);
-            placed++;
+            pendingPath.Add(point);
         }
 
+        if (pendingPath.Count == 0)
+            return 0;
+
+        ReservePendingWallTiles(pendingPath, wallingTower);
+
+        var chain = new WallGrowthChain(wallingTower, pendingPath);
+        _wallGrowthChains.Add(chain);
+        SpawnNextSegmentIfPossible(chain);
+
         _wallConnectedSets[wallingTower] = connected;
-        return placed;
+        return pendingPath.Count;
     }
 
     /// <summary>
@@ -101,13 +115,173 @@ public partial class TowerManager
         return false;
     }
 
-    private bool PlaceWallSegment(Point gridPos)
+    private Tower PlaceWallSegment(Point gridPos)
     {
         var wall = new Tower(TowerType.WallSegment, gridPos);
+        wall.InitializeWallGrowth(
+            startMaxHealth: WallGrowthStartMaxHealth,
+            targetMaxHealth: wall.MaxHealth,
+            growthPerSecond: WallGrowthPerSecond,
+            syncCurrentWhileUndamaged: true
+        );
         _towers.Add(wall);
         _map.Tiles[gridPos.X, gridPos.Y].OccupyingTower = wall;
         OnTowerPlaced?.Invoke(gridPos);
+        return wall;
+    }
+
+    private void ReservePendingWallTiles(List<Point> pendingPath, Tower anchor)
+    {
+        foreach (var point in pendingPath)
+            _map.Tiles[point.X, point.Y].ReservedForPendingWallBy = anchor;
+    }
+
+    internal void UpdateWallGrowthChains()
+    {
+        for (int i = _wallGrowthChains.Count - 1; i >= 0; i--)
+        {
+            var chain = _wallGrowthChains[i];
+            if (chain.Cancelled)
+            {
+                _wallGrowthChains.RemoveAt(i);
+                continue;
+            }
+
+            bool anchorMissing = !_towers.Contains(chain.Anchor) || chain.Anchor.IsDead;
+            if (anchorMissing)
+            {
+                CancelChain(chain, stopActiveGrowth: true);
+                _wallGrowthChains.RemoveAt(i);
+                continue;
+            }
+
+            var active = chain.ActiveSegment;
+            if (active != null)
+            {
+                bool activeNoLongerManaged = !_towers.Contains(active);
+                if (activeNoLongerManaged || active.IsDead)
+                {
+                    if (!active.IsWallGrowthComplete)
+                    {
+                        // If the current growing segment is destroyed before completion,
+                        // cancel remaining pending reservations in this path.
+                        CancelChain(chain, stopActiveGrowth: false);
+                        _wallGrowthChains.RemoveAt(i);
+                        continue;
+                    }
+
+                    chain.ActiveSegment = null;
+                }
+                else if (active.IsWallGrowthComplete)
+                {
+                    chain.ActiveSegment = null;
+                }
+            }
+
+            if (chain.ActiveSegment == null)
+            {
+                bool spawned = SpawnNextSegmentIfPossible(chain);
+                if (chain.Cancelled)
+                {
+                    _wallGrowthChains.RemoveAt(i);
+                    continue;
+                }
+
+                if (!spawned && chain.NextIndex >= chain.PendingPath.Count)
+                    _wallGrowthChains.RemoveAt(i);
+            }
+        }
+    }
+
+    private bool SpawnNextSegmentIfPossible(WallGrowthChain chain)
+    {
+        if (chain.Cancelled || chain.NextIndex >= chain.PendingPath.Count)
+            return false;
+
+        var point = chain.PendingPath[chain.NextIndex];
+        var tile = _map.Tiles[point.X, point.Y];
+
+        if (tile.ReservedForPendingWallBy != chain.Anchor || tile.OccupyingTower != null)
+        {
+            CancelChain(chain, stopActiveGrowth: true);
+            return false;
+        }
+
+        tile.ReservedForPendingWallBy = null;
+
+        var wall = PlaceWallSegment(point);
+        chain.ActiveSegment = wall;
+        chain.NextIndex++;
+        wall.StartWallGrowth();
         return true;
+    }
+
+    private void ClearPendingWallReservations(WallGrowthChain chain)
+    {
+        for (int i = chain.NextIndex; i < chain.PendingPath.Count; i++)
+        {
+            var point = chain.PendingPath[i];
+            var tile = _map.Tiles[point.X, point.Y];
+            if (tile.ReservedForPendingWallBy == chain.Anchor)
+                tile.ReservedForPendingWallBy = null;
+        }
+    }
+
+    private void CancelChain(WallGrowthChain chain, bool stopActiveGrowth)
+    {
+        if (chain.Cancelled)
+            return;
+
+        if (stopActiveGrowth)
+            StopGrowthForAnchor(chain.Anchor);
+
+        ClearPendingWallReservations(chain);
+        chain.Cancelled = true;
+    }
+
+    private void StopGrowthForAnchor(Tower anchor)
+    {
+        foreach (var chain in _wallGrowthChains)
+        {
+            if (chain.Cancelled || chain.Anchor != anchor)
+                continue;
+
+            if (chain.ActiveSegment == null || !_towers.Contains(chain.ActiveSegment))
+                continue;
+
+            chain.ActiveSegment.StopWallGrowth();
+        }
+    }
+
+    internal void DrawPendingWallReservations(SpriteBatch spriteBatch)
+    {
+        int tileSize = GameSettings.TileSize;
+
+        foreach (var chain in _wallGrowthChains)
+        {
+            if (chain.Cancelled)
+                continue;
+
+            for (int i = chain.NextIndex; i < chain.PendingPath.Count; i++)
+            {
+                var point = chain.PendingPath[i];
+                if (point.X < 0 || point.X >= _map.Columns || point.Y < 0 || point.Y >= _map.Rows)
+                    continue;
+
+                var tile = _map.Tiles[point.X, point.Y];
+                if (tile.ReservedForPendingWallBy != chain.Anchor)
+                    continue;
+
+                var rect = new Rectangle(
+                    point.X * tileSize,
+                    point.Y * tileSize,
+                    tileSize,
+                    tileSize
+                );
+                TextureManager.DrawRect(spriteBatch, rect, Color.DarkGreen * 0.25f);
+                TextureManager.DrawRectOutline(spriteBatch, rect, Color.LimeGreen * 0.5f, 1);
+            }
+        }
     }
 
     /// <summary>
