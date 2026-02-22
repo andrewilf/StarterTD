@@ -58,7 +58,8 @@ internal static class TowerDrawingHelper
             new Vector2(SpriteSize * tower.DrawScale.X, SpriteSize * tower.DrawScale.Y),
             bodyColor,
             rotation: 0f,
-            origin: spriteOrigin
+            origin: spriteOrigin,
+            drawOutline: true
         );
 
         // Health bar above tower (only when damaged)

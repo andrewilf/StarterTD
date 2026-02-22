@@ -254,7 +254,8 @@ public class Enemy : IEnemy
             spriteBatch,
             Position,
             new Vector2(SpriteSize, SpriteSize),
-            spriteColor
+            spriteColor,
+            drawOutline: true
         );
 
         float healthBarWidth = SpriteSize;

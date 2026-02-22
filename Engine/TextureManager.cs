@@ -65,12 +65,75 @@ public static class TextureManager
         Vector2 size,
         Color color,
         float rotation = 0f,
-        Vector2? origin = null
+        Vector2? origin = null,
+        bool drawOutline = false,
+        Color? outlineColor = null,
+        int outlineThickness = 1
     )
     {
         // Origin defaults to center of the 1x1 pixel (0.5, 0.5).
         // Can be overridden for different scaling anchors (e.g., bottom-center for champion towers).
         Vector2 spriteOrigin = origin ?? new Vector2(0.5f, 0.5f);
+
+        if (drawOutline && outlineThickness > 0)
+        {
+            float width = System.MathF.Max(1f, size.X);
+            float height = System.MathF.Max(1f, size.Y);
+            float thickness = System.MathF.Max(1f, outlineThickness);
+            Vector2 topLeft =
+                position - new Vector2(spriteOrigin.X * width, spriteOrigin.Y * height);
+            Color edgeColor = outlineColor ?? Color.Black;
+
+            // Top
+            spriteBatch.Draw(
+                Pixel,
+                new Vector2(topLeft.X - thickness, topLeft.Y - thickness),
+                sourceRectangle: null,
+                edgeColor,
+                rotation: 0f,
+                origin: Vector2.Zero,
+                scale: new Vector2(width + thickness * 2f, thickness),
+                effects: SpriteEffects.None,
+                layerDepth: 0f
+            );
+            // Bottom
+            spriteBatch.Draw(
+                Pixel,
+                new Vector2(topLeft.X - thickness, topLeft.Y + height),
+                sourceRectangle: null,
+                edgeColor,
+                rotation: 0f,
+                origin: Vector2.Zero,
+                scale: new Vector2(width + thickness * 2f, thickness),
+                effects: SpriteEffects.None,
+                layerDepth: 0f
+            );
+            // Left
+            spriteBatch.Draw(
+                Pixel,
+                new Vector2(topLeft.X - thickness, topLeft.Y),
+                sourceRectangle: null,
+                edgeColor,
+                rotation: 0f,
+                origin: Vector2.Zero,
+                scale: new Vector2(thickness, height),
+                effects: SpriteEffects.None,
+                layerDepth: 0f
+            );
+            // Right
+            spriteBatch.Draw(
+                Pixel,
+                new Vector2(topLeft.X + width, topLeft.Y),
+                sourceRectangle: null,
+                edgeColor,
+                rotation: 0f,
+                origin: Vector2.Zero,
+                scale: new Vector2(thickness, height),
+                effects: SpriteEffects.None,
+                layerDepth: 0f
+            );
+        }
+
         spriteBatch.Draw(
             Pixel,
             position,
