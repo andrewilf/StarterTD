@@ -38,10 +38,15 @@ public partial class GameplayScene : IScene
     private Point _mouseGrid;
     private float _selectedTowerRange;
     private List<Point>? _towerMovePreviewPath;
+    private bool _isWallDragActive;
+    private Point _wallDragStartGrid;
+    private Point _wallDragCurrentGrid;
+    private List<Point>? _wallDragPreviewPath;
+    private int _wallDragValidPrefixLength;
 
     /// <summary>
     /// True when the player has activated wall-placement mode by clicking the world-space "+"
-    /// button on a selected walling champion. Clicks on the grid place wall segments.
+    /// button on a selected walling tower. Press-drag-release on the grid places wall segments.
     /// </summary>
     private bool _wallPlacementMode;
 

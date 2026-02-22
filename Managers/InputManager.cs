@@ -37,6 +37,19 @@ public class InputManager
             && _previousMouse.LeftButton == ButtonState.Released;
     }
 
+    /// <summary>True while the left mouse button is held down.</summary>
+    public bool IsLeftHeld()
+    {
+        return _currentMouse.LeftButton == ButtonState.Pressed;
+    }
+
+    /// <summary>True on the single frame the left mouse button is released.</summary>
+    public bool IsLeftReleased()
+    {
+        return _currentMouse.LeftButton == ButtonState.Released
+            && _previousMouse.LeftButton == ButtonState.Pressed;
+    }
+
     /// <summary>True on the single frame the right mouse button is pressed.</summary>
     public bool IsRightClick()
     {

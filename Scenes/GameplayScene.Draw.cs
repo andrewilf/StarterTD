@@ -23,6 +23,8 @@ public partial class GameplayScene
 
         _towerManager.Draw(spriteBatch, _uiPanel.GetFont(), _hoveredTower);
 
+        DrawWallDragPreview(spriteBatch);
+
         foreach (var enemy in _enemies)
             enemy.Draw(spriteBatch);
 
@@ -56,6 +58,7 @@ public partial class GameplayScene
             && _mouseGrid.Y >= 0
             && _mouseGrid.Y < _map.Rows
             && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
+            && !(_wallPlacementMode && _isWallDragActive)
         )
         {
             DrawHoverIndicator(spriteBatch);
@@ -180,6 +183,33 @@ public partial class GameplayScene
                 new Rectangle(centerX - 100, centerY - 30, 200, 60),
                 indicatorColor
             );
+        }
+    }
+
+    private void DrawWallDragPreview(SpriteBatch spriteBatch)
+    {
+        if (!_wallPlacementMode || !_isWallDragActive || _wallDragPreviewPath == null)
+            return;
+
+        for (int i = 0; i < _wallDragPreviewPath.Count; i++)
+        {
+            var point = _wallDragPreviewPath[i];
+            if (point.X < 0 || point.X >= _map.Columns || point.Y < 0 || point.Y >= _map.Rows)
+                continue;
+
+            var rect = new Rectangle(
+                point.X * GameSettings.TileSize,
+                point.Y * GameSettings.TileSize,
+                GameSettings.TileSize,
+                GameSettings.TileSize
+            );
+
+            bool isValidPrefix = i < _wallDragValidPrefixLength;
+            Color fill = isValidPrefix ? Color.DarkGreen * 0.5f : Color.Red * 0.3f;
+            Color outline = isValidPrefix ? Color.LimeGreen : Color.Red;
+
+            TextureManager.DrawRect(spriteBatch, rect, fill);
+            TextureManager.DrawRectOutline(spriteBatch, rect, outline, 1);
         }
     }
 

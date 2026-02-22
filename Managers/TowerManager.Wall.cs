@@ -30,6 +30,77 @@ public partial class TowerManager
         return PlaceWallSegment(gridPos);
     }
 
+    /// <summary>
+    /// Attempts to place wall segments in order and stops at the first invalid tile.
+    /// Returns the number of segments successfully placed.
+    /// </summary>
+    public int TryPlaceWallPath(IReadOnlyList<Point> orderedPath, Tower wallingTower)
+    {
+        var connected = GetConnectedSetForTower(wallingTower);
+        int placed = 0;
+
+        foreach (var point in orderedPath)
+        {
+            if (!_map.CanBuild(point))
+                break;
+
+            if (!IsAdjacentToConnectedSet(point, connected))
+                break;
+
+            if (!PlaceWallSegment(point))
+                break;
+
+            connected.Add(point);
+            placed++;
+        }
+
+        _wallConnectedSets[wallingTower] = connected;
+        return placed;
+    }
+
+    /// <summary>
+    /// Returns how many tiles from the start of orderedPath are valid wall placements,
+    /// simulating sequential placement without mutating map state.
+    /// </summary>
+    public int GetWallPathValidPrefixLength(IReadOnlyList<Point> orderedPath, Tower wallingTower)
+    {
+        var connected = GetConnectedSetForTower(wallingTower);
+        int validCount = 0;
+
+        foreach (var point in orderedPath)
+        {
+            if (!_map.CanBuild(point))
+                break;
+
+            if (!IsAdjacentToConnectedSet(point, connected))
+                break;
+
+            connected.Add(point);
+            validCount++;
+        }
+
+        return validCount;
+    }
+
+    private HashSet<Point> GetConnectedSetForTower(Tower wallingTower)
+    {
+        return _wallConnectedSets.TryGetValue(wallingTower, out var cached)
+            ? new HashSet<Point>(cached)
+            : BuildConnectedWallSet([wallingTower.GridPosition]);
+    }
+
+    private static bool IsAdjacentToConnectedSet(Point point, HashSet<Point> connected)
+    {
+        Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
+        foreach (var dir in dirs)
+        {
+            var neighbor = new Point(point.X + dir.X, point.Y + dir.Y);
+            if (connected.Contains(neighbor))
+                return true;
+        }
+        return false;
+    }
+
     private bool PlaceWallSegment(Point gridPos)
     {
         var wall = new Tower(TowerType.WallSegment, gridPos);

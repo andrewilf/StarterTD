@@ -32,6 +32,7 @@
 - `Tower.ApplyDecayDamage(float dt)`: accumulates fractional HP; used by wall segment decay
 - Wall segments: `TowerType.WallSegment`, 30 HP, 10k movement cost, placed by `TryPlaceWall()`. Must be 4-directionally adjacent to placing tower's connected set. `_wallConnectedSets: Dictionary<Tower, HashSet<Point>>` — rebuilt each `Update` as single-root BFS per walling tower; disconnected towers don't share zones. `UpdateWallDecay()` unions all sets; orphaned segments decay 1 HP/sec per exposed cardinal side. Runs before dead-tower sweep
 - `TowerManager.IsAdjacentToWallingNetwork(Point, Tower)`: public; uses `_wallConnectedSets[tower]` cache, falls back to fresh BFS if called before first `Update`
+- `TowerManager.TryPlaceWallPath(path, tower)`: sequentially places along ordered path and stops at first invalid tile. `GetWallPathValidPrefixLength(path, tower)` simulates contiguous prefix validity (no mutation) for preview/corner choice
 - `TowerStats.AbilityEffect: Action<Tower>?`: called by `TriggerChampionAbility()` on champion + generics. ChampionWalling always buffs all Walling generics even if champion is dead
 - `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals via `_hasStoredAbilityStats` guard, sets `IsAbilityBuffActive = true`, runs for `AbilityDuration`. Re-trigger resets timer, no stacking. `DeactivateAbilityBuff()` only restores if guard set. Gold aura while active
 - `Tower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(tower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`; `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
@@ -63,9 +64,9 @@
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
 
 ## Wall Placement Mode
-- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). Grid left-clicks → `TryPlaceWall()` using `IsAdjacentToWallingNetwork` against that tower's own set. Blocks right-click move
+- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path: candidate A = horizontal-then-vertical, candidate B = vertical-then-horizontal. Candidate with longer valid prefix is selected (ties: shorter path, then A). On release, `TryPlaceWallPath()` commits and stops at first invalid tile. Blocks right-click move
 - `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` (tracks during cooldown movement)
-- Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise
+- Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise. During drag, preview draws valid prefix in dark green and blocked remainder in red
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold
 
 ## Enemy Selection

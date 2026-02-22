@@ -13,7 +13,7 @@ public static class WallSegmentTower
         MovementCost: 10000,
         IsAOE: false,
         AOERadius: 0f,
-        Color: Color.DarkGreen,
+        Color: Color.Green,
         MaxHealth: 30,
         BlockCapacity: 20,
         DrawScale: new Vector2(1.0f, 1.0f),

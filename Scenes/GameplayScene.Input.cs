@@ -36,10 +36,17 @@ public partial class GameplayScene
             _selectedEnemy = null;
             _towerMovePreviewPath = null;
             _wallPlacementMode = false;
+            CancelWallDrag();
         }
 
         if (_inputManager.IsLeftClick())
             HandleLeftClick();
+
+        if (_inputManager.IsLeftHeld())
+            UpdateWallDrag();
+
+        if (_inputManager.IsLeftReleased())
+            CommitWallDrag();
 
         if (_inputManager.IsRightClick())
             HandleRightClick();
@@ -62,6 +69,8 @@ public partial class GameplayScene
         )
         {
             _wallPlacementMode = !_wallPlacementMode;
+            if (!_wallPlacementMode)
+                CancelWallDrag();
         }
         // Check if click is on UI panel first
         else if (_uiPanel.ContainsPoint(mousePos))
@@ -74,6 +83,7 @@ public partial class GameplayScene
                 _towerManager.SelectedTower = null;
                 _selectedEnemy = null;
                 _wallPlacementMode = false;
+                CancelWallDrag();
             }
 
             // Cache selected tower range to avoid per-frame GetStats allocation in Draw
@@ -100,7 +110,7 @@ public partial class GameplayScene
         var wallingAnchor = _towerManager.SelectedTower;
         if (_wallPlacementMode && wallingAnchor != null)
         {
-            _towerManager.TryPlaceWall(gridPos, wallingAnchor);
+            StartWallDrag(gridPos);
         }
         else if (_uiPanel.SelectionMode == UISelectionMode.PlaceHighGround)
         {
@@ -141,13 +151,17 @@ public partial class GameplayScene
                 _selectedEnemy = enemy;
                 _towerManager.SelectedTower = null;
                 _wallPlacementMode = false;
+                CancelWallDrag();
             }
             else
             {
                 // Select existing tower; clear wall mode if selection changes
                 var tower = _towerManager.GetTowerAt(gridPos);
                 if (tower != _towerManager.SelectedTower)
+                {
                     _wallPlacementMode = false;
+                    CancelWallDrag();
+                }
                 _towerManager.SelectedTower = tower;
                 _selectedEnemy = null;
             }
@@ -186,6 +200,7 @@ public partial class GameplayScene
             {
                 _towerManager.SelectedTower = null;
                 _wallPlacementMode = false;
+                CancelWallDrag();
             }
 
             int refund = _towerManager.SellTower(tower);
