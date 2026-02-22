@@ -9,6 +9,7 @@ public enum TowerType
 {
     Gun,
     Cannon,
+    Walling,
     ChampionGun,
     ChampionCannon,
     ChampionWalling,

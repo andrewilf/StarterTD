@@ -76,18 +76,22 @@ public partial class GameplayScene
 
         bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
+        var wallingAnchor = _towerManager.SelectedTower;
         bool isWallMode =
             _wallPlacementMode
-            && _towerManager.SelectedTower?.TowerType == TowerType.ChampionWalling;
+            && wallingAnchor != null
+            && (
+                wallingAnchor.TowerType == TowerType.ChampionWalling
+                || wallingAnchor.TowerType.IsWallingGeneric()
+            );
 
         Color hoverColor;
         if (isWallMode)
         {
             // Green if the tile is a valid wall placement, red otherwise
-            var walling = _towerManager.SelectedTower!;
             bool canPlaceWall =
                 _map.CanBuild(_mouseGrid)
-                && _towerManager.IsAdjacentToWallingNetwork(_mouseGrid, walling);
+                && _towerManager.IsAdjacentToWallingNetwork(_mouseGrid, wallingAnchor!);
             hoverColor = canPlaceWall ? Color.DarkGreen * 0.5f : Color.Red * 0.3f;
         }
         else if (canPlaceTower)
@@ -203,9 +207,9 @@ public partial class GameplayScene
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
 
-            // World-space wall placement button: shown when the walling champion is selected.
+            // World-space wall placement button: shown when any walling tower is selected.
             // Active (wall mode on) = dark green filled; inactive = dark outline only.
-            if (tower.TowerType == TowerType.ChampionWalling)
+            if (tower.TowerType == TowerType.ChampionWalling || tower.TowerType.IsWallingGeneric())
             {
                 var btnRect = GetWallPlacementButtonRect(tower);
                 Color btnBg = _wallPlacementMode ? Color.DarkGreen : new Color(20, 60, 20);

@@ -85,7 +85,11 @@ public class Enemy : IEnemy
 
     public void ApplySlow(float duration)
     {
-        _slowTimer = duration;
+        // Only refresh if the new duration exceeds what's already remaining.
+        // Prevents a shorter slow (e.g. from a generic Walling tower) from cutting short
+        // a longer slow already in progress (e.g. from the champion's 5s slow).
+        if (_slowTimer < duration)
+            _slowTimer = duration;
     }
 
     /// <summary>

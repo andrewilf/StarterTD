@@ -15,6 +15,7 @@ public static class TowerData
         {
             TowerType.Gun => GunTower.Stats,
             TowerType.Cannon => CannonTower.Stats,
+            TowerType.Walling => WallingTower.Stats,
             TowerType.ChampionGun => ChampionGunTower.Stats,
             TowerType.ChampionCannon => ChampionCannonTower.Stats,
             TowerType.ChampionWalling => ChampionWallingTower.Stats,
