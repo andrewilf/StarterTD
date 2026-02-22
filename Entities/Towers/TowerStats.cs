@@ -44,6 +44,8 @@ public static class TowerTypeExtensions
 
     public static bool IsWallingChampion(this TowerType type) => type == TowerType.ChampionWalling;
 
+    public static bool IsWallingGeneric(this TowerType type) => type == TowerType.Walling;
+
     public static bool IsWallSegment(this TowerType type) => type == TowerType.WallSegment;
 
     /// <summary>
@@ -56,6 +58,7 @@ public static class TowerTypeExtensions
         {
             TowerType.ChampionGun => TowerType.Gun,
             TowerType.ChampionCannon => TowerType.Cannon,
+            TowerType.ChampionWalling => TowerType.Walling,
             _ => throw new ArgumentException($"{championType} is not a champion type"),
         };
     }
@@ -70,6 +73,7 @@ public static class TowerTypeExtensions
         {
             TowerType.Gun => TowerType.ChampionGun,
             TowerType.Cannon => TowerType.ChampionCannon,
+            TowerType.Walling => TowerType.ChampionWalling,
             _ => throw new ArgumentException($"{genericType} is not a generic type"),
         };
     }

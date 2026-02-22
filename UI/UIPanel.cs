@@ -189,7 +189,7 @@ public partial class UIPanel
 
         if (_wallTowerButton.Contains(mousePos))
         {
-            HandleWallChampionClick();
+            HandleConsolidatedTowerClick(TowerType.Walling, TowerType.ChampionWalling, playerMoney);
             return true;
         }
         if (_wallAbilityButton.Contains(mousePos))
@@ -207,18 +207,6 @@ public partial class UIPanel
         }
 
         return false;
-    }
-
-    // Walling champion has no generic variant — button only places/re-places the champion.
-    private void HandleWallChampionClick()
-    {
-        bool championAlive = _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
-        if (championAlive)
-            return; // Already on field; player uses world-space button to place walls
-
-        bool canPlace = _championManager?.CanPlaceChampion(TowerType.ChampionWalling) ?? true;
-        SelectedTowerType = canPlace ? TowerType.ChampionWalling : null;
-        SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
     }
 
     // Champion dead → place champion. Champion alive → place generic.

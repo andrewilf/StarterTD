@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -17,11 +18,12 @@ public partial class TowerManager
     private readonly Map _map;
     private readonly ChampionManager _championManager;
 
-    // Recomputed once per Update; shared by UpdateWallDecay, FindWallNetworkTarget, and DrawWallRangeIndicator.
-    private HashSet<Point> _cachedWallConnectedSet = new();
+    // Recomputed once per Update. Each walling tower gets its own single-root BFS so disconnected
+    // towers don't share attack zones. UpdateWallDecay uses the union; targeting uses per-tower sets.
+    private Dictionary<Tower, HashSet<Point>> _wallConnectedSets = [];
 
-    // Tracks time since the last frenzy spike volley so it fires at the champion's fire rate.
-    private float _frenzyFireTimer;
+    // Tracks frenzy fire timers per tower — champion and Walling generics each have independent timers.
+    private readonly Dictionary<Tower, float> _frenzyFireTimers = [];
 
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
@@ -240,10 +242,14 @@ public partial class TowerManager
     {
         if (championType.IsWallingChampion())
         {
-            // Walling champion has no generic variant — invoke ability on the champion only
+            // Buff champion if alive
             var champion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
             if (champion != null)
                 TowerData.GetStats(TowerType.ChampionWalling).AbilityEffect?.Invoke(champion);
+
+            // Walling generics always receive frenzy when the ability fires, even if champion is dead.
+            foreach (var tower in _towers.Where(t => t.TowerType.IsWallingGeneric()))
+                TowerData.GetStats(TowerType.Walling).AbilityEffect?.Invoke(tower);
             return;
         }
 
@@ -260,29 +266,52 @@ public partial class TowerManager
     {
         _championManager.Update(gameTime);
 
-        // Assign wall-network targeting delegate each frame (network topology can change)
+        // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
+        // Each walling tower gets a single-root BFS from its own position so disconnected towers
+        // don't share attack zones. Targeting and frenzy use each tower's own set.
         var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
-
-        // Build wall connected set once — reused by targeting delegate, decay, and draw
-        _cachedWallConnectedSet = BuildConnectedWallSet(wallingChampion);
+        _wallConnectedSets = _towers
+            .Where(t => t.TowerType == TowerType.ChampionWalling || t.TowerType.IsWallingGeneric())
+            .ToDictionary(t => t, t => BuildConnectedWallSet([t.GridPosition]));
 
         if (wallingChampion != null)
         {
             var championPos = wallingChampion.WorldPosition;
+            var championSet = _wallConnectedSets[wallingChampion];
             // During frenzy the multi-target loop handles all attacks; suppress single-target to avoid double-hits.
             wallingChampion.WallNetworkTargetFinder = wallingChampion.IsAbilityBuffActive
                 ? null
-                : e => FindWallNetworkTarget(e, championPos);
+                : e => FindWallNetworkTarget(e, championPos, championSet);
             wallingChampion.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
         }
 
-        foreach (var tower in _towers)
+        // Wire wall-network targeting on generic Walling towers using each tower's own connected set.
+        // Suppress single-target targeting during frenzy to avoid double-hits.
+        foreach (var tower in _towers.Where(t => t.TowerType.IsWallingGeneric()))
         {
-            tower.Update(gameTime, enemies);
+            var towerSet = _wallConnectedSets[tower];
+            tower.WallNetworkTargetFinder = tower.IsAbilityBuffActive
+                ? null
+                : e => FindWallNetworkTarget(e, tower.WorldPosition, towerSet);
+            tower.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
         }
 
+        foreach (var tower in _towers)
+            tower.Update(gameTime, enemies);
+
         if (wallingChampion is { IsAbilityBuffActive: true })
-            UpdateWallFrenzy(gameTime, enemies, wallingChampion);
+            UpdateWallFrenzy(
+                gameTime,
+                enemies,
+                wallingChampion,
+                _wallConnectedSets[wallingChampion]
+            );
+
+        // Each Walling generic runs its own independent frenzy loop when active.
+        foreach (
+            var tower in _towers.Where(t => t.TowerType.IsWallingGeneric() && t.IsAbilityBuffActive)
+        )
+            UpdateWallFrenzy(gameTime, enemies, tower, _wallConnectedSets[tower]);
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
         UpdateWallDecay(gameTime);
@@ -311,8 +340,14 @@ public partial class TowerManager
         // Draw range indicator for hovered tower
         if (hoveredTower != null)
         {
-            if (hoveredTower.TowerType == TowerType.ChampionWalling)
-                DrawWallRangeIndicator(spriteBatch);
+            if (
+                hoveredTower.TowerType == TowerType.ChampionWalling
+                || hoveredTower.TowerType.IsWallingGeneric()
+            )
+            {
+                if (_wallConnectedSets.TryGetValue(hoveredTower, out var wallSet))
+                    DrawWallRangeIndicatorForSet(spriteBatch, wallSet);
+            }
             else
                 hoveredTower.DrawRangeIndicator(spriteBatch);
         }

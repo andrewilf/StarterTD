@@ -51,11 +51,14 @@ public partial class GameplayScene
 
         // Check if the world-space wall placement button was clicked.
         // This takes priority over grid clicks so it is checked before panel/grid routing.
-        var wallingChampion = _towerManager.SelectedTower;
+        var selectedWalling = _towerManager.SelectedTower;
         if (
-            wallingChampion != null
-            && wallingChampion.TowerType == TowerType.ChampionWalling
-            && GetWallPlacementButtonRect(wallingChampion).Contains(mousePos)
+            selectedWalling != null
+            && (
+                selectedWalling.TowerType == TowerType.ChampionWalling
+                || selectedWalling.TowerType.IsWallingGeneric()
+            )
+            && GetWallPlacementButtonRect(selectedWalling).Contains(mousePos)
         )
         {
             _wallPlacementMode = !_wallPlacementMode;
@@ -94,13 +97,10 @@ public partial class GameplayScene
     {
         Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
 
-        if (
-            _wallPlacementMode
-            && _towerManager.SelectedTower?.TowerType == TowerType.ChampionWalling
-        )
+        var wallingAnchor = _towerManager.SelectedTower;
+        if (_wallPlacementMode && wallingAnchor != null)
         {
-            // Place a wall segment adjacent to the walling network
-            _towerManager.TryPlaceWall(gridPos, _towerManager.SelectedTower);
+            _towerManager.TryPlaceWall(gridPos, wallingAnchor);
         }
         else if (_uiPanel.SelectionMode == UISelectionMode.PlaceHighGround)
         {
