@@ -44,6 +44,10 @@ public partial class GameplayScene : IScene
     private List<Point>? _wallDragPreviewPath;
     private int _wallDragValidPrefixLength;
 
+    // null = not yet locked (still on a straight line from start).
+    // true = horizontal-first locked, false = vertical-first locked.
+    private bool? _wallDragLockedHorizontalFirst;
+
     /// <summary>
     /// True when the player has activated wall-placement mode by clicking the world-space "+"
     /// button on a selected walling tower. Press-drag-release on the grid places wall segments.

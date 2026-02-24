@@ -65,7 +65,7 @@
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
 
 ## Wall Placement Mode
-- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path: candidate A = horizontal-then-vertical, candidate B = vertical-then-horizontal. Candidate with longer valid prefix is selected (ties: shorter path, then A). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move
+- `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path. L direction locks based on which axis the user drags first from the start tile (`_wallDragLockedHorizontalFirst`); returning to a straight line resets the lock. Falls back to the other candidate only if it has a strictly longer valid prefix (blocked tiles). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move
 - `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` (tracks during cooldown movement)
 - Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise. During drag, preview draws valid prefix in dark green and blocked remainder in red
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold

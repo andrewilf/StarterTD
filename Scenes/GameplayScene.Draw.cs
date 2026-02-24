@@ -79,14 +79,8 @@ public partial class GameplayScene
 
         bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
-        var wallingAnchor = _towerManager.SelectedTower;
-        bool isWallMode =
-            _wallPlacementMode
-            && wallingAnchor != null
-            && (
-                wallingAnchor.TowerType == TowerType.ChampionWalling
-                || wallingAnchor.TowerType.IsWallingGeneric()
-            );
+        var wallingAnchor = GetSelectedWallingAnchor();
+        bool isWallMode = _wallPlacementMode && wallingAnchor != null;
 
         Color hoverColor;
         if (isWallMode)
@@ -239,7 +233,7 @@ public partial class GameplayScene
 
             // World-space wall placement button: shown when any walling tower is selected.
             // Active (wall mode on) = dark green filled; inactive = dark outline only.
-            if (tower.TowerType == TowerType.ChampionWalling || tower.TowerType.IsWallingGeneric())
+            if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
             {
                 var btnRect = GetWallPlacementButtonRect(tower);
                 Color btnBg = _wallPlacementMode ? Color.DarkGreen : new Color(20, 60, 20);

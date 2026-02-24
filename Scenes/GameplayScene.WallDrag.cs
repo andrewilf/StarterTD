@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using StarterTD.Engine;
@@ -30,6 +31,7 @@ public partial class GameplayScene
         _isWallDragActive = true;
         _wallDragStartGrid = startGrid;
         _wallDragCurrentGrid = startGrid;
+        _wallDragLockedHorizontalFirst = null;
         UpdateWallDragPreview(wallingAnchor);
     }
 
@@ -71,37 +73,45 @@ public partial class GameplayScene
         _isWallDragActive = false;
         _wallDragPreviewPath = null;
         _wallDragValidPrefixLength = 0;
+        _wallDragLockedHorizontalFirst = null;
     }
 
     private void UpdateWallDragPreview(Tower wallingAnchor)
     {
-        var (candidateA, candidateB) = BuildLCandidates(_wallDragStartGrid, _wallDragCurrentGrid);
+        int dx = Math.Abs(_wallDragCurrentGrid.X - _wallDragStartGrid.X);
+        int dy = Math.Abs(_wallDragCurrentGrid.Y - _wallDragStartGrid.Y);
 
+        // Straight line — no L needed. Reset lock so next diagonal freely re-decides.
+        if (dx == 0 || dy == 0)
+        {
+            var straight = BuildLPath(
+                _wallDragStartGrid,
+                _wallDragCurrentGrid,
+                _wallDragCurrentGrid
+            );
+            int prefix = _towerManager.GetWallPathValidPrefixLength(straight, wallingAnchor);
+            _wallDragPreviewPath = straight;
+            _wallDragValidPrefixLength = prefix;
+            _wallDragLockedHorizontalFirst = null;
+            return;
+        }
+
+        // First time both axes are non-zero — lock the L direction based on which
+        // axis was dragged first (the longer axis from start is the one dragged first).
+        _wallDragLockedHorizontalFirst ??= dx >= dy;
+
+        var (candidateA, candidateB) = BuildLCandidates(_wallDragStartGrid, _wallDragCurrentGrid);
         int prefixA = _towerManager.GetWallPathValidPrefixLength(candidateA, wallingAnchor);
         int prefixB = _towerManager.GetWallPathValidPrefixLength(candidateB, wallingAnchor);
 
-        bool chooseA;
-        if (prefixA > prefixB)
-        {
-            chooseA = true;
-        }
-        else if (prefixB > prefixA)
-        {
+        bool chooseA = _wallDragLockedHorizontalFirst.Value;
+
+        // Only override the locked preference if the other candidate
+        // has a strictly longer valid prefix (i.e. the preferred one is blocked).
+        if (chooseA && prefixB > prefixA)
             chooseA = false;
-        }
-        else if (candidateA.Count < candidateB.Count)
-        {
+        else if (!chooseA && prefixA > prefixB)
             chooseA = true;
-        }
-        else if (candidateB.Count < candidateA.Count)
-        {
-            chooseA = false;
-        }
-        else
-        {
-            // Tie-breaker default: horizontal then vertical (candidate A).
-            chooseA = true;
-        }
 
         _wallDragPreviewPath = chooseA ? candidateA : candidateB;
         _wallDragValidPrefixLength = chooseA ? prefixA : prefixB;

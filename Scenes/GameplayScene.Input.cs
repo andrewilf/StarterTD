@@ -58,13 +58,9 @@ public partial class GameplayScene
 
         // Check if the world-space wall placement button was clicked.
         // This takes priority over grid clicks so it is checked before panel/grid routing.
-        var selectedWalling = _towerManager.SelectedTower;
+        var selectedWalling = GetSelectedWallingAnchor();
         if (
             selectedWalling != null
-            && (
-                selectedWalling.TowerType == TowerType.ChampionWalling
-                || selectedWalling.TowerType.IsWallingGeneric()
-            )
             && GetWallPlacementButtonRect(selectedWalling).Contains(mousePos)
         )
         {
