@@ -16,7 +16,7 @@ public partial class GameplayScene
         if (tower == null)
             return null;
 
-        return tower.TowerType == TowerType.ChampionWalling || tower.TowerType.IsWallingGeneric()
+        return tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric()
             ? tower
             : null;
     }

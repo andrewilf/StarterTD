@@ -29,16 +29,6 @@ public partial class TowerManager
     private const float WallGrowthPerSecond = 20f;
 
     /// <summary>
-    /// Place a wall segment adjacent to the walling champion's network.
-    /// Bypasses the terrain buildability check so walls can go on any non-tower tile.
-    /// Returns true if the wall was placed successfully.
-    /// </summary>
-    public bool TryPlaceWall(Point gridPos, Tower wallingTower)
-    {
-        return TryPlaceWallPath([gridPos], wallingTower) > 0;
-    }
-
-    /// <summary>
     /// Attempts to place wall segments in order and stops at the first invalid tile.
     /// Returns the number of segments successfully placed.
     /// </summary>
