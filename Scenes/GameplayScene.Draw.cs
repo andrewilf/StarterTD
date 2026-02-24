@@ -23,6 +23,8 @@ public partial class GameplayScene
 
         _towerManager.Draw(spriteBatch, _uiPanel.GetFont(), _hoveredTower);
 
+        DrawWallDragPreview(spriteBatch);
+
         foreach (var enemy in _enemies)
             enemy.Draw(spriteBatch);
 
@@ -56,6 +58,7 @@ public partial class GameplayScene
             && _mouseGrid.Y >= 0
             && _mouseGrid.Y < _map.Rows
             && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
+            && !(_wallPlacementMode && _isWallDragActive)
         )
         {
             DrawHoverIndicator(spriteBatch);
@@ -76,14 +79,8 @@ public partial class GameplayScene
 
         bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
-        var wallingAnchor = _towerManager.SelectedTower;
-        bool isWallMode =
-            _wallPlacementMode
-            && wallingAnchor != null
-            && (
-                wallingAnchor.TowerType == TowerType.ChampionWalling
-                || wallingAnchor.TowerType.IsWallingGeneric()
-            );
+        var wallingAnchor = GetSelectedWallingAnchor();
+        bool isWallMode = _wallPlacementMode && wallingAnchor != null;
 
         Color hoverColor;
         if (isWallMode)
@@ -183,6 +180,33 @@ public partial class GameplayScene
         }
     }
 
+    private void DrawWallDragPreview(SpriteBatch spriteBatch)
+    {
+        if (!_wallPlacementMode || !_isWallDragActive || _wallDragPreviewPath == null)
+            return;
+
+        for (int i = 0; i < _wallDragPreviewPath.Count; i++)
+        {
+            var point = _wallDragPreviewPath[i];
+            if (point.X < 0 || point.X >= _map.Columns || point.Y < 0 || point.Y >= _map.Rows)
+                continue;
+
+            var rect = new Rectangle(
+                point.X * GameSettings.TileSize,
+                point.Y * GameSettings.TileSize,
+                GameSettings.TileSize,
+                GameSettings.TileSize
+            );
+
+            bool isValidPrefix = i < _wallDragValidPrefixLength;
+            Color fill = isValidPrefix ? Color.DarkGreen * 0.5f : Color.Red * 0.3f;
+            Color outline = isValidPrefix ? Color.LimeGreen : Color.Red;
+
+            TextureManager.DrawRect(spriteBatch, rect, fill);
+            TextureManager.DrawRectOutline(spriteBatch, rect, outline, 1);
+        }
+    }
+
     /// <summary>
     /// Draw a red rectangle outline around the selected tower or enemy.
     /// For the walling champion, also draws the world-space wall placement toggle button.
@@ -209,7 +233,7 @@ public partial class GameplayScene
 
             // World-space wall placement button: shown when any walling tower is selected.
             // Active (wall mode on) = dark green filled; inactive = dark outline only.
-            if (tower.TowerType == TowerType.ChampionWalling || tower.TowerType.IsWallingGeneric())
+            if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
             {
                 var btnRect = GetWallPlacementButtonRect(tower);
                 Color btnBg = _wallPlacementMode ? Color.DarkGreen : new Color(20, 60, 20);

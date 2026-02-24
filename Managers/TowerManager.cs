@@ -299,6 +299,8 @@ public partial class TowerManager
         foreach (var tower in _towers)
             tower.Update(gameTime, enemies);
 
+        UpdateWallGrowthChains();
+
         if (wallingChampion is { IsAbilityBuffActive: true })
             UpdateWallFrenzy(
                 gameTime,
@@ -332,6 +334,8 @@ public partial class TowerManager
     /// </summary>
     public void Draw(SpriteBatch spriteBatch, SpriteFont? font = null, Tower? hoveredTower = null)
     {
+        DrawPendingWallReservations(spriteBatch);
+
         foreach (var tower in _towers)
         {
             tower.Draw(spriteBatch, font);

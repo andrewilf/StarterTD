@@ -13,7 +13,7 @@ public static class WallingTower
         MovementCost: 300,
         IsAOE: false,
         AOERadius: 0f,
-        Color: Color.Green,
+        Color: Color.DarkGreen,
         MaxHealth: 80,
         BlockCapacity: 3,
         DrawScale: new Vector2(1.0f, 1.0f),
