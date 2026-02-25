@@ -2,7 +2,7 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-public static class ChampionCannonTower
+public static class ChampionCannonTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Champion Cannon",
@@ -23,6 +23,6 @@ public static class ChampionCannonTower
         AbilityDuration: 21f,
         AbilityCooldown: 50f,
         Targeting: TargetingStrategy.MostGrouped,
-        AbilityEffect: tower => tower.ActivateLaser()
+        AbilityEffect: tower => ((CannonChampionTower)tower).ActivateLaser()
     );
 }

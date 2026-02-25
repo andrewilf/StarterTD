@@ -9,8 +9,9 @@ using StarterTD.Interfaces;
 namespace StarterTD.Entities;
 
 /// <summary>
-/// Concrete tower implementation. Targets the nearest enemy in range
-/// and fires projectiles at it.
+/// Base tower class. Handles targeting, firing, movement, and ability buffs.
+/// Subclasses add type-specific features: WallSegmentTower (growth/decay),
+/// WallingTower (frenzy), CannonChampionTower (laser).
 /// </summary>
 public class Tower : ITower
 {
@@ -28,8 +29,8 @@ public class Tower : ITower
     public bool IsAOE { get; private set; }
     public float AOERadius { get; private set; }
     public Color TowerColor { get; private set; }
-    public int MaxHealth { get; private set; }
-    public int CurrentHealth { get; private set; }
+    public int MaxHealth { get; protected set; }
+    public int CurrentHealth { get; protected set; }
     public bool IsDead => CurrentHealth <= 0;
 
     /// <summary>Movement speed in pixels per second when in Moving state.</summary>
@@ -67,30 +68,22 @@ public class Tower : ITower
     private float _cooldownTimer;
     private float _cooldownDuration;
 
-    private float _abilityTimer;
-    private float _abilityDuration;
+    protected float _abilityTimer;
+
+    /// <summary>
+    /// Duration of this tower's ability in seconds. Protected so subclasses can read it
+    /// (e.g. WallingTower uses it as the slow duration applied to enemies on spike attack).
+    /// </summary>
+    protected float _abilityDuration;
+
     private float _originalDamage;
     private float _originalFireRate;
     private bool _hasStoredAbilityStats;
 
-    // Accumulates fractional decay damage for wall segments so 1 HP/sec is applied precisely.
-    private float _decayAccumulator;
-
-    // Wall segment max-HP growth state (used only by TowerType.WallSegment).
-    private bool _wallGrowthInitialized;
-    private bool _wallGrowthActive;
-    private bool _wallGrowthSyncCurrentWhenUndamaged;
-    private int _wallGrowthTargetMaxHealth;
-    private float _wallGrowthPerSecond;
-    private float _wallGrowthAccumulator;
-
     private TargetingStrategy _targeting; // set once in ApplyStats; not readonly because ApplyStats is called after field init
 
     /// <summary>True while the super ability buff is active on this tower.</summary>
-    public bool IsAbilityBuffActive { get; private set; }
-
-    /// <summary>True while the particle cannon laser ability is active. Suppresses normal projectile firing.</summary>
-    public bool IsLaserActive { get; private set; }
+    public bool IsAbilityBuffActive { get; protected set; }
 
     /// <summary>The last enemy this tower successfully targeted. Used by laser activation to aim the initial beam.</summary>
     public IEnemy? LastTarget { get; private set; }
@@ -107,7 +100,7 @@ public class Tower : ITower
     /// <summary>
     /// If set, replaces circular range targeting with wall-network targeting.
     /// Returns the best enemy to attack from within the wall attack zone.
-    /// Set each frame by TowerManager for ChampionWalling towers.
+    /// Set each frame by TowerManager for walling towers.
     /// </summary>
     public Func<List<IEnemy>, IEnemy?>? WallNetworkTargetFinder;
 
@@ -116,6 +109,18 @@ public class Tower : ITower
     /// Bubbles up to TowerManager → GameplayScene to spawn SpikeEffect.
     /// </summary>
     public Action<Vector2>? OnWallAttack;
+
+    /// <summary>
+    /// Total HP capacity used for health bar rendering.
+    /// Overridden by WallSegmentTower to return the growth target cap.
+    /// </summary>
+    public virtual int HealthBarCapacity => MaxHealth;
+
+    /// <summary>
+    /// When true, suppresses normal projectile firing in UpdateActive.
+    /// Overridden by CannonChampionTower to return IsLaserActive.
+    /// </summary>
+    protected virtual bool IsFiringSuppressed => false;
 
     public Tower(TowerType type, Point gridPosition)
     {
@@ -128,89 +133,26 @@ public class Tower : ITower
         Cost = stats.Cost;
     }
 
+    /// <summary>
+    /// Factory method: creates the correct Tower subclass for the given type.
+    /// Use this instead of new Tower(...) to ensure subclass-specific behaviour is active.
+    /// </summary>
+    public static Tower Create(TowerType type, Point gridPos) =>
+        type switch
+        {
+            TowerType.WallSegment => new WallSegmentTower(gridPos),
+            TowerType.Walling => new WallingTower(type, gridPos),
+            TowerType.ChampionWalling => new WallingTower(type, gridPos),
+            TowerType.ChampionCannon => new CannonChampionTower(gridPos),
+            _ => new Tower(type, gridPos),
+        };
+
     public void TakeDamage(int amount)
     {
         CurrentHealth -= amount;
         if (CurrentHealth < 0)
             CurrentHealth = 0;
     }
-
-    /// <summary>
-    /// Accumulates decay damage over time (1 HP/sec for disconnected wall segments).
-    /// Uses an accumulator so fractional seconds don't get lost between frames.
-    /// </summary>
-    public void ApplyDecayDamage(float deltaSeconds)
-    {
-        _decayAccumulator += deltaSeconds;
-        int damage = (int)_decayAccumulator;
-        if (damage > 0)
-        {
-            TakeDamage(damage);
-            _decayAccumulator -= damage;
-        }
-    }
-
-    /// <summary>
-    /// Configures progressive max-HP growth for wall segments.
-    /// MaxHealth starts at startMaxHealth and grows toward targetMaxHealth once StartWallGrowth is called.
-    /// </summary>
-    public void InitializeWallGrowth(
-        int startMaxHealth,
-        int targetMaxHealth,
-        float growthPerSecond,
-        bool syncCurrentWhileUndamaged
-    )
-    {
-        if (!TowerType.IsWallSegment())
-            return;
-
-        int clampedStart = Math.Max(1, startMaxHealth);
-        int clampedTarget = Math.Max(clampedStart, targetMaxHealth);
-
-        _wallGrowthInitialized = true;
-        _wallGrowthActive = false;
-        _wallGrowthSyncCurrentWhenUndamaged = syncCurrentWhileUndamaged;
-        _wallGrowthTargetMaxHealth = clampedTarget;
-        _wallGrowthPerSecond = Math.Max(0f, growthPerSecond);
-        _wallGrowthAccumulator = 0f;
-
-        MaxHealth = clampedStart;
-        CurrentHealth = Math.Min(CurrentHealth, MaxHealth);
-        if (CurrentHealth <= 0)
-            CurrentHealth = MaxHealth;
-    }
-
-    public void StartWallGrowth()
-    {
-        if (!_wallGrowthInitialized || IsDead)
-            return;
-
-        if (MaxHealth >= _wallGrowthTargetMaxHealth)
-        {
-            _wallGrowthActive = false;
-            return;
-        }
-
-        _wallGrowthActive = true;
-    }
-
-    /// <summary>
-    /// Stops active wall growth without removing the segment.
-    /// Used when the owning walling anchor is removed so normal decay can take over.
-    /// </summary>
-    public void StopWallGrowth()
-    {
-        _wallGrowthActive = false;
-    }
-
-    public bool IsWallGrowthComplete =>
-        !_wallGrowthInitialized || MaxHealth >= _wallGrowthTargetMaxHealth;
-
-    /// <summary>
-    /// Total HP capacity used for health bar rendering.
-    /// Wall segments render against their growth target cap; other towers use MaxHealth.
-    /// </summary>
-    public int HealthBarCapacity => _wallGrowthInitialized ? _wallGrowthTargetMaxHealth : MaxHealth;
 
     /// <summary>
     /// Attempt to engage this tower. Returns true if the enemy can engage (capacity available).
@@ -281,28 +223,6 @@ public class Tower : ITower
         _abilityTimer = _abilityDuration;
     }
 
-    /// <summary>
-    /// Activates the wall frenzy mode without modifying Damage or FireRate.
-    /// The frenzy attack loop in TowerManager handles multi-target spike hits.
-    /// </summary>
-    public void ActivateFrenzy(float duration)
-    {
-        IsAbilityBuffActive = true;
-        _abilityTimer = duration;
-    }
-
-    /// <summary>
-    /// Activates the particle cannon laser. Suppresses normal firing and fires OnLaserActivated
-    /// so GameplayScene can spawn the LaserEffect at the last-targeted enemy's position.
-    /// Duration covers wind-up (1s) + beam (20s) = 21s total.
-    /// </summary>
-    public void ActivateLaser()
-    {
-        IsAbilityBuffActive = true;
-        IsLaserActive = true;
-        _abilityTimer = _abilityDuration;
-    }
-
     public void CancelAbility()
     {
         if (IsAbilityBuffActive)
@@ -319,17 +239,26 @@ public class Tower : ITower
         }
 
         IsAbilityBuffActive = false;
-        IsLaserActive = false;
         _abilityTimer = 0f;
+
+        OnAbilityDeactivated();
     }
+
+    /// <summary>
+    /// Called at the end of DeactivateAbilityBuff. Subclasses override to clear their own state
+    /// (e.g. CannonChampionTower clears IsLaserActive here).
+    /// </summary>
+    protected virtual void OnAbilityDeactivated() { }
 
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
-        UpdateWallGrowth((float)gameTime.ElapsedGameTime.TotalSeconds);
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        OnUpdateStart(dt);
 
         if (IsAbilityBuffActive)
         {
-            _abilityTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _abilityTimer -= dt;
             if (_abilityTimer <= 0f)
                 DeactivateAbilityBuff();
         }
@@ -356,48 +285,17 @@ public class Tower : ITower
         }
     }
 
-    private void UpdateWallGrowth(float dt)
-    {
-        if (!_wallGrowthInitialized || !_wallGrowthActive || IsDead || dt <= 0f)
-            return;
-
-        if (MaxHealth >= _wallGrowthTargetMaxHealth)
-        {
-            _wallGrowthActive = false;
-            return;
-        }
-
-        _wallGrowthAccumulator += dt * _wallGrowthPerSecond;
-        int growthAmount = (int)_wallGrowthAccumulator;
-        if (growthAmount <= 0)
-            return;
-
-        _wallGrowthAccumulator -= growthAmount;
-
-        int previousMax = MaxHealth;
-        int nextMax = Math.Min(_wallGrowthTargetMaxHealth, previousMax + growthAmount);
-        int appliedGrowth = nextMax - previousMax;
-        if (appliedGrowth <= 0)
-        {
-            _wallGrowthActive = false;
-            return;
-        }
-
-        MaxHealth = nextMax;
-
-        // Only mirror growth into current HP when the segment was full before this growth step.
-        if (_wallGrowthSyncCurrentWhenUndamaged && CurrentHealth == previousMax)
-            CurrentHealth = Math.Min(MaxHealth, CurrentHealth + appliedGrowth);
-
-        if (MaxHealth >= _wallGrowthTargetMaxHealth)
-            _wallGrowthActive = false;
-    }
+    /// <summary>
+    /// Called at the start of each Update tick before ability/movement/firing logic.
+    /// Overridden by WallSegmentTower to run wall growth each frame.
+    /// </summary>
+    protected virtual void OnUpdateStart(float dt) { }
 
     /// <summary>
     /// Normal targeting and firing logic. Only runs when CurrentState == Active.
     /// Skipped entirely for towers with no range and no wall targeting delegate,
     /// to avoid passing float.MaxValue FireRate into CountdownTimer (TimeSpan overflow).
-    /// Wall-network targeting (ChampionWalling) uses WallNetworkTargetFinder instead of circular range,
+    /// Wall-network targeting (WallingTower) uses WallNetworkTargetFinder instead of circular range,
     /// and deals instant spike damage rather than spawning a projectile.
     /// </summary>
     private void UpdateActive(GameTime gameTime, List<IEnemy> enemies)
@@ -417,7 +315,7 @@ public class Tower : ITower
         if (target != null)
             LastTarget = target;
 
-        if (target != null && canFire && !IsLaserActive)
+        if (target != null && canFire && !IsFiringSuppressed)
         {
             _fireCooldown = new CountdownTimer(FireRate);
             _fireCooldown.Start();

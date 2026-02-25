@@ -105,7 +105,7 @@ public partial class TowerManager
         if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
             return -1;
 
-        var tower = new Tower(type, gridPos);
+        var tower = Tower.Create(type, gridPos);
         // Wire AoE callback once at placement (not per-frame)
         tower.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
         _towers.Add(tower);
@@ -177,7 +177,7 @@ public partial class TowerManager
         if (tower.CurrentState == TowerState.Moving)
             ClearReservationFor(tower);
 
-        if (tower.IsLaserActive)
+        if (tower is CannonChampionTower cannon && cannon.IsLaserActive)
         {
             tower.CancelAbility();
             OnLaserCancelled?.Invoke();
@@ -234,7 +234,7 @@ public partial class TowerManager
         // Wire completion callback before starting (handles single-frame edge case)
         tower.OnMovementComplete = () => HandleMovementComplete(tower, destination);
 
-        if (tower.IsLaserActive)
+        if (tower is CannonChampionTower movingCannon && movingCannon.IsLaserActive)
         {
             tower.CancelAbility();
             OnLaserCancelled?.Invoke();
@@ -268,14 +268,20 @@ public partial class TowerManager
         if (championType.IsWallingChampion())
         {
             // Buff champion if alive
-            var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+            var wallingChampion = _towers
+                .OfType<WallingTower>()
+                .FirstOrDefault(t => t.TowerType == TowerType.ChampionWalling);
             if (wallingChampion != null)
                 TowerData
                     .GetStats(TowerType.ChampionWalling)
                     .AbilityEffect?.Invoke(wallingChampion);
 
             // Walling generics always receive frenzy when the ability fires, even if champion is dead.
-            foreach (var tower in _towers.Where(t => t.TowerType.IsWallingGeneric()))
+            foreach (
+                var tower in _towers
+                    .OfType<WallingTower>()
+                    .Where(t => t.TowerType == TowerType.Walling)
+            )
                 TowerData.GetStats(TowerType.Walling).AbilityEffect?.Invoke(tower);
             return;
         }
@@ -325,31 +331,19 @@ public partial class TowerManager
         // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
         // Each walling tower gets a single-root BFS from its own position so disconnected towers
         // don't share attack zones. Targeting and frenzy use each tower's own set.
-        var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
         _wallConnectedSets = _towers
-            .Where(t => t.TowerType == TowerType.ChampionWalling || t.TowerType.IsWallingGeneric())
-            .ToDictionary(t => t, t => BuildConnectedWallSet([t.GridPosition]));
+            .OfType<WallingTower>()
+            .ToDictionary(t => (Tower)t, t => BuildConnectedWallSet([t.GridPosition]));
 
-        if (wallingChampion != null)
-        {
-            var championPos = wallingChampion.WorldPosition;
-            var championSet = _wallConnectedSets[wallingChampion];
-            // During frenzy the multi-target loop handles all attacks; suppress single-target to avoid double-hits.
-            wallingChampion.WallNetworkTargetFinder = wallingChampion.IsAbilityBuffActive
-                ? null
-                : e => FindWallNetworkTarget(e, championPos, championSet);
-            wallingChampion.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
-        }
-
-        // Wire wall-network targeting on generic Walling towers using each tower's own connected set.
+        // Wire wall-network targeting on each WallingTower using its own connected set.
         // Suppress single-target targeting during frenzy to avoid double-hits.
-        foreach (var tower in _towers.Where(t => t.TowerType.IsWallingGeneric()))
+        foreach (var wt in _towers.OfType<WallingTower>())
         {
-            var towerSet = _wallConnectedSets[tower];
-            tower.WallNetworkTargetFinder = tower.IsAbilityBuffActive
+            var towerSet = _wallConnectedSets[wt];
+            wt.WallNetworkTargetFinder = wt.IsAbilityBuffActive
                 ? null
-                : e => FindWallNetworkTarget(e, tower.WorldPosition, towerSet);
-            tower.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
+                : e => FindWallNetworkTarget(e, wt.WorldPosition, towerSet);
+            wt.OnWallAttack = pos => OnWallAttack?.Invoke(pos);
         }
 
         foreach (var tower in _towers)
@@ -357,19 +351,9 @@ public partial class TowerManager
 
         UpdateWallGrowthChains();
 
-        if (wallingChampion is { IsAbilityBuffActive: true })
-            UpdateWallFrenzy(
-                gameTime,
-                enemies,
-                wallingChampion,
-                _wallConnectedSets[wallingChampion]
-            );
-
-        // Each Walling generic runs its own independent frenzy loop when active.
-        foreach (
-            var tower in _towers.Where(t => t.TowerType.IsWallingGeneric() && t.IsAbilityBuffActive)
-        )
-            UpdateWallFrenzy(gameTime, enemies, tower, _wallConnectedSets[tower]);
+        // Run frenzy multi-target attack for all active walling towers (champion and generics).
+        foreach (var wt in _towers.OfType<WallingTower>().Where(t => t.IsAbilityBuffActive))
+            UpdateWallFrenzy(gameTime, enemies, wt, _wallConnectedSets[wt]);
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
         UpdateWallDecay(gameTime);
@@ -400,10 +384,7 @@ public partial class TowerManager
         // Draw range indicator for hovered tower
         if (hoveredTower != null)
         {
-            if (
-                hoveredTower.TowerType == TowerType.ChampionWalling
-                || hoveredTower.TowerType.IsWallingGeneric()
-            )
+            if (hoveredTower is WallingTower)
             {
                 if (_wallConnectedSets.TryGetValue(hoveredTower, out var wallSet))
                     DrawWallRangeIndicatorForSet(spriteBatch, wallSet);
