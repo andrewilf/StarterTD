@@ -111,7 +111,7 @@ public partial class TowerManager
         _towers.Add(tower);
         tile.OccupyingTower = tower;
 
-        if (type.IsChampion())
+        if (isChampion)
             _championManager.OnChampionPlaced(type);
 
         OnTowerPlaced?.Invoke(gridPos);
@@ -331,13 +331,15 @@ public partial class TowerManager
         // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
         // Each walling tower gets a single-root BFS from its own position so disconnected towers
         // don't share attack zones. Targeting and frenzy use each tower's own set.
-        _wallConnectedSets = _towers
-            .OfType<WallingTower>()
-            .ToDictionary(t => (Tower)t, t => BuildConnectedWallSet([t.GridPosition]));
+        var wallingTowers = _towers.OfType<WallingTower>().ToList();
+        _wallConnectedSets = wallingTowers.ToDictionary(
+            t => (Tower)t,
+            t => BuildConnectedWallSet([t.GridPosition])
+        );
 
         // Wire wall-network targeting on each WallingTower using its own connected set.
         // Suppress single-target targeting during frenzy to avoid double-hits.
-        foreach (var wt in _towers.OfType<WallingTower>())
+        foreach (var wt in wallingTowers)
         {
             var towerSet = _wallConnectedSets[wt];
             wt.WallNetworkTargetFinder = wt.IsAbilityBuffActive
@@ -352,7 +354,7 @@ public partial class TowerManager
         UpdateWallGrowthChains();
 
         // Run frenzy multi-target attack for all active walling towers (champion and generics).
-        foreach (var wt in _towers.OfType<WallingTower>().Where(t => t.IsAbilityBuffActive))
+        foreach (var wt in wallingTowers.Where(t => t.IsAbilityBuffActive))
             UpdateWallFrenzy(gameTime, enemies, wt, _wallConnectedSets[wt]);
 
         // Decay disconnected wall segments before the dead-tower sweep so they can die this frame
