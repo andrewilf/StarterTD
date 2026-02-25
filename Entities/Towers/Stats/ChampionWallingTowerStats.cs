@@ -2,7 +2,7 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-public static class ChampionWallingTower
+public static class ChampionWallingTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Champion Wall",
@@ -22,6 +22,6 @@ public static class ChampionWallingTower
         CooldownDuration: 2.0f,
         AbilityDuration: 5f, // Slow duration in seconds applied to enemies hit by spike attack
         AbilityCooldown: 20f,
-        AbilityEffect: tower => tower.ActivateFrenzy(10f)
+        AbilityEffect: tower => ((WallingTower)tower).ActivateFrenzy(10f)
     );
 }

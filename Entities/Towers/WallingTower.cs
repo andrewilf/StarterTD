@@ -2,23 +2,23 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-public static class WallingTower
+/// <summary>
+/// Walling tower (generic and champion variants). Places wall segments to form a network
+/// and attacks enemies adjacent to that network with spike damage.
+/// The frenzy ability hits all enemies in the attack zone simultaneously.
+/// </summary>
+public class WallingTower : Tower
 {
-    public static readonly TowerStats Stats = new(
-        Name: "Wall Tower",
-        Range: 0f,
-        Damage: 2f,
-        FireRate: 1.8f,
-        Cost: 50,
-        MovementCost: 300,
-        IsAOE: false,
-        AOERadius: 0f,
-        Color: Color.DarkGreen,
-        MaxHealth: 80,
-        BlockCapacity: 3,
-        DrawScale: new Vector2(1.0f, 1.0f),
-        CanWalk: false,
-        AbilityDuration: 3f,
-        AbilityEffect: tower => tower.ActivateFrenzy(10f)
-    );
+    public WallingTower(TowerType type, Point gridPosition)
+        : base(type, gridPosition) { }
+
+    /// <summary>
+    /// Activates the wall frenzy mode without modifying Damage or FireRate.
+    /// The frenzy attack loop in TowerManager handles multi-target spike hits.
+    /// </summary>
+    public void ActivateFrenzy(float duration)
+    {
+        IsAbilityBuffActive = true;
+        _abilityTimer = duration;
+    }
 }

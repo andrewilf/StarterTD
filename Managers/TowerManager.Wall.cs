@@ -19,7 +19,7 @@ public partial class TowerManager
         public Tower Anchor { get; } = anchor;
         public List<Point> PendingPath { get; } = pendingPath;
         public int NextIndex { get; set; }
-        public Tower? ActiveSegment { get; set; }
+        public WallSegmentTower? ActiveSegment { get; set; }
         public bool Cancelled { get; set; }
     }
 
@@ -105,9 +105,9 @@ public partial class TowerManager
         return false;
     }
 
-    private Tower PlaceWallSegment(Point gridPos)
+    private WallSegmentTower PlaceWallSegment(Point gridPos)
     {
-        var wall = new Tower(TowerType.WallSegment, gridPos);
+        var wall = new WallSegmentTower(gridPos);
         wall.InitializeWallGrowth(
             startMaxHealth: WallGrowthStartMaxHealth,
             targetMaxHealth: wall.MaxHealth,
@@ -325,7 +325,7 @@ public partial class TowerManager
                     continue;
 
                 var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
-                if (occupant != null && occupant.TowerType.IsWallSegment())
+                if (occupant is WallSegmentTower)
                 {
                     connected.Add(neighbor);
                     queue.Enqueue(neighbor);
@@ -356,21 +356,15 @@ public partial class TowerManager
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
 
-        foreach (var tower in _towers)
+        foreach (var wall in _towers.OfType<WallSegmentTower>())
         {
-            if (!tower.TowerType.IsWallSegment())
-                continue;
-
-            if (connectedSet.Contains(tower.GridPosition))
+            if (connectedSet.Contains(wall.GridPosition))
                 continue;
 
             int exposedSides = 0;
             foreach (var dir in dirs)
             {
-                var neighbor = new Point(
-                    tower.GridPosition.X + dir.X,
-                    tower.GridPosition.Y + dir.Y
-                );
+                var neighbor = new Point(wall.GridPosition.X + dir.X, wall.GridPosition.Y + dir.Y);
 
                 if (
                     neighbor.X < 0
@@ -384,14 +378,14 @@ public partial class TowerManager
                 }
 
                 var occupant = _map.Tiles[neighbor.X, neighbor.Y].OccupyingTower;
-                bool sheltered = occupant != null && occupant.TowerType.IsWallSegment();
+                bool sheltered = occupant is WallSegmentTower;
 
                 if (!sheltered)
                     exposedSides++;
             }
 
             if (exposedSides > 0)
-                tower.ApplyDecayDamage(dt * exposedSides);
+                wall.ApplyDecayDamage(dt * exposedSides);
         }
     }
 
@@ -458,14 +452,14 @@ public partial class TowerManager
     }
 
     /// <summary>
-    /// When the walling champion's frenzy is active, hits every enemy in the attack zone
-    /// at the champion's normal fire rate. Each hit deals spike damage and applies slow,
+    /// When a walling tower's frenzy is active, hits every enemy in the attack zone
+    /// at the tower's normal fire rate. Each hit deals spike damage and applies slow,
     /// same as the regular single-target attack — but targeting all enemies simultaneously.
     /// </summary>
     internal void UpdateWallFrenzy(
         GameTime gameTime,
         List<IEnemy> enemies,
-        Tower tower,
+        WallingTower tower,
         HashSet<Point> wallSet
     )
     {

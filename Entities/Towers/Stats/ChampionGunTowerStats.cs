@@ -2,7 +2,7 @@ using Microsoft.Xna.Framework;
 
 namespace StarterTD.Entities;
 
-public static class ChampionGunTower
+public static class ChampionGunTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Champion Gun",
