@@ -63,6 +63,19 @@ public partial class TowerManager
     /// </summary>
     public Action<Vector2>? OnWallAttack;
 
+    /// <summary>
+    /// Callback fired when the cannon champion activates its laser ability.
+    /// Passes the initial target world position (last-targeted enemy, or champion position as fallback).
+    /// GameplayScene uses this to spawn LaserEffect.
+    /// </summary>
+    public Action<Vector2>? OnLaserActivated;
+
+    /// <summary>
+    /// Callback fired when the cannon champion's laser is interrupted (tower moved or destroyed).
+    /// GameplayScene uses this to cancel the active LaserEffect immediately.
+    /// </summary>
+    public Action? OnLaserCancelled;
+
     public TowerManager(Map map, ChampionManager championManager)
     {
         _map = map;
@@ -164,6 +177,12 @@ public partial class TowerManager
         if (tower.CurrentState == TowerState.Moving)
             ClearReservationFor(tower);
 
+        if (tower.IsLaserActive)
+        {
+            tower.CancelAbility();
+            OnLaserCancelled?.Invoke();
+        }
+
         _towers.Remove(tower);
 
         if (tower.TowerType.IsChampion())
@@ -215,6 +234,12 @@ public partial class TowerManager
         // Wire completion callback before starting (handles single-frame edge case)
         tower.OnMovementComplete = () => HandleMovementComplete(tower, destination);
 
+        if (tower.IsLaserActive)
+        {
+            tower.CancelAbility();
+            OnLaserCancelled?.Invoke();
+        }
+
         // Reroute enemies through the now-vacated tile
         OnTowerPlaced?.Invoke(tower.GridPosition);
 
@@ -238,14 +263,16 @@ public partial class TowerManager
     /// Dispatches the champion super ability to all relevant towers.
     /// Each tower type's AbilityEffect delegate (defined in its own stats file) handles what the buff does.
     /// </summary>
-    public void TriggerChampionAbility(TowerType championType)
+    public void TriggerChampionAbility(TowerType championType, List<IEnemy> enemies)
     {
         if (championType.IsWallingChampion())
         {
             // Buff champion if alive
-            var champion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
-            if (champion != null)
-                TowerData.GetStats(TowerType.ChampionWalling).AbilityEffect?.Invoke(champion);
+            var wallingChampion = _towers.Find(t => t.TowerType == TowerType.ChampionWalling);
+            if (wallingChampion != null)
+                TowerData
+                    .GetStats(TowerType.ChampionWalling)
+                    .AbilityEffect?.Invoke(wallingChampion);
 
             // Walling generics always receive frenzy when the ability fires, even if champion is dead.
             foreach (var tower in _towers.Where(t => t.TowerType.IsWallingGeneric()))
@@ -255,10 +282,39 @@ public partial class TowerManager
 
         var genericType = championType.GetGenericVariant();
 
+        Tower? champion = null;
         foreach (var tower in _towers)
         {
             if (tower.TowerType == championType || tower.TowerType == genericType)
+            {
                 TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
+                if (tower.TowerType == championType)
+                    champion = tower;
+            }
+        }
+
+        // Notify scene to spawn the laser effect.
+        // Priority: last living target → closest living enemy → 1 tile left of the tower
+        if (championType == TowerType.ChampionCannon && champion != null)
+        {
+            Vector2 initialTarget;
+            if (champion.LastTarget != null && !champion.LastTarget.IsDead)
+            {
+                initialTarget = champion.LastTarget.Position;
+            }
+            else
+            {
+                var closest = enemies
+                    .Where(e => !e.IsDead && !e.ReachedEnd)
+                    .OrderBy(e => Vector2.DistanceSquared(e.Position, champion.WorldPosition))
+                    .FirstOrDefault();
+
+                initialTarget =
+                    closest?.Position
+                    ?? champion.WorldPosition - new Vector2(GameSettings.TileSize, 0);
+            }
+
+            OnLaserActivated?.Invoke(initialTarget);
         }
     }
 

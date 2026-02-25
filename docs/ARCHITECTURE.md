@@ -36,12 +36,15 @@
 - `TowerManager.TryPlaceWallPath(path, tower)`: validates contiguous prefix, reserves pending path, and starts deferred sequential spawning. `GetWallPathValidPrefixLength(path, tower)` simulates contiguous prefix validity without mutating map state (preview/corner choice only)
 - `TowerStats.AbilityEffect: Action<Tower>?`: called by `TriggerChampionAbility()` on champion + generics. ChampionWalling always buffs all Walling generics even if champion is dead
 - `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals via `_hasStoredAbilityStats` guard, sets `IsAbilityBuffActive = true`, runs for `AbilityDuration`. Re-trigger resets timer, no stacking. `DeactivateAbilityBuff()` only restores if guard set. Gold aura while active
+- `Tower.ActivateLaser()`: sets `IsAbilityBuffActive = true` + `IsLaserActive = true`; suppresses projectile firing. `Tower.CancelAbility()`: public wrapper that calls `DeactivateAbilityBuff()` if active
+- Laser ability chain: `TriggerChampionAbility(type, enemies)` resolves initial target (last living target → closest enemy → 1 tile left of tower) → fires `TowerManager.OnLaserActivated` → `GameplayScene` spawns `LaserEffect`. Interruption: `MoveTower`/`RemoveTower` check `IsLaserActive` → `CancelAbility()` + `TowerManager.OnLaserCancelled` → `GameplayScene` nulls `_laserEffect`
+- `LaserEffect` (`Entities/LaserEffect.cs`): self-contained wind-up + beam effect. `_currentContact` tracks live damage point; beam renders from `BeamOrigin` (top-right off-screen) to `_currentContact`. `IsSelected` enables right-click redirect. `Cancel()` sets `IsActive = false`
 - `Tower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(tower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`; `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
 - `TowerStats.AbilityCooldown`: per-champion CD; generics default 0
 - Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
 - `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: grid-snapped
 - `TowerManager.MoveTower(tower, dest)`: ghost origin → `destTile.ReservedByTower = tower` → reroute → `StartMoving()`. `HandleMovementComplete`: clear reservation → re-occupy → reroute. `RemoveTower()` calls `ClearReservationFor()` on mid-move death
-- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()`. Costs: Path=1, HighGround=2, occupied=10, Rock=impassable. Ignores enemies
+- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()`. Costs defined per tile type; Rock=impassable. Ignores enemies
 
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)

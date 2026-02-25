@@ -32,11 +32,8 @@ public partial class GameplayScene
         {
             _uiPanel.ClearSelection();
             _selectedTowerRange = 0f;
-            _towerManager.SelectedTower = null;
-            _selectedEnemy = null;
             _towerMovePreviewPath = null;
-            _wallPlacementMode = false;
-            CancelWallDrag();
+            DeselectAll();
         }
 
         if (_inputManager.IsLeftClick())
@@ -73,14 +70,9 @@ public partial class GameplayScene
         {
             _uiPanel.HandleClick(mousePos, _money);
 
-            // Selecting a tower to place clears the inspected tower, enemy, and wall mode
+            // Selecting a tower to place clears any existing selection
             if (_uiPanel.SelectedTowerType.HasValue)
-            {
-                _towerManager.SelectedTower = null;
-                _selectedEnemy = null;
-                _wallPlacementMode = false;
-                CancelWallDrag();
-            }
+                DeselectAll();
 
             // Cache selected tower range to avoid per-frame GetStats allocation in Draw
             _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
@@ -99,10 +91,36 @@ public partial class GameplayScene
         }
     }
 
+    /// <summary>
+    /// Clears all selections (laser, tower, enemy) and resets associated modes.
+    /// Call before setting any new selection to enforce single-selection invariant.
+    /// </summary>
+    private void DeselectAll()
+    {
+        _laserSelected = false;
+        if (_laserEffect != null)
+            _laserEffect.IsSelected = false;
+
+        _towerManager.SelectedTower = null;
+        _selectedEnemy = null;
+        _wallPlacementMode = false;
+        CancelWallDrag();
+    }
+
     private void HandleGridLeftClick(Point mousePos)
     {
+        // Left-clicking the active laser beam selects it so right-click can redirect it.
+        if (_laserEffect != null && _laserEffect.ContainsPoint(mousePos.ToVector2()))
+        {
+            DeselectAll();
+            _laserSelected = true;
+            _laserEffect.IsSelected = true;
+            return;
+        }
+
         Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
 
+        // Preserve wall drag if the selected walling tower is still selected
         var wallingAnchor = _towerManager.SelectedTower;
         if (_wallPlacementMode && wallingAnchor != null)
         {
@@ -144,22 +162,16 @@ public partial class GameplayScene
             var enemy = GetEnemyAt(mousePos.ToVector2());
             if (enemy != null)
             {
+                DeselectAll();
                 _selectedEnemy = enemy;
-                _towerManager.SelectedTower = null;
-                _wallPlacementMode = false;
-                CancelWallDrag();
             }
             else
             {
-                // Select existing tower; clear wall mode if selection changes
                 var tower = _towerManager.GetTowerAt(gridPos);
+                // Selecting a different tower resets wall mode
                 if (tower != _towerManager.SelectedTower)
-                {
-                    _wallPlacementMode = false;
-                    CancelWallDrag();
-                }
+                    DeselectAll();
                 _towerManager.SelectedTower = tower;
-                _selectedEnemy = null;
             }
         }
     }
@@ -170,6 +182,13 @@ public partial class GameplayScene
 
         if (_uiPanel.ContainsPoint(mousePos))
             return;
+
+        // When the laser is selected, right-click redirects the beam instead of selling/moving
+        if (_laserSelected && _laserEffect != null)
+        {
+            _laserEffect.SetTarget(mousePos.ToVector2());
+            return;
+        }
 
         Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
         var tower = _towerManager.GetTowerAt(gridPos);
