@@ -89,6 +89,12 @@ public class Tower : ITower
     /// <summary>True while the super ability buff is active on this tower.</summary>
     public bool IsAbilityBuffActive { get; private set; }
 
+    /// <summary>True while the particle cannon laser ability is active. Suppresses normal projectile firing.</summary>
+    public bool IsLaserActive { get; private set; }
+
+    /// <summary>The last enemy this tower successfully targeted. Used by laser activation to aim the initial beam.</summary>
+    public IEnemy? LastTarget { get; private set; }
+
     /// <summary>List of active projectiles fired by this tower.</summary>
     public List<Projectile> Projectiles { get; } = new();
 
@@ -285,6 +291,24 @@ public class Tower : ITower
         _abilityTimer = duration;
     }
 
+    /// <summary>
+    /// Activates the particle cannon laser. Suppresses normal firing and fires OnLaserActivated
+    /// so GameplayScene can spawn the LaserEffect at the last-targeted enemy's position.
+    /// Duration covers wind-up (1s) + beam (20s) = 21s total.
+    /// </summary>
+    public void ActivateLaser()
+    {
+        IsAbilityBuffActive = true;
+        IsLaserActive = true;
+        _abilityTimer = _abilityDuration;
+    }
+
+    public void CancelAbility()
+    {
+        if (IsAbilityBuffActive)
+            DeactivateAbilityBuff();
+    }
+
     private void DeactivateAbilityBuff()
     {
         if (_hasStoredAbilityStats)
@@ -295,6 +319,7 @@ public class Tower : ITower
         }
 
         IsAbilityBuffActive = false;
+        IsLaserActive = false;
         _abilityTimer = 0f;
     }
 
@@ -389,7 +414,10 @@ public class Tower : ITower
 
         bool canFire = _fireCooldown == null || _fireCooldown.State.HasFlag(TimerState.Completed);
 
-        if (target != null && canFire)
+        if (target != null)
+            LastTarget = target;
+
+        if (target != null && canFire && !IsLaserActive)
         {
             _fireCooldown = new CountdownTimer(FireRate);
             _fireCooldown.Start();

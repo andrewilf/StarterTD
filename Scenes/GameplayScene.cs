@@ -27,6 +27,8 @@ public partial class GameplayScene : IScene
     private readonly List<FloatingText> _floatingTexts = new();
     private readonly List<AoEEffect> _aoeEffects = new();
     private readonly List<SpikeEffect> _spikeEffects = new();
+    private LaserEffect? _laserEffect;
+    private bool _laserSelected;
     private int _money;
     private int _lives;
     private bool _gameOver;
@@ -98,11 +100,26 @@ public partial class GameplayScene : IScene
         // Subscribe to wall spike attacks to spawn visual effects
         _towerManager.OnWallAttack = pos => _spikeEffects.Add(new SpikeEffect(pos));
 
+        // Subscribe to cannon champion laser activation to spawn the laser effect
+        _towerManager.OnLaserActivated = pos =>
+        {
+            _laserEffect = new LaserEffect(pos);
+            _laserSelected = false;
+        };
+
+        // Cancel the laser immediately if the champion tower moves or is destroyed
+        _towerManager.OnLaserCancelled = () =>
+        {
+            _laserEffect?.Cancel();
+            _laserEffect = null;
+            _laserSelected = false;
+        };
+
         // Champion super ability: start cooldown and apply buff to relevant towers
         _uiPanel.OnAbilityTriggered = championType =>
         {
             _championManager.StartAbilityCooldown(championType);
-            _towerManager.TriggerChampionAbility(championType);
+            _towerManager.TriggerChampionAbility(championType, _enemies);
         };
 
         // Try to load font if available
@@ -182,6 +199,17 @@ public partial class GameplayScene : IScene
         _towerMovePreviewPath = _wallPlacementMode
             ? null
             : _towerManager.GetPreviewPath(_mouseGrid);
+
+        // --- Update laser effect ---
+        if (_laserEffect != null)
+        {
+            _laserEffect.Update(gameTime, _enemies);
+            if (!_laserEffect.IsActive)
+            {
+                _laserEffect = null;
+                _laserSelected = false;
+            }
+        }
 
         // --- Update AoE effects ---
         for (int i = _aoeEffects.Count - 1; i >= 0; i--)

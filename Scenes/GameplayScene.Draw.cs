@@ -36,6 +36,8 @@ public partial class GameplayScene
         foreach (var spike in _spikeEffects)
             spike.Draw(spriteBatch);
 
+        _laserEffect?.Draw(spriteBatch);
+
         foreach (var floatingText in _floatingTexts)
             floatingText.Draw(spriteBatch, _uiPanel.GetFont());
 
@@ -229,7 +231,7 @@ public partial class GameplayScene
                 w,
                 h
             );
-            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
+            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Yellow, borderThickness);
 
             // World-space wall placement button: shown when any walling tower is selected.
             // Active (wall mode on) = dark green filled; inactive = dark outline only.
@@ -266,7 +268,7 @@ public partial class GameplayScene
                 size,
                 size
             );
-            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Red, borderThickness);
+            TextureManager.DrawRectOutline(spriteBatch, rect, Color.Yellow, borderThickness);
         }
     }
 
