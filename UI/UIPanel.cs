@@ -52,6 +52,8 @@ public partial class UIPanel
     private readonly Rectangle _wallAbilityButton;
 
     private readonly Rectangle _startWaveButton;
+    private readonly Rectangle _timeSlowButton;
+    private readonly Rectangle _timeSlowBarBg;
 
     /// <summary>
     /// Fired when the player clicks a ready ability button.
@@ -65,6 +67,17 @@ public partial class UIPanel
 
     /// <summary>Whether the "Start Wave" button was clicked this frame.</summary>
     public bool StartWaveClicked { get; private set; }
+
+    /// <summary>Whether time-slow mode is currently active (persistent toggle).</summary>
+    public bool IsTimeSlowed { get; private set; }
+
+    /// <summary>
+    /// Set by GameplayScene each frame. False when bank &lt; minimum — blocks activation.
+    /// </summary>
+    public bool CanActivateTimeSlow { get; set; }
+
+    /// <summary>Called by GameplayScene when the bank hits 0 to force time-slow off.</summary>
+    public void ForceDeactivateTimeSlow() => IsTimeSlowed = false;
 
     /// <summary>Whether the "Spawn Enemy" button was clicked this frame.</summary>
     public bool SpawnEnemyClicked { get; private set; }
@@ -111,8 +124,8 @@ public partial class UIPanel
             abilityButtonHeight
         );
 
-        // Debug buttons positioned below instructions (above Start Wave button)
-        int debugStartY = _height - 200;
+        // Debug buttons pushed up to leave room for time-slow button above Start Wave
+        int debugStartY = _height - 270;
         _placeHighGroundButton = new Rectangle(_x + 10, debugStartY, buttonWidth, buttonHeight);
         _spawnEnemyButton = new Rectangle(
             _x + 10,
@@ -121,6 +134,13 @@ public partial class UIPanel
             buttonHeight
         );
 
+        _timeSlowButton = new Rectangle(_x + 10, _height - 140, buttonWidth, buttonHeight);
+        _timeSlowBarBg = new Rectangle(
+            _timeSlowButton.X,
+            _timeSlowButton.Bottom + 4,
+            _timeSlowButton.Width,
+            6
+        );
         _startWaveButton = new Rectangle(_x + 10, _height - 70, buttonWidth, buttonHeight);
     }
 
@@ -196,6 +216,15 @@ public partial class UIPanel
         {
             if (_championManager?.IsAbilityReady(TowerType.ChampionWalling) ?? false)
                 OnAbilityTriggered?.Invoke(TowerType.ChampionWalling);
+            return true;
+        }
+
+        if (_timeSlowButton.Contains(mousePos))
+        {
+            // Block activation when bank is below the minimum threshold.
+            if (!IsTimeSlowed && !CanActivateTimeSlow)
+                return true;
+            IsTimeSlowed = !IsTimeSlowed;
             return true;
         }
 

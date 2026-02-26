@@ -19,6 +19,7 @@ public partial class UIPanel
         int wave,
         int totalWaves,
         bool waveInProgress,
+        float timeSlowBankFraction,
         Tower? selectedTower = null,
         IEnemy? selectedEnemy = null
     )
@@ -74,32 +75,6 @@ public partial class UIPanel
             );
             DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
 
-            // Instructions
-            spriteBatch.DrawString(
-                _font,
-                "L-Click: Place",
-                new Vector2(_x + 10, _wallAbilityButton.Bottom + 15),
-                Color.LightGray
-            );
-            spriteBatch.DrawString(
-                _font,
-                "R-Click: Sell",
-                new Vector2(_x + 10, _wallAbilityButton.Bottom + 35),
-                Color.LightGray
-            );
-            spriteBatch.DrawString(
-                _font,
-                "P: Pause",
-                new Vector2(_x + 10, _wallAbilityButton.Bottom + 55),
-                Color.LightGray
-            );
-            spriteBatch.DrawString(
-                _font,
-                "ESC: Deselect",
-                new Vector2(_x + 10, _wallAbilityButton.Bottom + 75),
-                Color.LightGray
-            );
-
             // Debug section
             spriteBatch.DrawString(
                 _font,
@@ -119,6 +94,25 @@ public partial class UIPanel
                 "Spawn Enemy",
                 UISelectionMode.SpawnEnemy
             );
+
+            // Time-slow toggle button
+            Color timeSlowBg = IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80);
+            Color timeSlowOutline = IsTimeSlowed ? Color.DeepSkyBlue : Color.SteelBlue;
+            string timeSlowText = IsTimeSlowed ? ">> 0.5x Speed <<" : "Time Slow";
+            TextureManager.DrawRect(spriteBatch, _timeSlowButton, timeSlowBg);
+            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, timeSlowOutline, 2);
+            Vector2 tsSize = _font.MeasureString(timeSlowText);
+            spriteBatch.DrawString(
+                _font,
+                timeSlowText,
+                new Vector2(
+                    _timeSlowButton.X + (_timeSlowButton.Width - tsSize.X) / 2,
+                    _timeSlowButton.Y + (_timeSlowButton.Height - tsSize.Y) / 2
+                ),
+                IsTimeSlowed ? Color.DeepSkyBlue : Color.LightSteelBlue
+            );
+
+            DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
 
             // Start Wave button
             Color waveBtnColor = waveInProgress ? Color.Gray : Color.Green;
@@ -163,6 +157,14 @@ public partial class UIPanel
 
             TextureManager.DrawRect(
                 spriteBatch,
+                _timeSlowButton,
+                IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80)
+            );
+            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, Color.SteelBlue, 2);
+            DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
+
+            TextureManager.DrawRect(
+                spriteBatch,
                 _startWaveButton,
                 waveInProgress ? Color.Gray : Color.Green
             );
@@ -173,6 +175,31 @@ public partial class UIPanel
             DrawTowerInfoPanel(spriteBatch, selectedTower);
         else if (selectedEnemy != null)
             DrawEnemyInfoPanel(spriteBatch, selectedEnemy);
+    }
+
+    private void DrawTimeSlowBar(SpriteBatch spriteBatch, float fraction)
+    {
+        // Dark background track
+        TextureManager.DrawRect(spriteBatch, _timeSlowBarBg, new Color(15, 15, 25));
+
+        // Colour signals state: active = DeepSkyBlue, blocked = OrangeRed, recharging = SteelBlue
+        Color fillColor;
+        if (IsTimeSlowed)
+            fillColor = Color.DeepSkyBlue;
+        else if (!CanActivateTimeSlow)
+            fillColor = Color.OrangeRed;
+        else
+            fillColor = Color.SteelBlue;
+
+        int fillWidth = (int)(_timeSlowBarBg.Width * fraction);
+        if (fillWidth > 0)
+        {
+            TextureManager.DrawRect(
+                spriteBatch,
+                new Rectangle(_timeSlowBarBg.X, _timeSlowBarBg.Y, fillWidth, _timeSlowBarBg.Height),
+                fillColor
+            );
+        }
     }
 
     private void DrawButtonNoFont(SpriteBatch spriteBatch, Rectangle rect, TowerType type)

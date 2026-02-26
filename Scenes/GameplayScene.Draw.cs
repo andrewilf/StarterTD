@@ -49,6 +49,7 @@ public partial class GameplayScene
             _waveManager.CurrentWave,
             _waveManager.TotalWaves,
             waveActive,
+            _timeSlowBank / TimeSlowMaxBank,
             _towerManager.SelectedTower,
             _selectedEnemy
         );

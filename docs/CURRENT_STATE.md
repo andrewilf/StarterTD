@@ -25,6 +25,7 @@
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others
 - Floating text, range indicators, AoE visuals, victory/defeat flow
 - Debug sidebar: Place High Ground tiles, Spawn Enemy
+- Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, wave spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank tracks real (wall-clock) time, unaffected by the slowdown itself
 
 ## Backlog
 
