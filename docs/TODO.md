@@ -7,142 +7,56 @@
 
 ---
 
-## 1. Bug Fixes
+## 1. Tower Rework & Rebalance
 
-### 1.1 Enemy Pathing — Exit Selection After Tile Destruction
-- **Priority**: P0 | **Effort**: S | **Status**: [x] **Done**
-- **What was built**: `Enemy._spawnName` stores the spawn name at construction; passed to `Map.ComputePathFromPosition()` on reroute so `ResolveExitName` always resolves the correct lane exit (e.g. `spawn_a → exit_a`), even after tower placement/removal mid-wave.
-
----
-
-## 2. Tower Rework & Rebalance
-
-### 2.1 Rename & Rebalance Towers
+### 1.1 Rename & Rebalance Towers
 - **Priority**: P1 | **Effort**: S
-- **Current State**: 4 tower types (Gun, Cannon, ChampionGun, ChampionCannon) with placeholder balance values.
+- **Current State**: 5 tower types (Gun, Cannon, Walling, ChampionGun, ChampionCannon, ChampionWalling) with placeholder balance values.
 - **Tasks**:
   - [ ] Decide on new tower names and theme (fantasy, sci-fi, etc.)
   - [ ] Rebalance stat values (damage, fire rate, range, cost, HP, block capacity)
   - [ ] Update `TowerType` enum, all `*Tower.cs` stat files, `TowerData.GetStats()`, and UI labels
   - [ ] Verify wave JSON enemy stats still make sense against new tower numbers
-- **Note**: Coordinate with wave rebalance (section 6.1) — changing tower DPS affects wave difficulty curves.
-
-### 2.2 Gun Tower — Lowest HP Targeting (Aggro Logic)
-- **Priority**: P1 | **Effort**: S | **Status**: [x] **Done**
-- **What was built**: `TargetingStrategy` enum (`Closest`, `LowestHP`, `MostGrouped`) on `TowerStats`; `Tower.SelectTarget()` dispatches to pure helper methods. Gun + ChampionGun assigned `LowestHP`.
-
-### 2.3 Cannon Tower — Most Grouped Targeting (Aggro Logic)
-- **Priority**: P1 | **Effort**: M | **Status**: [x] **Done**
-- **What was built**: `MostGrouped` counts alive enemies within `AOERadius` of each in-range candidate; picks highest count, tie-break lowest HP. Cannon + ChampionCannon assigned `MostGrouped`.
-
-### 2.4 Cannon Champion Super Ability — "Orbital Strike"
-- **Priority**: P2 | **Effort**: M
-- **Current State**: Champion abilities apply a damage/fire-rate buff to champion + generics. The cannon super is just a stat buff.
-- **New Design**: When activated, the cannon champion fires a cinematic **Orbital Strike**:
-  1. Screen darkens (semi-transparent black overlay, ~60% opacity)
-  2. Game pauses for ~3 seconds (freeze `Update()` on gameplay entities, but still draw + animate the strike effect)
-  3. Large AoE explosion centered on the cannon champion's target (or a clicked position — decide which)
-  4. Deals heavy damage to all enemies in a large radius
-  5. Screen returns to normal, gameplay resumes
-- **Tasks**:
-  - [ ] Implement a `CinematicPause` system: flag in `GameplayScene` that skips entity updates but still draws + allows effect animations
-  - [ ] Create dark overlay rendering (draw a screen-sized black rect at 60% alpha before entity layer)
-  - [ ] Design the strike visual: expanding circle, screen shake, particle sparks (or keep simple with a large AoE ring + flash)
-  - [ ] Replace the cannon champion's `AbilityEffect` delegate with the new strike logic
-  - [ ] Balance: damage amount, radius, cooldown — should feel powerful but not trivialize waves
-- **Risk**: Pausing gameplay mid-wave is a significant UX change. Ensure it feels *cinematic* not *broken*. Consider a brief wind-up animation before the pause so it doesn't feel like a freeze.
+- **Note**: Coordinate with cooldown system (section 5.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
 
 ---
 
-## 3. Walling Tower Mechanics (New Tower Type)
+## 2. Healing Tower Mechanics (Dual-Mode Tower Type)
 
-### 3.1 Core Wall Tower Implementation
-- **Priority**: P1 | **Effort**: L
-- **Status**: [x] **Done**
-- **What was built**:
-  - `ChampionWallingTower`: free, walkable, no attack. Toggles wall-placement mode via world-space "+" button
-  - `WallSegmentTower`: free, 30 HP, movement cost 10,000 (enemies strongly avoid but can attack through)
-  - BFS-based connectivity (`BuildConnectedWallSet()`) determines which segments are in the champion's network
-  - `TowerType` enum, stats files, and `TowerData` registration all in place
-
-### 3.2 Wall Attack Range (Along-Wall Targeting)
-- **Priority**: P1 | **Effort**: M
-- **Status**: [x] **Done**
-- **What was built**:
-  - Attack originates from `ChampionWallingTower`, not individual wall segments (Damage: 3, FireRate: 1.5s)
-  - Attack zone: all tiles 1 step outside the connected wall network in all 8 directions. With no walls, the 8 tiles surrounding the champion are in range.
-  - Instant spike damage (no projectile) — `SpikeEffect` visual spawns at enemy position on hit
-  - Range indicator: semi-transparent white strip drawn over all attack-zone tiles when champion is hovered
-
-### 3.2.1 Wall Attack — Slow-Aggro Priority
-- **Priority**: P2 | **Effort**: S
-- **Status**: [x] **Done**
-- **What was built**: `FindWallNetworkTarget()` uses two-pass selection — closest non-slowed enemy first, falls back to closest slowed enemy if none available.
-
-### 3.3 Wall Decay — Exposure-Based Degradation
+### 2.1 Healing Tower — Toggle Mode System
 - **Priority**: P2 | **Effort**: M
-- **Status**: [x] **Done**
-- **What was built**:
-  - Decay rate: 1 HP/sec per exposed cardinal side (max 4 HP/sec fully isolated)
-  - Map boundaries count as exposed sides
-  - **Suppressed** while champion is alive and directly adjacent to any wall in its network
-  - BFS recalculates connectivity each frame — orphaned walls from mid-wave destruction decay immediately
-- **Remaining**:
-  - [ ] Visual feedback: tint decaying walls red/orange, particle crumble effect
-
-### 3.4 Wall Tower — Slow Effect on Attack
-- **Priority**: P2 | **Effort**: M
-- **Status**: [x] **Done**
-- **What was built**:
-  - `Enemy.ApplySlow(float duration)` on `IEnemy` interface — timer-based, refreshes on re-hit
-  - 40% speed (60% reduction), 5-second duration
-  - Slowed enemies tinted blue (`Color.CornflowerBlue` blended 50%)
-  - Slow only affects movement speed, not attack rate
-
-### 3.5 Wall Tower — Prioritize Non-Slowed Enemies
-- **Priority**: P2 | **Effort**: S
-- **Status**: [x] **Done** (see 3.2.1)
-
-### 3.6 Wall Champion Ability ("Spike Frenzy")
-- **Priority**: P2 | **Effort**: S
-- **Status**: [x] **Done**
-- **What was built**:
-  - 20s cooldown, 10s duration. All enemies in the attack zone hit at normal fire rate (every 1.5s) simultaneously
-  - Single-target attack suppressed during frenzy to avoid double-hits
-  - Gold aura visual while active (reuses existing `IsAbilityBuffActive` rendering)
-  - Triggered via `_wallAbilityButton` in the UI panel (same pattern as Gun/Cannon abilities)
-
----
-
-## 4. Healing Tower Mechanics (New Tower Type)
-
-### 4.1 Core Healing Tower Implementation
-- **Priority**: P2 | **Effort**: M
-- **Concept**: A support tower that **heals nearby allied towers** instead of attacking enemies. First tower type with no offensive capability.
-- **Tasks**:
+- **Concept**: A dual-mode tower that **heals nearby allied towers in healing mode** or **attacks as a sniper tower in attack mode**. Toggle between modes via world-space UI button.
+- **Healing Mode**:
   - [ ] Create `HealTower` type (enum, stats, registration)
   - [ ] Stats: heal amount per tick, heal interval, heal range (circular), cost, HP
-  - [ ] Healing target selection: lowest HP ally tower in range (mirrors gun tower's enemy targeting philosophy)
+  - [ ] Healing target selection: lowest HP ally tower in range
   - [ ] Implement `Tower.Heal(float amount)`: clamp to MaxHealth, skip if full HP
   - [ ] Visual: green pulse/ring effect on heal tick, green floating text showing heal amount
-  - [ ] No projectile — instant heal (or optional: slow-moving green projectile for visual clarity)
-- **Design Decisions Needed**:
-  - Can healing towers heal other healing towers? (Recommend: yes, but self-heal: no)
-  - Can healing towers heal wall towers? (Recommend: yes — this creates wall + healer synergy)
-  - Champion/Generic pairing? (Recommend: yes, follow established pattern)
+  - [ ] No projectile — instant heal
+- **Attack Mode (Sniper)**:
+  - [ ] Switch to single-target high-damage sniper tower (follows gun tower targeting: lowest HP enemy)
+  - [ ] Stats differ from healing mode: damage, fire rate, range, attack projectile type
+  - [ ] Projectile type: "railgun" — piercing ammo that travels further, may pass through targets or explode on impact
+  - [ ] Visual distinction in UI: icon/label changes to indicate mode
+- **Mode Toggle**:
+  - [ ] World-space "H/S" button (or icon) to switch modes (similar to wall "+" button pattern)
+  - [ ] Persist selection until toggled again
+  - [ ] When switching modes, interrupt current action (finish attack/heal in progress, reset targeting)
+  - [ ] Cooldown-based system: placing new champions increases cooldown before next tower placement (see section 5.1 below)
 
-### 4.2 Healing Tower — Champion Variant
+### 2.2 Healing Tower — Champion Variant
 - **Priority**: P3 | **Effort**: S
 - **Tasks**:
-  - [ ] Create `ChampionHealTower` (free, walkable, larger heal range, stronger heal)
-  - [ ] Champion ability: "Mass Heal" — burst heal all allied towers on the map for a percentage of their max HP
+  - [ ] Create `ChampionHealTower` (free, walkable, starts in healing mode)
+  - [ ] **Healing Mode Ultimate**: "Healing Overdrive" — burst heal all allied towers on the map for a percentage of their max HP; sustained AoE healing aura around champion for duration
+  - [ ] **Attack Mode Ultimate**: "Railgun Overcharge" — fires a massive railgun shot that pierces through all enemies in a line; applies a slow debuff on hit
   - [ ] Register variant mappings, add UI elements
 
 ---
 
-## 5. Auto-Tiled Map Logic
+## 3. Auto-Tiled Map Logic
 
-### 5.1 Implement Auto-Tiling System
+### 3.1 Implement Auto-Tiling System
 - **Priority**: P1 | **Effort**: L
 - **Current State**: Each tile renders as a single flat sprite from `terrain.png` (3 tile types, each a solid 40x40 square). No edge blending or variation.
 - **Goal**: Tiles should automatically select the correct sprite variant based on their neighbors (e.g., a path tile next to a rock tile shows a path-edge sprite, corners connect smoothly).
@@ -153,13 +67,13 @@
     - **Tiled's native terrain system** — can export auto-tile data in `.tmx`, read via `TmxLoader`
   - [ ] Read Tiled custom properties documentation: https://doc.mapeditor.org/en/stable/manual/custom-properties/
   - [ ] Decide approach: manual bitmask in code vs. leverage Tiled's terrain brushes + export
-  - [ ] Create or source a tileset with edge/corner variants for each tile type (see section 8 for asset packs)
+  - [ ] Create or source a tileset with edge/corner variants for each tile type (see section 6 for asset packs)
   - [ ] Update `TextureManager.DrawTile()` to select sprite variant based on neighbor context
   - [ ] Handle edge cases: map borders (treat out-of-bounds as a specific type), runtime tile changes (HighGround placement)
   - [ ] Recalculate auto-tile when tiles change at runtime (e.g., debug HighGround placement)
 - **Complexity Warning**: Auto-tiling touches rendering, map loading, and runtime tile changes. Plan carefully before implementing.
 
-### 5.2 Tiled Custom Properties Integration
+### 3.2 Tiled Custom Properties Integration
 - **Priority**: P2 | **Effort**: M
 - **Reference**: https://doc.mapeditor.org/en/stable/manual/custom-properties/
 - **Goal**: Use Tiled's custom properties to embed game-specific data directly in `.tmx` files, reducing hardcoded values.
@@ -173,9 +87,29 @@
 
 ---
 
-## 6. Wave & Gameplay Flow
+## 4. Gameplay Flow & Tower Placement System
 
-### 6.1 Auto-Start Waves After First Manual Start
+### 4.1 Replace Money System with Cooldown-Based Placement
+- **Priority**: P1 | **Effort**: L
+- **Current State**: Towers cost gold; player earns gold from enemy kills and wave completion.
+- **New System**: Remove all gold mechanics. Tower placement operates on a **cooldown timer**:
+  - [ ] Remove `GameplayScene._money`, `_moneyDisplay`, all gold earning logic
+  - [ ] Remove cost values from all `TowerStats` — towers are now **free to place**
+  - [ ] Add global `TowerPlacementCooldown` timer to `GameplayScene` (base duration, e.g., 15 seconds)
+  - [ ] Cooldown **increases** each time a champion is placed:
+    - Placing a champion adds a fixed duration to the current cooldown (e.g., +10 seconds per champion)
+    - Generics increase cooldown less or not at all (configurable)
+  - [ ] UI: Show cooldown timer when a tower is being placed (e.g., "Cooldown: 8.2s" or a progress bar)
+  - [ ] Tower placement is **blocked** until cooldown expires
+  - [ ] After cooldown expires, next tower placement **resets the timer** to base value and enters cooldown again immediately
+- **Design Rationale**: Creates pacing mechanics where placing towers strategically (fewer champions = faster placement) becomes the core decision-making loop instead of resource scarcity.
+- **Tasks**:
+  - [ ] Implement `TowerPlacementCooldown` state machine in `GameplayScene`
+  - [ ] Update tower placement UI to show cooldown status
+  - [ ] Remove all gold-related code paths
+  - [ ] Balance cooldown durations (base, per-champion increment)
+
+### 4.2 Auto-Start Waves After First Manual Start
 - **Priority**: P1 | **Effort**: S
 - **Current State**: Each wave requires a manual "Start Wave" button click.
 - **New Behavior**:
@@ -187,9 +121,8 @@
   - [ ] Add intermission timer to `WaveManager` (starts after wave completion, triggers next wave on expiry)
   - [ ] Add early-start logic: `WaveManager.CanStartEarly()` returns true if timer > 50% elapsed
   - [ ] Update `UIPanel` to show countdown text and disable/enable "Start Wave" button accordingly
-  - [ ] Consider a "fast forward" bonus: starting early gives bonus gold (reward aggressive play)
 
-### 6.2 Enemy Crowding Mechanic
+### 4.3 Enemy Crowding Mechanic
 - **Priority**: P2 | **Effort**: L
 - **Concept**: Enemies currently overlap freely on the same tile. A crowding mechanic would make dense groups of enemies interact — slowing each other down, spreading out, or taking crowd damage.
 - **Design Options** (pick one or combine):
@@ -202,7 +135,49 @@
   - [ ] If Option C: refactor `Map` grid to support sub-tile resolution, update pathfinding costs, update rendering coordinates
   - [ ] Visual feedback: show enemies visually offset within a tile so overlapping is less jarring even without full collision
   - [ ] Balance: crowding should create interesting tactical situations (funnel enemies into AoE kill zones) without making the game feel sluggish
-- **Interacts With**: Cannon "most grouped" targeting (2.3) — crowding makes cannons more valuable. Wall towers (3.x) — walls create natural chokepoints that trigger crowding.
+- **Interacts With**: Cannon "most grouped" targeting — crowding makes cannons more valuable. Wall towers — walls create natural chokepoints that trigger crowding.
+
+### 4.4 Enemy Entrance Indicator
+- **Priority**: P2 | **Effort**: S
+- **Concept**: Visual indicator at spawn point(s) warning the player when enemies are about to emerge.
+- **Tasks**:
+  - [ ] Detect when first enemy in a wave is ~1 tile away from spawn (or use a configurable "warning distance")
+  - [ ] Display animated indicator at spawn point: pulsing red circle, arrow pointing outward, or "!" icon
+  - [ ] Play optional SFX cue (low-priority, defer to sound system 9.2)
+  - [ ] Dismiss indicator once first enemy exits spawn or wave completes
+  - [ ] Support multi-spawn maps: show indicator at all active spawn points for the current wave
+
+---
+
+## 5. Champion Tower Movement Constraints
+
+### 5.1 Champion Canon Tower — Prevent High Ground / Path Crossing
+- **Priority**: P2 | **Effort**: S
+- **Concept**: Champion cannon towers cannot cross between high ground and path tiles (and vice versa). Enforces arena-like spatial control — cannon champions must commit to one terrain type.
+- **Current State**: Champion towers freely move between all terrain types via `TowerPathfinder`.
+- **Tasks**:
+  - [ ] Extend `TowerPathfinder.ComputePath()` to accept terrain-type constraint (or check per-tower)
+  - [ ] For `ChampionCannonTower`: when computing movement path, block transitions between `TileType.HighGround` ↔ `TileType.Path`
+  - [ ] Movement already blocked if adjacent tile is unreachable; this adds a terrain-type barrier on top
+  - [ ] Detect attempted crossing: if current tile is High Ground, disallow move to Path tile and vice versa
+  - [ ] UI feedback: grayed-out or disabled movement button if target is on opposite terrain type
+- **Note**: This applies only to `ChampionCannonTower`, not `ChampionGunTower` or `ChampionWallingTower` (for now)
+
+---
+
+## 6. Wave Spawning & JSON Tooling
+
+### 6.1 Excel and Script Tooling for Spawn Wave JSON
+- **Priority**: P3 | **Effort**: M
+- **Current State**: Wave JSON files (`Content/Waves/{mapId}.json`) are hand-written with enemy spawn timings, types, and exit lanes.
+- **Goal**: Create a spreadsheet template and conversion script to reduce manual JSON editing.
+- **Tasks**:
+  - [ ] Design Excel/CSV template: columns for enemy type, count, spawn delay, exit lane, notes
+  - [ ] Create Python or C# script to parse Excel → JSON (or CSV → JSON)
+  - [ ] Script generates properly formatted wave array with correct JSON structure
+  - [ ] Validate output: check for missing fields, invalid enemy types, duplicate spawn names
+  - [ ] Document template usage (how to fill columns, how to run script)
+  - [ ] Optional: Add a UI dialog in-game to load/preview waves from a spreadsheet (low priority)
 
 ---
 
@@ -216,7 +191,7 @@
   - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
   - [ ] **Tower Comparison**: When hovering a tower button while another tower is selected, show stat diff (+/- indicators)
   - [ ] **Kill Counter**: Track and display kills per tower (motivates strategic placement)
-  - [ ] **Wave Stats Summary**: After each wave, show brief stats (damage dealt, enemies killed, gold earned, towers lost)
+  - [ ] **Wave Stats Summary**: After each wave, show brief stats (damage dealt, enemies killed, towers lost)
   - [ ] **Enemy Info Enrichment**: Show enemy progress (% of path completed), current status effects (slow, etc.)
   - [ ] **Health Bars on Enemies**: Currently in backlog — implement colored health bars above enemy sprites (green > yellow > red gradient based on % HP)
   - [ ] **Tooltip System**: Hover over UI elements for explanatory text (especially useful for new players learning tower abilities)
@@ -226,7 +201,7 @@
 - **Current State**: Listed in backlog but not implemented.
 - **Tasks**:
   - [ ] Show upcoming wave composition before wave starts (enemy types, count, spawn points)
-  - [ ] Display during intermission countdown (section 6.1)
+  - [ ] Display during intermission countdown (section 4.2)
   - [ ] Format: icon + count per enemy type, color-coded to match enemy colors
   - [ ] Optional: show total wave HP to help player gauge difficulty
 
@@ -237,7 +212,7 @@
 ### 8.1 Placeholder Tile Pack with Standard Tile Sizes
 - **Priority**: P1 | **Effort**: M
 - **Current State**: 3 solid-color 40x40 tiles in `terrain.png`. No visual variety or edge blending.
-- **Goal**: Replace with a cohesive tileset that supports auto-tiling (section 5.1) and looks like an actual game.
+- **Goal**: Replace with a cohesive tileset that supports auto-tiling (section 3.1) and looks like an actual game.
 - **Tile Size Decision**: Current game uses 40x40. Most free asset packs use **32x32** or **16x16**.
   - **Option A**: Switch to 32x32 (matches most free packs, industry standard for pixel art TD games)
   - **Option B**: Stay at 40x40 (avoids refactoring `GameSettings.TileSize` and all dependent calculations)
@@ -281,21 +256,21 @@ A recommended sequence that respects dependencies and delivers playable value ea
 
 | Phase | Items | Rationale |
 |-------|-------|-----------|
-| **Phase 1: Foundation** | 1.1 (pathing bug), 2.1 (rename/rebalance), 6.1 (auto-waves) | Fix the critical bug, establish final tower identity, improve game flow |
-| **Phase 2: Combat Depth** | 2.2 (gun aggro), 2.3 (cannon aggro), 9.1 (champion debuff) | Towers feel distinct and strategic |
-| **Phase 3: Wall System** | ~~3.1~~ ~~3.2~~ ~~3.3~~ ~~3.4~~ ~~3.5~~ ~~3.6~~ (all done), 3.3 decay visuals remaining | Major new mechanic, creates chokepoint gameplay |
-| **Phase 4: Visual Upgrade** | 8.1 (tile pack), 5.1 (auto-tiling), 7.1 (UI stats) | Game looks and reads better |
-| **Phase 5: Polish & Expand** | 4.1 (heal tower), 2.4 (cannon super) | Deepen mechanics |
-| **Phase 6: Nice-to-Haves** | 6.2 (crowding), 5.2 (Tiled properties), 7.2 (wave preview), 9.2 (sound), 4.2 (heal champion) | Polish and completeness |
+| **Phase 1: Foundation** | 4.1 (cooldown placement system), 4.2 (auto-waves), 5.1 (cannon crossing) | Remove gold, implement new pacing mechanics, terrain constraints |
+| **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 9.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
+| **Phase 3: Healing Tower** | 2.1 (dual-mode healing/sniper tower), 2.2 (champion variant) | New tower type with unique mechanics and ultimates |
+| **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
+| **Phase 5: Polish & Completeness** | 6.1 (wave JSON tooling), 3.2 (Tiled properties), 9.2 (sound), 4.3 (crowding), 7.2 (wave preview), 9.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
 ---
 
-## Open Questions for PM
+## Open Questions & Design Notes
 
 1. **Tower theme/names**: Fantasy (Archer/Catapult), Military (Turret/Mortar), Sci-fi (Laser/Railgun)? This affects art direction.
-2. **Wall tower cost model**: Should walls be free like champions, cheap and spammable, or expensive and strategic?
-3. **Cannon super — targeted or auto?**: Does the orbital strike hit the cannon's current target, or does the player click a location?
-4. **Healing tower — does it heal enemies too?** (some TD games have neutral heal zones). Recommend: no, towers only.
+2. **Cooldown system tuning**: Base placement cooldown (e.g., 15s), per-champion increment (e.g., +10s), per-generic increment (e.g., 0s or +2s)?
+3. **Healing tower toggle UX**: Should mode-switch be instant or have a brief wind-up/transition animation?
+4. **Healing tower rail-gun**: Piercing rounds vs. explosion-on-impact? Does it apply slow to all enemies hit or only on landing?
 5. **Tile size change**: Switching from 40x40 to 32x32 unlocks free asset packs but requires a refactor pass. Approve?
-6. **Crowding approach**: Option A (speed penalty, simple) vs. Option C (sub-grid, major refactor)? Recommend A first.
-7. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.
+7. **Crowding approach**: Option A (speed penalty, simple) vs. Option C (sub-grid, major refactor)? Recommend A first.
+8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.
+9. **Entrance indicator distance**: How far away should the "enemy coming" indicator activate? (e.g., 1 tile, 2 tiles, configurable per spawn)

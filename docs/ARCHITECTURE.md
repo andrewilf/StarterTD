@@ -68,6 +68,7 @@
 - One consolidated button per tower type: champion mode (free, shows CD) when dead; generic mode (costs gold) when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Can't Afford" (red)
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
+- Time-slow toggle: `IsTimeSlowed` property (set by `HandleClick`); `CanActivateTimeSlow` gating property (set by `GameplayScene` each frame); `ForceDeactivateTimeSlow()` called by `GameplayScene` when bank hits 0. `Draw()` accepts `timeSlowBankFraction` (0–1) for bar rendering. Bank logic and constants live in `GameplayScene` — UIPanel is purely presentational
 
 ## Wall Placement Mode
 - `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path. L direction locks based on which axis the user drags first from the start tile (`_wallDragLockedHorizontalFirst`); returning to a straight line resets the lock. Falls back to the other candidate only if it has a strictly longer valid prefix (blocked tiles). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move

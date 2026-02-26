@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -32,6 +33,12 @@ public partial class GameplayScene : IScene
     private int _money;
     private int _lives;
     private bool _gameOver;
+    private const float TimeSlowScale = 0.5f;
+    private const float TimeSlowMaxBank = 20f;
+    private const float TimeSlowMinToActivate = 5f;
+    private const float TimeSlowDrainRate = 1f; // seconds drained per real second active
+    private const float TimeSlowRegenRate = 1f / 2f; // seconds regained per real second inactive
+    private float _timeSlowBank = TimeSlowMaxBank;
     private bool _gameWon;
     private bool _allEnemiesCleared;
     private readonly string _selectedMapId;
@@ -142,13 +149,40 @@ public partial class GameplayScene : IScene
         if (_gameOver || _gameWon)
             return;
 
+        // Update bank against real (unscaled) time before activeTime is computed.
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        _uiPanel.CanActivateTimeSlow = _timeSlowBank >= TimeSlowMinToActivate;
+        if (_uiPanel.IsTimeSlowed)
+        {
+            _timeSlowBank -= TimeSlowDrainRate * dt;
+            if (_timeSlowBank <= 0f)
+            {
+                _timeSlowBank = 0f;
+                _uiPanel.ForceDeactivateTimeSlow();
+            }
+        }
+        else
+        {
+            _timeSlowBank = Math.Min(_timeSlowBank + TimeSlowRegenRate * dt, TimeSlowMaxBank);
+        }
+
+        // Scale elapsed time uniformly when time-slow is active. All downstream systems
+        // (CountdownTimers, float dt, wave spawning) propagate this automatically through
+        // their GameTime parameter, requiring no changes inside Enemy, Tower, or WaveManager.
+        GameTime activeTime = _uiPanel.IsTimeSlowed
+            ? new GameTime(
+                gameTime.TotalGameTime,
+                TimeSpan.FromSeconds(gameTime.ElapsedGameTime.TotalSeconds * TimeSlowScale)
+            )
+            : gameTime;
+
         // --- Update wave spawning ---
-        _waveManager.Update(gameTime);
+        _waveManager.Update(activeTime);
 
         // --- Update enemies ---
         for (int i = _enemies.Count - 1; i >= 0; i--)
         {
-            _enemies[i].Update(gameTime, _map);
+            _enemies[i].Update(activeTime, _map);
 
             if (_enemies[i].IsDead)
             {
@@ -188,7 +222,7 @@ public partial class GameplayScene : IScene
         }
 
         // --- Update towers ---
-        _towerManager.Update(gameTime, _enemies);
+        _towerManager.Update(activeTime, _enemies);
 
         // --- Detect hovered tower for range indicator ---
         _mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
@@ -203,7 +237,7 @@ public partial class GameplayScene : IScene
         // --- Update laser effect ---
         if (_laserEffect != null)
         {
-            _laserEffect.Update(gameTime, _enemies);
+            _laserEffect.Update(activeTime, _enemies);
             if (!_laserEffect.IsActive)
             {
                 _laserEffect = null;
@@ -214,7 +248,7 @@ public partial class GameplayScene : IScene
         // --- Update AoE effects ---
         for (int i = _aoeEffects.Count - 1; i >= 0; i--)
         {
-            _aoeEffects[i].Update(gameTime);
+            _aoeEffects[i].Update(activeTime);
             if (!_aoeEffects[i].IsActive)
                 _aoeEffects.RemoveAt(i);
         }
@@ -222,7 +256,7 @@ public partial class GameplayScene : IScene
         // --- Update spike effects ---
         for (int i = _spikeEffects.Count - 1; i >= 0; i--)
         {
-            _spikeEffects[i].Update(gameTime);
+            _spikeEffects[i].Update(activeTime);
             if (!_spikeEffects[i].IsActive)
                 _spikeEffects.RemoveAt(i);
         }
@@ -230,7 +264,7 @@ public partial class GameplayScene : IScene
         // --- Update floating texts ---
         for (int i = _floatingTexts.Count - 1; i >= 0; i--)
         {
-            _floatingTexts[i].Update(gameTime);
+            _floatingTexts[i].Update(activeTime);
             if (!_floatingTexts[i].IsActive)
                 _floatingTexts.RemoveAt(i);
         }
