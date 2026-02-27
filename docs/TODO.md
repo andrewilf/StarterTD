@@ -14,7 +14,7 @@
 - **Current State**: 5 tower types (Gun, Cannon, Walling, ChampionGun, ChampionCannon, ChampionWalling) with placeholder balance values.
 - **Tasks**:
   - [ ] Decide on new tower names and theme (fantasy, sci-fi, etc.)
-  - [ ] Rebalance stat values (damage, fire rate, range, cost, HP, block capacity)
+  - [ ] Rebalance stat values (damage, fire rate, range, BaseCooldown, CooldownPenalty, HP, block capacity)
   - [ ] Update `TowerType` enum, all `*Tower.cs` stat files, `TowerData.GetStats()`, and UI labels
   - [ ] Verify wave JSON enemy stats still make sense against new tower numbers
 - **Note**: Coordinate with cooldown system (section 5.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
@@ -42,7 +42,7 @@
   - [ ] World-space "H/S" button (or icon) to switch modes (similar to wall "+" button pattern)
   - [ ] Persist selection until toggled again
   - [ ] When switching modes, interrupt current action (finish attack/heal in progress, reset targeting)
-  - [ ] Cooldown-based system: placing new champions increases cooldown before next tower placement (see section 5.1 below)
+  - [ ] Assign `BaseCooldown`/`CooldownPenalty` values in `HealTowerStats` (follows cooldown placement system, section 4.1)
 
 ### 2.2 Healing Tower — Champion Variant
 - **Priority**: P3 | **Effort**: S
@@ -90,24 +90,9 @@
 ## 4. Gameplay Flow & Tower Placement System
 
 ### 4.1 Replace Money System with Cooldown-Based Placement
-- **Priority**: P1 | **Effort**: L
-- **Current State**: Towers cost gold; player earns gold from enemy kills and wave completion.
-- **New System**: Remove all gold mechanics. Tower placement operates on a **cooldown timer**:
-  - [ ] Remove `GameplayScene._money`, `_moneyDisplay`, all gold earning logic
-  - [ ] Remove cost values from all `TowerStats` — towers are now **free to place**
-  - [ ] Add global `TowerPlacementCooldown` timer to `GameplayScene` (base duration, e.g., 15 seconds)
-  - [ ] Cooldown **increases** each time a champion is placed:
-    - Placing a champion adds a fixed duration to the current cooldown (e.g., +10 seconds per champion)
-    - Generics increase cooldown less or not at all (configurable)
-  - [ ] UI: Show cooldown timer when a tower is being placed (e.g., "Cooldown: 8.2s" or a progress bar)
-  - [ ] Tower placement is **blocked** until cooldown expires
-  - [ ] After cooldown expires, next tower placement **resets the timer** to base value and enters cooldown again immediately
-- **Design Rationale**: Creates pacing mechanics where placing towers strategically (fewer champions = faster placement) becomes the core decision-making loop instead of resource scarcity.
-- **Tasks**:
-  - [ ] Implement `TowerPlacementCooldown` state machine in `GameplayScene`
-  - [ ] Update tower placement UI to show cooldown status
-  - [ ] Remove all gold-related code paths
-  - [ ] Balance cooldown durations (base, per-champion increment)
+- **Priority**: P1 | **Effort**: L | **Status**: `[x]` done
+- **Implemented**: Per-pool cooldown timers replace gold. Each tower type has a `BaseCooldown` + `CooldownPenalty × existing pool count` added on placement. Champions share one pool. Selling refunds `CooldownPenalty`. Pools tick on scaled game time. UI shows "Locked: X.Xs" when blocked.
+- **Remaining**: Balance cooldown values (base, penalty, per-type).
 
 ### 4.2 Auto-Start Waves After First Manual Start
 - **Priority**: P1 | **Effort**: S
@@ -256,7 +241,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 
 | Phase | Items | Rationale |
 |-------|-------|-----------|
-| **Phase 1: Foundation** | 4.1 (cooldown placement system), 4.2 (auto-waves), 5.1 (cannon crossing) | Remove gold, implement new pacing mechanics, terrain constraints |
+| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves), 5.1 (cannon crossing) | ~~Gold removed~~ (done), auto-waves, terrain constraints |
 | **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 9.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
 | **Phase 3: Healing Tower** | 2.1 (dual-mode healing/sniper tower), 2.2 (champion variant) | New tower type with unique mechanics and ultimates |
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
@@ -267,7 +252,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 ## Open Questions & Design Notes
 
 1. **Tower theme/names**: Fantasy (Archer/Catapult), Military (Turret/Mortar), Sci-fi (Laser/Railgun)? This affects art direction.
-2. **Cooldown system tuning**: Base placement cooldown (e.g., 15s), per-champion increment (e.g., +10s), per-generic increment (e.g., 0s or +2s)?
+2. **Cooldown system tuning**: Values live in each `*TowerStats.cs` — tune `BaseCooldown` and `CooldownPenalty` per type. WallSegment intentionally zero.
 3. **Healing tower toggle UX**: Should mode-switch be instant or have a brief wind-up/transition animation?
 4. **Healing tower rail-gun**: Piercing rounds vs. explosion-on-impact? Does it apply slow to all enemies hit or only on landing?
 5. **Tile size change**: Switching from 40x40 to 32x32 unlocks free asset packs but requires a refactor pass. Approve?

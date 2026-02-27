@@ -10,11 +10,11 @@
 - Rendering: `SpriteBatch`/fonts passed via `Draw()`
 
 ## GameplayScene Owns
-`Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `FloatingTexts`, `AoEEffects`, `SpikeEffects`
+`Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`
 
 ## Tower System
 - `TowerType` enum: Generic (Gun, Cannon, Walling) + Champion (ChampionGun, ChampionCannon, ChampionWalling) + WallSegment
-- Stats: `Entities/Towers/Stats/<Type>TowerStats.cs`; registry: `TowerData.GetStats()`
+- Stats: `Entities/Towers/Stats/<Type>TowerStats.cs`; registry: `TowerData.GetStats()`. Each stat record carries `BaseCooldown` (flat seconds added to pool on placement) and `CooldownPenalty` (additional seconds per tower already in that pool). WallSegment: both zero (no throttle)
 - Variant mapping: `TowerType.GetChampionVariant()` / `GetGenericVariant()`
 - `TowerTypeExtensions`: `IsChampion()`, `IsWallingChampion()`, `IsWallingGeneric()`, `IsWallSegment()`
 - **Tower class hierarchy**: `Tower` (base) → `WallSegmentTower` (growth/decay), `WallingTower` (Walling + ChampionWalling; frenzy), `CannonChampionTower` (laser). Gun/Cannon/ChampionGun use `Tower` directly. Instantiate via `Tower.Create(type, pos)` factory — never `new Tower(...)` directly
@@ -65,7 +65,8 @@
 
 ## UIPanel
 - `UISelectionMode`: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
-- One consolidated button per tower type: champion mode (free, shows CD) when dead; generic mode (costs gold) when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Can't Afford" (red)
+- One consolidated button per tower type: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
+- `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of player money
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
 - Time-slow toggle: `IsTimeSlowed` property (set by `HandleClick`); `CanActivateTimeSlow` gating property (set by `GameplayScene` each frame); `ForceDeactivateTimeSlow()` called by `GameplayScene` when bank hits 0. `Draw()` accepts `timeSlowBankFraction` (0–1) for bar rendering. Bank logic and constants live in `GameplayScene` — UIPanel is purely presentational
