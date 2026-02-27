@@ -1,17 +1,22 @@
 # CLAUDE.md
 
 ## Developer Context
-I am a Python/TypeScript engineer new to C#.
-- **Tone**: Educational. Explain C# patterns (Delegates, LINQ, Structs).
+I am a Python engineer new to C#.
+- **Tone**: Educational. Explain C# patterns (Delegates, LINQ, Structs) by mapping them directly to their Python equivalents.
 - **Code Style**: Readable over clever. Prioritize clear, explicit logic.
 - **Comments**: Explain "Why", not "What". Avoid conversational notes or redundant narration. Focus on non-obvious logic.
+
+## AI Tooling & MCP Workflow
+When executing tasks, use connected MCP servers in the following sequence:
+1. **Context7 (External Knowledge):** Use automatically whenever utilizing or configuring third-party libraries (e.g., MonoGame, MonoGame.Extended, external parsers). Resolve the library ID and fetch up-to-date documentation *before* writing code to prevent hallucinated APIs.
+2. **ChunkHound (Local Semantic Research):** Use for broad architectural discovery. When designing a new feature (e.g., a new tower type) or debugging an unknown system, use ChunkHound to map out inheritance structures, base classes, and conceptual logic across the local codebase.
+3. **Serena (Surgical Code Execution):** Use for deterministic editing. Once the architecture and external docs are understood, use Serena's LSP capabilities for exact symbol navigation ("Find All References", "Go to Definition") and injecting safe, precise C# edits.
+
 
 ## Project Architecture
 Source of truth: `docs/ARCHITECTURE.md`.
 
 ## Documentation Strategy
-- **Status & Backlog**: Check `docs/CURRENT_STATE.md` for features and **To-Do** items.
-- **Update Rule**: Update `CURRENT_STATE.md` immediately after finishing a feature.
 - **Gotcha Rule**: If we hit a recurring MonoGame/C# quirk, ask to append it to "Known Gotchas" below.
 - **NO BLOAT**: Updates to documentation files (CLAUDE.md, ARCHITECTURE.md, CURRENT_STATE.md) must be **essential only**. Document architectural patterns and relationships, NOT implementation details visible in code. Keep it minimal.
 - **MEMORY.md**: Keep under 10 lines. Only store non-obvious gotchas that would be hard to discover from code. No stat values, no API signatures, no implementation details.
@@ -19,10 +24,12 @@ Source of truth: `docs/ARCHITECTURE.md`.
 ## Feature Implementation Rules
 1.  **Event Handling**: Use `Action<T>` for cross-system events. Avoid `EventHandler`.
 2.  **State**: Global state (Money, Lives) resides in `GameplayScene`.
-3. **Clean-up**: If code is made redundant from changes, remove it.
+3.  **Clean-up**: If code is made redundant from changes, remove it.
 4.  **Verification**: Run `dotnet build` after generating code.
-5. **Formatting**: Run `dotnet csharpier format .` once at the end of all code changes.
-6. **Linting**: SonarAnalyzer.CSharp enforces code quality rules. Resolve warnings before finishing.
+5.  **Formatting**: Run `dotnet csharpier format .` once at the end of all code changes.
+6.  **Linting**: SonarAnalyzer.CSharp enforces code quality rules. Resolve warnings before finishing.
+7.  **Autonomous Debugging**: If dotnet build fails, do not immediately ask for help. Use Serena to read the specific error lines, attempt a fix, and rebuild up to 3 times before prompting the user.
+8.  **Memory Allocation**: Avoid using the new keyword inside the Update() or Draw() loops. Use object pooling for projectiles and enemies to prevent Garbage Collection spikes.
 
 ## Known Gotchas
 - **Positioning**: `TextureManager.DrawSprite` uses **CENTERED** origin. `DrawRect` uses **TOP-LEFT**.

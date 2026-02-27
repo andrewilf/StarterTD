@@ -25,12 +25,26 @@ public partial class GameplayScene : IScene
     private UIPanel _uiPanel = null!;
 
     private readonly List<IEnemy> _enemies = new();
-    private readonly List<FloatingText> _floatingTexts = new();
     private readonly List<AoEEffect> _aoeEffects = new();
     private readonly List<SpikeEffect> _spikeEffects = new();
     private LaserEffect? _laserEffect;
     private bool _laserSelected;
-    private int _money;
+    private readonly Dictionary<TowerType, float> _placementCooldowns = new()
+    {
+        [TowerType.ChampionGun] = 0f, // Shared champion pool — all champions key on ChampionGun
+        [TowerType.Gun] = 0f,
+        [TowerType.Cannon] = 0f,
+        [TowerType.Walling] = 0f,
+    };
+
+    // Cached to avoid per-frame allocation when ticking cooldowns in Update()
+    private static readonly TowerType[] CooldownPoolKeys =
+    [
+        TowerType.ChampionGun,
+        TowerType.Gun,
+        TowerType.Cannon,
+        TowerType.Walling,
+    ];
     private int _lives;
     private bool _gameOver;
     private const float TimeSlowScale = 0.5f;
@@ -69,6 +83,10 @@ public partial class GameplayScene : IScene
         _selectedMapId = mapId;
     }
 
+    // Maps any champion type to ChampionGun (shared pool key); generics map to themselves.
+    private static TowerType GetCooldownPoolKey(TowerType type) =>
+        type.IsChampion() ? TowerType.ChampionGun : type;
+
     public void LoadContent()
     {
         _map = new Map(MapDataRepository.GetMap(_selectedMapId));
@@ -85,7 +103,6 @@ public partial class GameplayScene : IScene
             _championManager
         );
 
-        _money = GameSettings.StartingMoney;
         _lives = GameSettings.StartingLives;
         _gameOver = false;
         _gameWon = false;
@@ -176,6 +193,11 @@ public partial class GameplayScene : IScene
             )
             : gameTime;
 
+        // Tick placement cooldown pools using scaled time — time-slow extends the wait.
+        float scaledDt = (float)activeTime.ElapsedGameTime.TotalSeconds;
+        foreach (var key in CooldownPoolKeys)
+            _placementCooldowns[key] = Math.Max(0f, _placementCooldowns[key] - scaledDt);
+
         // --- Update wave spawning ---
         _waveManager.Update(activeTime);
 
@@ -189,9 +211,6 @@ public partial class GameplayScene : IScene
                 if (_selectedEnemy == _enemies[i])
                     _selectedEnemy = null;
 
-                int bounty = _enemies[i].Bounty;
-                _money += bounty;
-                SpawnFloatingText(_enemies[i].Position, $"+${bounty}", Color.Gold);
                 _enemies[i].OnDestroy(); // Release tower engagement before removal
                 _enemies.RemoveAt(i);
             }
@@ -260,14 +279,6 @@ public partial class GameplayScene : IScene
             if (!_spikeEffects[i].IsActive)
                 _spikeEffects.RemoveAt(i);
         }
-
-        // --- Update floating texts ---
-        for (int i = _floatingTexts.Count - 1; i >= 0; i--)
-        {
-            _floatingTexts[i].Update(activeTime);
-            if (!_floatingTexts[i].IsActive)
-                _floatingTexts.RemoveAt(i);
-        }
     }
 
     /// <summary>
@@ -300,11 +311,6 @@ public partial class GameplayScene : IScene
                 return enemy;
         }
         return null;
-    }
-
-    private void SpawnFloatingText(Vector2 worldPos, string text, Color color)
-    {
-        _floatingTexts.Add(new FloatingText(worldPos, text, color));
     }
 
     /// <summary>
