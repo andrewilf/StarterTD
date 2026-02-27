@@ -25,7 +25,8 @@ public class Tower : ITower
     public float Range { get; private set; }
     public float Damage { get; private set; }
     public float FireRate { get; private set; }
-    public int Cost { get; }
+    public float BaseCooldown { get; }
+    public float CooldownPenalty { get; }
     public bool IsAOE { get; private set; }
     public float AOERadius { get; private set; }
     public Color TowerColor { get; private set; }
@@ -130,7 +131,8 @@ public class Tower : ITower
 
         var stats = TowerData.GetStats(type);
         ApplyStats(stats);
-        Cost = stats.Cost;
+        BaseCooldown = stats.BaseCooldown;
+        CooldownPenalty = stats.CooldownPenalty;
     }
 
     /// <summary>

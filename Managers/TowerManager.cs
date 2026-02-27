@@ -87,10 +87,10 @@ public partial class TowerManager
     /// Returns the cost if successful, or -1 if placement failed.
     /// Champions can only have one per type placed at a time.
     /// </summary>
-    public int TryPlaceTower(TowerType type, Point gridPos)
+    public bool TryPlaceTower(TowerType type, Point gridPos)
     {
         if (!_map.CanBuild(gridPos))
-            return -1;
+            return false;
 
         var tile = _map.Tiles[gridPos.X, gridPos.Y];
 
@@ -100,10 +100,10 @@ public partial class TowerManager
             : _championManager.CanPlaceGeneric(type);
 
         if (!canPlace)
-            return -1;
+            return false;
 
         if (OnValidatePlacement != null && !OnValidatePlacement(gridPos))
-            return -1;
+            return false;
 
         var tower = Tower.Create(type, gridPos);
         // Wire AoE callback once at placement (not per-frame)
@@ -116,7 +116,7 @@ public partial class TowerManager
 
         OnTowerPlaced?.Invoke(gridPos);
 
-        return tower.Cost;
+        return true;
     }
 
     /// <summary>
@@ -156,12 +156,11 @@ public partial class TowerManager
     /// Sell a tower, returning its refund value.
     /// Refund is 60% of cost, scaled by remaining health percentage.
     /// </summary>
-    public int SellTower(Tower tower)
+    public float SellTower(Tower tower)
     {
-        float healthPercent = (float)tower.CurrentHealth / tower.MaxHealth;
-        int refund = (int)(tower.Cost * 0.6f * healthPercent);
+        float penalty = tower.CooldownPenalty;
         RemoveTower(tower);
-        return refund;
+        return penalty;
     }
 
     /// <summary>

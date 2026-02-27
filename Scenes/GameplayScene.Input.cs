@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
@@ -68,7 +69,7 @@ public partial class GameplayScene
         // Check if click is on UI panel first
         else if (_uiPanel.ContainsPoint(mousePos))
         {
-            _uiPanel.HandleClick(mousePos, _money);
+            _uiPanel.HandleClick(mousePos, _placementCooldowns);
 
             // Selecting a tower to place clears any existing selection
             if (_uiPanel.SelectedTowerType.HasValue)
@@ -141,16 +142,16 @@ public partial class GameplayScene
         }
         else if (_uiPanel.SelectedTowerType.HasValue)
         {
-            var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
-            if (_money >= stats.Cost)
+            var towerType = _uiPanel.SelectedTowerType.Value;
+            var poolKey = GetCooldownPoolKey(towerType);
+            // UIPanel already blocks selection during cooldown, but guard here as well
+            if (_placementCooldowns[poolKey] <= 0f)
             {
-                int cost = _towerManager.TryPlaceTower(_uiPanel.SelectedTowerType.Value, gridPos);
-                if (cost >= 0)
+                bool placed = _towerManager.TryPlaceTower(towerType, gridPos);
+                if (placed)
                 {
-                    _money -= cost;
-                    Vector2 worldPos = Map.GridToWorld(gridPos);
-                    if (cost > 0)
-                        SpawnFloatingText(worldPos, $"-${cost}", Color.Red);
+                    var stats = TowerData.GetStats(towerType);
+                    _placementCooldowns[poolKey] += stats.BaseCooldown + stats.CooldownPenalty;
                     _uiPanel.SelectedTowerType = null;
                     _selectedTowerRange = 0f;
                 }
@@ -218,11 +219,13 @@ public partial class GameplayScene
                 CancelWallDrag();
             }
 
-            int refund = _towerManager.SellTower(tower);
-            _money += refund;
-
-            Vector2 worldPos = Map.GridToWorld(gridPos);
-            SpawnFloatingText(worldPos, $"+${refund}", Color.LimeGreen);
+            float penalty = _towerManager.SellTower(tower);
+            // Reduce that type's placement pool by CooldownPenalty (capped at 0)
+            if (penalty > 0f)
+            {
+                var poolKey = GetCooldownPoolKey(tower.TowerType);
+                _placementCooldowns[poolKey] = Math.Max(0f, _placementCooldowns[poolKey] - penalty);
+            }
         }
     }
 }

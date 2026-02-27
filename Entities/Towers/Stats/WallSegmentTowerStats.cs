@@ -9,7 +9,8 @@ public static class WallSegmentTowerStats
         Range: 0f,
         Damage: 0f,
         FireRate: float.MaxValue, // never fires
-        Cost: 0,
+        BaseCooldown: 0f,
+        CooldownPenalty: 0f,
         MovementCost: 10000,
         IsAOE: false,
         AOERadius: 0f,

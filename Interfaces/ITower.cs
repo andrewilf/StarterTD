@@ -31,8 +31,11 @@ public interface ITower
     /// <summary>Seconds between shots.</summary>
     float FireRate { get; }
 
-    /// <summary>Cost to place this tower.</summary>
-    int Cost { get; }
+    /// <summary>Base seconds added to this type's placement pool on placement.</summary>
+    float BaseCooldown { get; }
+
+    /// <summary>Additional seconds stacked on top of BaseCooldown per placement.</summary>
+    float CooldownPenalty { get; }
 
     /// <summary>Whether this tower deals area-of-effect damage.</summary>
     bool IsAOE { get; }

@@ -14,7 +14,6 @@ public static class GameSettings
     public const int TileSize = 40; // pixels per tile
 
     // --- Player ---
-    public const int StartingMoney = 2000;
     public const int StartingLives = 5;
 
     // --- UI ---

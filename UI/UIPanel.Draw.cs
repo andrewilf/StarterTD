@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -14,7 +15,7 @@ public partial class UIPanel
 {
     public void Draw(
         SpriteBatch spriteBatch,
-        int money,
+        IReadOnlyDictionary<TowerType, float> cooldowns,
         int lives,
         int wave,
         int totalWaves,
@@ -31,7 +32,42 @@ public partial class UIPanel
 
         if (_font != null)
         {
-            spriteBatch.DrawString(_font, $"Money: ${money}", new Vector2(_x + 10, 10), Color.Gold);
+            float championCooldown = cooldowns.GetValueOrDefault(TowerType.ChampionGun);
+
+            DrawConsolidatedTowerButton(
+                spriteBatch,
+                _gunTowerButton,
+                TowerType.Gun,
+                TowerType.ChampionGun,
+                cooldowns.GetValueOrDefault(TowerType.Gun),
+                championCooldown
+            );
+            DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
+
+            DrawConsolidatedTowerButton(
+                spriteBatch,
+                _cannonTowerButton,
+                TowerType.Cannon,
+                TowerType.ChampionCannon,
+                cooldowns.GetValueOrDefault(TowerType.Cannon),
+                championCooldown
+            );
+            DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
+
+            DrawConsolidatedTowerButton(
+                spriteBatch,
+                _wallTowerButton,
+                TowerType.Walling,
+                TowerType.ChampionWalling,
+                cooldowns.GetValueOrDefault(TowerType.Walling),
+                championCooldown
+            );
+            DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
+
+            string cdText =
+                championCooldown > 0f ? $"Champ CD: {championCooldown:F1}s" : "Champ: Ready!";
+            Color cdColor = championCooldown > 0f ? Color.OrangeRed : Color.LimeGreen;
+            spriteBatch.DrawString(_font, cdText, new Vector2(_x + 10, 10), cdColor);
             spriteBatch.DrawString(
                 _font,
                 $"Lives: {lives}",
@@ -44,36 +80,6 @@ public partial class UIPanel
                 new Vector2(_x + 10, 60),
                 Color.White
             );
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _gunTowerButton,
-                TowerType.Gun,
-                TowerType.ChampionGun,
-                50,
-                money
-            );
-            DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _cannonTowerButton,
-                TowerType.Cannon,
-                TowerType.ChampionCannon,
-                80,
-                money
-            );
-            DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _wallTowerButton,
-                TowerType.Walling,
-                TowerType.ChampionWalling,
-                TowerData.GetStats(TowerType.Walling).Cost,
-                money
-            );
-            DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
 
             // Debug section
             spriteBatch.DrawString(
@@ -231,8 +237,8 @@ public partial class UIPanel
         Rectangle rect,
         TowerType genericType,
         TowerType championType,
-        int genericCost,
-        int playerMoney
+        float genericCooldown,
+        float championCooldown
     )
     {
         bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
@@ -247,12 +253,18 @@ public partial class UIPanel
         if (!championAlive)
         {
             indicatorType = championType;
-            mainLabel = $"{genericType} (Free)";
+            mainLabel = $"{genericType} Champion";
 
             float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
             float respawnCooldown = _championManager?.GetRespawnCooldown(championType) ?? 0f;
 
-            if (globalCooldown > 0)
+            if (championCooldown > 0f)
+            {
+                bgColor = Color.DarkGray;
+                subLabel = $"Locked: {championCooldown:F1}s";
+                textColor = Color.DarkGray;
+            }
+            else if (globalCooldown > 0)
             {
                 bgColor = Color.DarkSlateGray;
                 subLabel = $"Global: {globalCooldown:F1}s";
@@ -273,12 +285,17 @@ public partial class UIPanel
         else
         {
             indicatorType = genericType;
-            bool canAfford = playerMoney >= genericCost;
-            mainLabel = $"{genericType} (${genericCost})";
-            bgColor = canAfford ? Color.DarkSlateGray : Color.DarkGray;
-            textColor = canAfford ? Color.White : Color.DarkGray;
-            if (!canAfford)
-                subLabel = "Can't Afford";
+            mainLabel = $"{genericType}";
+            if (genericCooldown > 0f)
+            {
+                bgColor = Color.DarkGray;
+                textColor = Color.DarkGray;
+                subLabel = $"Locked: {genericCooldown:F1}s";
+            }
+            else
+            {
+                bgColor = Color.DarkSlateGray;
+            }
         }
 
         if (isSelected)
@@ -293,10 +310,12 @@ public partial class UIPanel
         );
 
         var stats = TowerData.GetStats(indicatorType);
+        float activeCooldown = championAlive ? genericCooldown : championCooldown;
+        Color swatchColor = activeCooldown > 0f ? Color.DarkGray : stats.Color;
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            stats.Color
+            swatchColor
         );
 
         spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
@@ -306,10 +325,10 @@ public partial class UIPanel
             Color subColor;
             if (subLabel == "Place Champion")
                 subColor = Color.LightGreen;
-            else if (subLabel == "Can't Afford")
-                subColor = Color.Red;
+            else if (subLabel.StartsWith("Locked"))
+                subColor = Color.OrangeRed;
             else
-                subColor = Color.Yellow; // cooldown text
+                subColor = Color.Yellow; // global/respawn cooldown text
             spriteBatch.DrawString(
                 _font,
                 subLabel,

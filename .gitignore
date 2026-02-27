@@ -15,3 +15,6 @@ Thumbs.db
 # NuGet
 *.nupkg
 packages/
+
+# ChunkHound local vector database and cache
+.chunkhound/

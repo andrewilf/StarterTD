@@ -38,13 +38,10 @@ public partial class GameplayScene
 
         _laserEffect?.Draw(spriteBatch);
 
-        foreach (var floatingText in _floatingTexts)
-            floatingText.Draw(spriteBatch, _uiPanel.GetFont());
-
         bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
         _uiPanel.Draw(
             spriteBatch,
-            _money,
+            _placementCooldowns,
             _lives,
             _waveManager.CurrentWave,
             _waveManager.TotalWaves,
@@ -149,7 +146,6 @@ public partial class GameplayScene
                 ? new[]
                 {
                     $"All {_waveManager.TotalWaves} waves completed!",
-                    $"Final Money: ${_money}",
                     $"Lives Remaining: {_lives}",
                     "",
                     "Press R to return to map selection",
@@ -157,7 +153,6 @@ public partial class GameplayScene
                 : new[]
                 {
                     $"Wave Reached: {_waveManager.CurrentWave}/{_waveManager.TotalWaves}",
-                    $"Money: ${_money}",
                     $"Lives: {_lives}",
                     "",
                     "Press R to return to map selection",

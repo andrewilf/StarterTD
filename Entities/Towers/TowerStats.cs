@@ -12,7 +12,8 @@ public record TowerStats(
     float Range, // Attack range in pixels
     float Damage, // Damage per shot
     float FireRate, // Seconds between shots
-    int Cost, // Gold cost (0 for champions)
+    float BaseCooldown, // Base seconds added to this type's placement pool on placement
+    float CooldownPenalty, // Additional seconds stacked on top of BaseCooldown per placement
     int MovementCost, // Pathfinding weight when placed on a tile
     bool IsAOE, // Area-of-effect vs single-target
     float AOERadius, // Splash radius in pixels (0 if not AOE)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -163,7 +164,7 @@ public partial class UIPanel
     /// <summary>
     /// Handle click input on the UI panel. Returns true if the click was consumed.
     /// </summary>
-    public bool HandleClick(Point mousePos, int playerMoney)
+    public bool HandleClick(Point mousePos, IReadOnlyDictionary<TowerType, float> cooldowns)
     {
         StartWaveClicked = false;
         SpawnEnemyClicked = false;
@@ -183,10 +184,17 @@ public partial class UIPanel
             return true;
         }
 
+        float championCooldown = cooldowns.GetValueOrDefault(TowerType.ChampionGun);
+
         // Consolidated tower buttons: place champion if dead, generic if champion is alive
         if (_gunTowerButton.Contains(mousePos))
         {
-            HandleConsolidatedTowerClick(TowerType.Gun, TowerType.ChampionGun, playerMoney);
+            HandleConsolidatedTowerClick(
+                TowerType.Gun,
+                TowerType.ChampionGun,
+                cooldowns.GetValueOrDefault(TowerType.Gun),
+                championCooldown
+            );
             return true;
         }
         if (_gunAbilityButton.Contains(mousePos))
@@ -197,7 +205,12 @@ public partial class UIPanel
         }
         if (_cannonTowerButton.Contains(mousePos))
         {
-            HandleConsolidatedTowerClick(TowerType.Cannon, TowerType.ChampionCannon, playerMoney);
+            HandleConsolidatedTowerClick(
+                TowerType.Cannon,
+                TowerType.ChampionCannon,
+                cooldowns.GetValueOrDefault(TowerType.Cannon),
+                championCooldown
+            );
             return true;
         }
         if (_cannonAbilityButton.Contains(mousePos))
@@ -209,7 +222,12 @@ public partial class UIPanel
 
         if (_wallTowerButton.Contains(mousePos))
         {
-            HandleConsolidatedTowerClick(TowerType.Walling, TowerType.ChampionWalling, playerMoney);
+            HandleConsolidatedTowerClick(
+                TowerType.Walling,
+                TowerType.ChampionWalling,
+                cooldowns.GetValueOrDefault(TowerType.Walling),
+                championCooldown
+            );
             return true;
         }
         if (_wallAbilityButton.Contains(mousePos))
@@ -238,26 +256,36 @@ public partial class UIPanel
         return false;
     }
 
-    // Champion dead → place champion. Champion alive → place generic.
+    // Champion dead → place champion (if champion pool ready). Champion alive → place generic (if generic pool ready).
     private void HandleConsolidatedTowerClick(
         TowerType genericType,
         TowerType championType,
-        int playerMoney
+        float genericCooldown,
+        float championCooldown
     )
     {
         bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
         if (!championAlive)
         {
+            if (championCooldown > 0f)
+            {
+                SelectedTowerType = null;
+                SelectionMode = UISelectionMode.None;
+                return;
+            }
             bool canPlace = _championManager?.CanPlaceChampion(championType) ?? true;
             SelectedTowerType = canPlace ? championType : null;
             SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
         }
         else
         {
-            var stats = TowerData.GetStats(genericType);
-            bool canPlace =
-                playerMoney >= stats.Cost
-                && (_championManager?.CanPlaceGeneric(genericType) ?? true);
+            if (genericCooldown > 0f)
+            {
+                SelectedTowerType = null;
+                SelectionMode = UISelectionMode.None;
+                return;
+            }
+            bool canPlace = _championManager?.CanPlaceGeneric(genericType) ?? true;
             SelectedTowerType = canPlace ? genericType : null;
             SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
         }
