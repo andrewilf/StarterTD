@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
@@ -147,11 +148,16 @@ public partial class GameplayScene
             // UIPanel already blocks selection during cooldown, but guard here as well
             if (_placementCooldowns[poolKey] <= 0f)
             {
+                // Count placed towers in this pool before placement so penalty scales with stack size.
+                int poolCount = _towerManager.Towers.Count(t =>
+                    GetCooldownPoolKey(t.TowerType) == poolKey
+                );
                 bool placed = _towerManager.TryPlaceTower(towerType, gridPos);
                 if (placed)
                 {
                     var stats = TowerData.GetStats(towerType);
-                    _placementCooldowns[poolKey] += stats.BaseCooldown + stats.CooldownPenalty;
+                    _placementCooldowns[poolKey] +=
+                        stats.BaseCooldown + stats.CooldownPenalty * poolCount;
                     _uiPanel.SelectedTowerType = null;
                     _selectedTowerRange = 0f;
                 }

@@ -64,14 +64,10 @@ public partial class UIPanel
             );
             DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
 
-            string cdText =
-                championCooldown > 0f ? $"Champ CD: {championCooldown:F1}s" : "Champ: Ready!";
-            Color cdColor = championCooldown > 0f ? Color.OrangeRed : Color.LimeGreen;
-            spriteBatch.DrawString(_font, cdText, new Vector2(_x + 10, 10), cdColor);
             spriteBatch.DrawString(
                 _font,
                 $"Lives: {lives}",
-                new Vector2(_x + 10, 35),
+                new Vector2(_x + 10, 10),
                 Color.LimeGreen
             );
             spriteBatch.DrawString(
