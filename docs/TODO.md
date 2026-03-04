@@ -71,14 +71,14 @@
   - [ ] Update `TextureManager.DrawTile()` to select sprite variant based on neighbor context
   - [ ] Handle edge cases: map borders (treat out-of-bounds as a specific type), runtime tile changes (HighGround placement)
   - [ ] Recalculate auto-tile when tiles change at runtime (e.g., debug HighGround placement)
-- **Complexity Warning**: Auto-tiling touches rendering, map loading, and runtime tile changes. Plan carefully before implementing.
+  - [ ] Complexity Warning: Auto-tiling touches rendering, map loading, and runtime tile changes. Plan carefully before implementing.
 
 ### 3.2 Tiled Custom Properties Integration
 - **Priority**: P2 | **Effort**: M
 - **Reference**: https://doc.mapeditor.org/en/stable/manual/custom-properties/
-- **Goal**: Use Tiled's custom properties to embed game-specific data directly in `.tmx` files, reducing hardcoded values.
+- **Goal**: use Tiled's custom properties to embed game-specific data directly in `.tmx` files, reducing hardcoded values.
 - **Tasks**:
-  - [ ] Extend `TmxLoader` to parse `<properties>` elements on tiles, objects, and layers
+  - [ ] Extend `TmxLoader` to parse `<properties>` on tiles, objects, and layers
   - [ ] Potential uses:
     - Tile properties: movement cost overrides, buildable flag, visual variant hints
     - Object properties: enemy spawn delay, wave triggers, scripted events
@@ -146,7 +146,7 @@
   - [ ] Movement already blocked if adjacent tile is unreachable; this adds a terrain-type barrier on top
   - [ ] Detect attempted crossing: if current tile is High Ground, disallow move to Path tile and vice versa
   - [ ] UI feedback: grayed-out or disabled movement button if target is on opposite terrain type
-- **Note**: This applies only to `ChampionCannonTower`, not `ChampionGunTower` or `ChampionWallingTower` (for now)
+  - [ ] Note: This applies only to `ChampionCannonTower`, not `ChampionGunTower` or `ChampionWallingTower` (for now)
 
 ---
 
@@ -176,7 +176,7 @@
   - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
   - [ ] **Tower Comparison**: When hovering a tower button while another tower is selected, show stat diff (+/- indicators)
   - [ ] **Kill Counter**: Track and display kills per tower (motivates strategic placement)
-  - [ ] **Wave Stats Summary**: After each wave, show brief stats (damage dealt, enemies killed, towers lost)
+  - [ ] **Wave Stats Summary**: After each wave, show brief stats (damage, kills, towers lost)
   - [ ] **Enemy Info Enrichment**: Show enemy progress (% of path completed), current status effects (slow, etc.)
   - [ ] **Health Bars on Enemies**: Currently in backlog — implement colored health bars above enemy sprites (green > yellow > red gradient based on % HP)
   - [ ] **Tooltip System**: Hover over UI elements for explanatory text (especially useful for new players learning tower abilities)
@@ -233,8 +233,6 @@ These items are from `CURRENT_STATE.md` and remain relevant:
 - **Priority**: P2 | **Effort**: S
 - **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low bounty). Can be implemented as named presets in wave JSON rather than code archetypes.
 
----
-
 ## 10. Suggested Implementation Order
 
 A recommended sequence that respects dependencies and delivers playable value early:
@@ -247,8 +245,6 @@ A recommended sequence that respects dependencies and delivers playable value ea
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
 | **Phase 5: Polish & Completeness** | 6.1 (wave JSON tooling), 3.2 (Tiled properties), 9.2 (sound), 4.3 (crowding), 7.2 (wave preview), 9.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
----
-
 ## Open Questions & Design Notes
 
 1. **Tower theme/names**: Fantasy (Archer/Catapult), Military (Turret/Mortar), Sci-fi (Laser/Railgun)? This affects art direction.
@@ -256,6 +252,5 @@ A recommended sequence that respects dependencies and delivers playable value ea
 3. **Healing tower toggle UX**: Should mode-switch be instant or have a brief wind-up/transition animation?
 4. **Healing tower rail-gun**: Piercing rounds vs. explosion-on-impact? Does it apply slow to all enemies hit or only on landing?
 5. **Tile size change**: Switching from 40x40 to 32x32 unlocks free asset packs but requires a refactor pass. Approve?
-7. **Crowding approach**: Option A (speed penalty, simple) vs. Option C (sub-grid, major refactor)? Recommend A first.
+7. **Crowding approach**: Option A (speed penalty, simple) vs Option C (sub-grid, major refactor)? Recommend A first.
 8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.
-9. **Entrance indicator distance**: How far away should the "enemy coming" indicator activate? (e.g., 1 tile, 2 tiles, configurable per spawn)

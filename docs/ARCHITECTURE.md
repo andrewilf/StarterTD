@@ -5,8 +5,8 @@
 - Scenes: `MapSelectionScene`, `GameplayScene`, `PauseScene`
 
 ## Data Flow
-- Down: Scene → managers via `Update()` args
-- Up: Managers → Scene via `Action<T>` callbacks. Managers never reference each other
+- Down: Scene -> managers via `Update()` args
+- Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
 - Rendering: `SpriteBatch`/fonts passed via `Draw()`
 
 ## GameplayScene Owns
@@ -41,7 +41,7 @@
 - `CannonChampionTower.ActivateLaser()`: sets `IsAbilityBuffActive = true` + `IsLaserActive = true`; suppresses projectile firing via `IsFiringSuppressed` override. `Tower.CancelAbility()`: public wrapper that calls `DeactivateAbilityBuff()` if active; `OnAbilityDeactivated()` hook clears `IsLaserActive`
 - Laser ability chain: `TriggerChampionAbility(type, enemies)` resolves initial target (last living target → closest enemy → 1 tile left of tower) → fires `TowerManager.OnLaserActivated` → `GameplayScene` spawns `LaserEffect`. Interruption: `MoveTower`/`RemoveTower` pattern-match `is CannonChampionTower` → `CancelAbility()` + `TowerManager.OnLaserCancelled` → `GameplayScene` nulls `_laserEffect`
 - `LaserEffect` (`Entities/LaserEffect.cs`): self-contained wind-up + beam effect. `_currentContact` tracks live damage point; beam renders from `BeamOrigin` (top-right off-screen) to `_currentContact`. `IsSelected` enables right-click redirect. `Cancel()` sets `IsActive = false`
-- `WallingTower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(WallingTower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`; `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
+- `WallingTower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(WallingTower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`. `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
 - `TowerStats.AbilityCooldown`: per-champion CD; generics default 0
 - Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
 - `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: grid-snapped
