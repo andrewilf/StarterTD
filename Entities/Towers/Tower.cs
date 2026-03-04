@@ -17,8 +17,19 @@ public class Tower : ITower
 {
     public string Name { get; private set; } = string.Empty;
     public TowerState CurrentState { get; private set; } = TowerState.Active;
-    public Point GridPosition { get; private set; }
-    public Vector2 WorldPosition => Map.GridToWorld(GridPosition);
+
+    /// <summary>
+    /// Canonical anchor position in half-tile units.
+    /// 1x1 towers anchor to tile centers; 2x2 towers anchor to tile-corner intersections.
+    /// </summary>
+    public GridAnchor GridAnchor { get; private set; }
+
+    /// <summary>
+    /// Compatibility accessor: top-left tile of the tower footprint.
+    /// </summary>
+    public Point GridPosition => Map.AnchorToTopLeft(GridAnchor, FootprintSize);
+
+    public Vector2 WorldPosition => Map.AnchorToWorld(GridAnchor);
 
     /// <summary>Visual position used for rendering. Interpolates smoothly during movement.</summary>
     public Vector2 DrawPosition => _drawPosition;
@@ -52,8 +63,19 @@ public class Tower : ITower
     /// <summary>Number of enemies currently attacking this tower.</summary>
     public int CurrentEngagedCount => _currentEngagedCount;
 
-    /// <summary>Scale factor for visual rendering (X, Y). Generics default to (1.0, 1.0), Champions to (1.0, 1.5).</summary>
+    public Point FootprintSize { get; private set; }
+
+    public Vector2 PlaceholderDrawSize { get; private set; }
+
+    /// <summary>Scale factor for visual rendering.</summary>
     public Vector2 DrawScale { get; private set; }
+
+    /// <summary>Final draw size in pixels after applying DrawScale.</summary>
+    public Vector2 DrawSize =>
+        new(PlaceholderDrawSize.X * DrawScale.X, PlaceholderDrawSize.Y * DrawScale.Y);
+
+    /// <summary>All currently occupied grid tiles by this tower.</summary>
+    public IReadOnlyList<Point> OccupiedTiles => _occupiedTiles;
 
     /// <summary>0→1 progress of post-move cooldown. 1 means ready to move again. Read by TowerDrawingHelper.</summary>
     public float MoveCooldownProgress => 1f - (_cooldownTimer / _cooldownDuration);
@@ -68,6 +90,8 @@ public class Tower : ITower
     private Queue<Point> _movePath = new();
     private float _cooldownTimer;
     private float _cooldownDuration;
+
+    private Point[] _occupiedTiles = [];
 
     protected float _abilityTimer;
 
@@ -126,11 +150,12 @@ public class Tower : ITower
     public Tower(TowerType type, Point gridPosition)
     {
         TowerType = type;
-        GridPosition = gridPosition;
-        _drawPosition = Map.GridToWorld(gridPosition);
 
         var stats = TowerData.GetStats(type);
         ApplyStats(stats);
+        SetTopLeftGridPosition(gridPosition);
+        _drawPosition = WorldPosition;
+
         BaseCooldown = stats.BaseCooldown;
         CooldownPenalty = stats.CooldownPenalty;
     }
@@ -178,6 +203,20 @@ public class Tower : ITower
             _currentEngagedCount--;
     }
 
+    /// <summary>
+    /// True when the given tile is part of this tower's occupied footprint.
+    /// </summary>
+    public bool OccupiesTile(Point gridPos)
+    {
+        for (int i = 0; i < _occupiedTiles.Length; i++)
+        {
+            if (_occupiedTiles[i] == gridPos)
+                return true;
+        }
+
+        return false;
+    }
+
     private void ApplyStats(TowerStats stats)
     {
         Name = stats.Name;
@@ -190,12 +229,39 @@ public class Tower : ITower
         MaxHealth = stats.MaxHealth;
         CurrentHealth = stats.MaxHealth;
         BlockCapacity = stats.BlockCapacity;
+        FootprintSize = stats.FootprintTiles;
+        PlaceholderDrawSize = stats.PlaceholderDrawSize;
         DrawScale = stats.DrawScale;
         MoveSpeed = stats.MoveSpeed;
         _cooldownDuration = stats.CooldownDuration;
         _abilityDuration = stats.AbilityDuration;
         CanWalk = stats.CanWalk;
         _targeting = stats.Targeting;
+
+        EnsureOccupiedTileBuffer();
+    }
+
+    private void EnsureOccupiedTileBuffer()
+    {
+        int needed = FootprintSize.X * FootprintSize.Y;
+        if (_occupiedTiles.Length == needed)
+            return;
+
+        _occupiedTiles = new Point[needed];
+    }
+
+    private void SetTopLeftGridPosition(Point topLeft)
+    {
+        GridAnchor = Map.TopLeftToAnchor(topLeft, FootprintSize);
+
+        int index = 0;
+        for (int y = 0; y < FootprintSize.Y; y++)
+        {
+            for (int x = 0; x < FootprintSize.X; x++)
+            {
+                _occupiedTiles[index++] = new Point(topLeft.X + x, topLeft.Y + y);
+            }
+        }
     }
 
     /// <summary>
@@ -465,7 +531,7 @@ public class Tower : ITower
 
     /// <summary>
     /// Smoothly interpolates the tower's visual position along the path queue.
-    /// Updates GridPosition on arrival at each cell. Transitions to Cooldown when path exhausted.
+    /// Updates anchor/grid position on cell arrival. Transitions to Cooldown when path exhausted.
     /// </summary>
     private void UpdateMovement(GameTime gameTime)
     {
@@ -478,8 +544,8 @@ public class Tower : ITower
             return;
         }
 
-        Point nextGrid = _movePath.Peek();
-        Vector2 nextWorld = Map.GridToWorld(nextGrid);
+        Point nextTopLeft = _movePath.Peek();
+        Vector2 nextWorld = Map.AnchorToWorld(Map.TopLeftToAnchor(nextTopLeft, FootprintSize));
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         Vector2 direction = nextWorld - _drawPosition;
@@ -489,7 +555,7 @@ public class Tower : ITower
         if (distance <= moveAmount)
         {
             _drawPosition = nextWorld;
-            GridPosition = nextGrid;
+            SetTopLeftGridPosition(nextTopLeft);
             _movePath.Dequeue();
         }
         else

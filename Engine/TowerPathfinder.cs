@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Xna.Framework;
+using StarterTD.Entities;
 
 namespace StarterTD.Engine;
 
@@ -21,19 +22,28 @@ public static class TowerPathfinder
 
     /// <summary>
     /// Compute a walking path for a tower from start to end on the given map.
-    /// Returns a Queue of grid points representing the route, or null if no path exists.
+    /// Returns a Queue of top-left footprint points representing the route, or null if no path exists.
     /// The queue includes the start point as the first element.
     /// </summary>
-    /// <param name="start">Tower's current grid position.</param>
-    /// <param name="end">Destination grid position.</param>
-    /// <param name="map">The map containing tile and tower data.</param>
-    public static Queue<Point>? FindPath(Point start, Point end, Map map)
+    public static Queue<Point>? FindPath(
+        Point start,
+        Point end,
+        Point footprintSize,
+        Map map,
+        Tower? movingTower = null
+    )
     {
+        if (!map.IsFootprintInBounds(start, footprintSize))
+            return null;
+
+        if (!map.IsFootprintInBounds(end, footprintSize))
+            return null;
+
         var heatMap = Pathfinder.ComputeHeatMap(
             end,
             map.Columns,
             map.Rows,
-            p => GetTowerMovementCost(map.Tiles[p.X, p.Y])
+            p => GetTowerMovementCost(p, map, footprintSize, movingTower)
         );
 
         var pathList = Pathfinder.ExtractPath(start, heatMap, map.Columns, map.Rows);
@@ -82,7 +92,7 @@ public static class TowerPathfinder
         var map = new Map(mapData);
 
         // Test 1: basic path exists
-        var path = FindPath(new Point(0, 0), new Point(4, 4), map);
+        var path = FindPath(new Point(0, 0), new Point(4, 4), new Point(1, 1), map);
         Debug.Assert(path != null, "TowerPathfinder: path should exist from (0,0) to (4,4)");
         Debug.Assert(path.Count > 0, "TowerPathfinder: path should not be empty");
 
@@ -110,33 +120,60 @@ public static class TowerPathfinder
             RockAreas: rocksOnly
         );
         var blockedMap = new Map(blockedData);
-        var blockedPath = FindPath(new Point(0, 0), new Point(4, 4), blockedMap);
+        var blockedPath = FindPath(new Point(0, 0), new Point(4, 4), new Point(1, 1), blockedMap);
         Debug.Assert(blockedPath == null, "TowerPathfinder: fully blocked path should return null");
 
         Debug.WriteLine("TowerPathfinder.DebugValidate: All tests passed.");
     }
 
     /// <summary>
-    /// Tower-specific movement cost for a tile. Ignores enemies entirely.
-    /// Rock = impassable, Path = cheap, HighGround = moderate, occupied tile = expensive.
+    /// Tower-specific movement cost for a footprint's top-left tile.
+    /// Rock or out-of-bounds in any footprint tile = impassable.
+    /// Occupied tiles are penalized but still passable, except reservations by other towers.
     /// </summary>
-    private static int GetTowerMovementCost(Tile tile)
+    private static int GetTowerMovementCost(
+        Point topLeft,
+        Map map,
+        Point footprintSize,
+        Tower? movingTower
+    )
     {
-        int baseCost = tile.Type switch
-        {
-            TileType.Path => PathCost,
-            TileType.HighGround => HighGroundCost,
-            TileType.Rock => int.MaxValue,
-            _ => int.MaxValue,
-        };
-
-        if (baseCost == int.MaxValue)
+        if (!map.IsFootprintInBounds(topLeft, footprintSize))
             return int.MaxValue;
 
-        // Other towers are passable but penalized so the path routes around them when possible
-        if (tile.OccupyingTower != null)
+        int worstBaseCost = 0;
+        bool hasBlockingTower = false;
+
+        for (int y = 0; y < footprintSize.Y; y++)
+        {
+            for (int x = 0; x < footprintSize.X; x++)
+            {
+                var tile = map.Tiles[topLeft.X + x, topLeft.Y + y];
+                int baseCost = tile.Type switch
+                {
+                    TileType.Path => PathCost,
+                    TileType.HighGround => HighGroundCost,
+                    TileType.Rock => int.MaxValue,
+                    _ => int.MaxValue,
+                };
+
+                if (baseCost == int.MaxValue)
+                    return int.MaxValue;
+
+                if (tile.ReservedByTower != null && tile.ReservedByTower != movingTower)
+                    return int.MaxValue;
+
+                if (tile.OccupyingTower != null && tile.OccupyingTower != movingTower)
+                    hasBlockingTower = true;
+
+                if (baseCost > worstBaseCost)
+                    worstBaseCost = baseCost;
+            }
+        }
+
+        if (hasBlockingTower)
             return OccupiedTowerCost;
 
-        return baseCost;
+        return worstBaseCost;
     }
 }

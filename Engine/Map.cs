@@ -186,6 +186,57 @@ public class Map
     }
 
     /// <summary>
+    /// Convert a footprint's top-left tile to its grid anchor (stored in half-tile units).
+    /// </summary>
+    public static GridAnchor TopLeftToAnchor(Point topLeft, Point footprintSize)
+    {
+        return new GridAnchor(topLeft.X * 2 + footprintSize.X, topLeft.Y * 2 + footprintSize.Y);
+    }
+
+    /// <summary>
+    /// Convert a grid anchor to the footprint's top-left tile.
+    /// </summary>
+    public static Point AnchorToTopLeft(GridAnchor anchor, Point footprintSize)
+    {
+        return new Point(
+            (anchor.HalfX - footprintSize.X) / 2,
+            (anchor.HalfY - footprintSize.Y) / 2
+        );
+    }
+
+    /// <summary>
+    /// Convert a grid anchor to world-space.
+    /// </summary>
+    public static Vector2 AnchorToWorld(GridAnchor anchor)
+    {
+        return anchor.ToWorld();
+    }
+
+    /// <summary>
+    /// Snap a world-space position to the nearest valid anchor for a footprint size.
+    /// Footprint size 1x1 snaps to tile centers; 2x2 snaps to tile corner intersections.
+    /// </summary>
+    public static GridAnchor SnapWorldToAnchor(Vector2 worldPos, Point footprintSize)
+    {
+        float tileX = worldPos.X / GameSettings.TileSize;
+        float tileY = worldPos.Y / GameSettings.TileSize;
+        int topLeftX = (int)
+            MathF.Round(tileX - footprintSize.X / 2f, MidpointRounding.AwayFromZero);
+        int topLeftY = (int)
+            MathF.Round(tileY - footprintSize.Y / 2f, MidpointRounding.AwayFromZero);
+        return TopLeftToAnchor(new Point(topLeftX, topLeftY), footprintSize);
+    }
+
+    /// <summary>
+    /// Snap a world-space position to the nearest footprint top-left tile.
+    /// </summary>
+    public static Point SnapWorldToTopLeft(Vector2 worldPos, Point footprintSize)
+    {
+        var anchor = SnapWorldToAnchor(worldPos, footprintSize);
+        return AnchorToTopLeft(anchor, footprintSize);
+    }
+
+    /// <summary>
     /// Convert a world-space position to a grid position.
     /// </summary>
     public static Point WorldToGrid(Vector2 worldPos)
@@ -293,14 +344,73 @@ public class Map
     /// </summary>
     public bool CanBuild(Point gridPos)
     {
-        if (gridPos.X < 0 || gridPos.X >= Columns || gridPos.Y < 0 || gridPos.Y >= Rows)
+        return CanBuildFootprint(gridPos, new Point(1, 1));
+    }
+
+    /// <summary>
+    /// Returns true if all footprint tiles are in-bounds.
+    /// </summary>
+    public bool IsFootprintInBounds(Point topLeft, Point footprintSize)
+    {
+        if (footprintSize.X <= 0 || footprintSize.Y <= 0)
             return false;
 
-        var tile = Tiles[gridPos.X, gridPos.Y];
-        return TileData.GetStats(tile.Type).IsBuildable
-            && tile.OccupyingTower == null
-            && tile.ReservedByTower == null
-            && tile.ReservedForPendingWallBy == null;
+        return topLeft.X >= 0
+            && topLeft.Y >= 0
+            && topLeft.X + footprintSize.X <= Columns
+            && topLeft.Y + footprintSize.Y <= Rows;
+    }
+
+    /// <summary>
+    /// Enumerates footprint tiles from top-left using row-major order.
+    /// </summary>
+    public static Point[] GetFootprintTiles(Point topLeft, Point footprintSize)
+    {
+        Point[] tiles = new Point[footprintSize.X * footprintSize.Y];
+        int index = 0;
+        for (int y = 0; y < footprintSize.Y; y++)
+        {
+            for (int x = 0; x < footprintSize.X; x++)
+            {
+                tiles[index++] = new Point(topLeft.X + x, topLeft.Y + y);
+            }
+        }
+
+        return tiles;
+    }
+
+    /// <summary>
+    /// Check if all tiles in a footprint are buildable and unoccupied.
+    /// When ignoreTower is set, occupancy/reservation by that tower is treated as free.
+    /// </summary>
+    public bool CanBuildFootprint(Point topLeft, Point footprintSize, Tower? ignoreTower = null)
+    {
+        if (!IsFootprintInBounds(topLeft, footprintSize))
+            return false;
+
+        for (int y = 0; y < footprintSize.Y; y++)
+        {
+            for (int x = 0; x < footprintSize.X; x++)
+            {
+                int gx = topLeft.X + x;
+                int gy = topLeft.Y + y;
+                var tile = Tiles[gx, gy];
+
+                if (!TileData.GetStats(tile.Type).IsBuildable)
+                    return false;
+
+                if (tile.OccupyingTower != null && tile.OccupyingTower != ignoreTower)
+                    return false;
+
+                if (tile.ReservedByTower != null && tile.ReservedByTower != ignoreTower)
+                    return false;
+
+                if (tile.ReservedForPendingWallBy != null)
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -39,7 +39,10 @@ public partial class GameplayScene
         _map.Draw(spriteBatch);
 
         if (_towerMovePreviewPath != null)
-            DrawTowerMovePreview(spriteBatch, _towerMovePreviewPath);
+        {
+            Point footprintSize = _towerManager.SelectedTower?.FootprintSize ?? new Point(1, 1);
+            DrawTowerMovePreview(spriteBatch, _towerMovePreviewPath, footprintSize);
+        }
 
         _towerManager.Draw(spriteBatch, _uiPanel.GetFont(), _hoveredTower);
 
@@ -106,6 +109,17 @@ public partial class GameplayScene
 
     private void DrawHoverIndicator(SpriteBatch spriteBatch)
     {
+        Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
+        Point placementTopLeft = _mouseGrid;
+        Point placementFootprint = new Point(1, 1);
+
+        if (_uiPanel.SelectedTowerType.HasValue)
+        {
+            var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
+            placementFootprint = stats.FootprintTiles;
+            placementTopLeft = Map.SnapWorldToTopLeft(worldMouse, placementFootprint);
+        }
+
         var hoverRect = new Rectangle(
             _mouseGrid.X * GameSettings.TileSize,
             _mouseGrid.Y * GameSettings.TileSize,
@@ -113,7 +127,9 @@ public partial class GameplayScene
             GameSettings.TileSize
         );
 
-        bool canPlaceTower = _map.CanBuild(_mouseGrid) && _uiPanel.SelectedTowerType.HasValue;
+        bool canPlaceTower =
+            _uiPanel.SelectedTowerType.HasValue
+            && _map.CanBuildFootprint(placementTopLeft, placementFootprint);
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
         var wallingAnchor = GetSelectedWallingAnchor();
         bool isWallMode = _wallPlacementMode && wallingAnchor != null;
@@ -135,13 +151,27 @@ public partial class GameplayScene
 
         if (_selectedTowerRange > 0f)
         {
-            Vector2 hoverCenter = Map.GridToWorld(_mouseGrid);
+            Vector2 hoverCenter = _uiPanel.SelectedTowerType.HasValue
+                ? Map.AnchorToWorld(Map.TopLeftToAnchor(placementTopLeft, placementFootprint))
+                : Map.GridToWorld(_mouseGrid);
             TextureManager.DrawFilledCircle(
                 spriteBatch,
                 hoverCenter,
                 _selectedTowerRange,
                 Color.White * 0.15f
             );
+        }
+
+        if (_uiPanel.SelectedTowerType.HasValue)
+        {
+            DrawFootprintHover(
+                spriteBatch,
+                placementTopLeft,
+                placementFootprint,
+                hoverColor,
+                Color.White
+            );
+            return;
         }
 
         TextureManager.DrawRect(spriteBatch, hoverRect, hoverColor);
@@ -275,17 +305,17 @@ public partial class GameplayScene
     {
         const int borderThickness = 2;
         const int padding = 4;
-        const float towerSpriteSize = 30f;
         const float enemySpriteSize = 20f;
 
         if (_towerManager.SelectedTower != null)
         {
             var tower = _towerManager.SelectedTower;
-            int w = (int)(towerSpriteSize * tower.DrawScale.X) + padding * 2;
-            int h = (int)(towerSpriteSize * tower.DrawScale.Y) + padding * 2;
+            Vector2 drawSize = tower.DrawSize;
+            int w = (int)MathF.Round(drawSize.X) + padding * 2;
+            int h = (int)MathF.Round(drawSize.Y) + padding * 2;
             var rect = new Rectangle(
-                (int)(tower.WorldPosition.X - w / 2f),
-                (int)(tower.WorldPosition.Y - h / 2f),
+                (int)(tower.DrawPosition.X - w / 2f),
+                (int)(tower.DrawPosition.Y - h / 2f),
                 w,
                 h
             );
@@ -359,7 +389,11 @@ public partial class GameplayScene
     /// Visualizes a planned tower movement path as dots connected by line segments.
     /// Gold color distinguishes it from the enemy path (DeepSkyBlue).
     /// </summary>
-    private static void DrawTowerMovePreview(SpriteBatch spriteBatch, List<Point> path)
+    private void DrawTowerMovePreview(
+        SpriteBatch spriteBatch,
+        List<Point> path,
+        Point footprintSize
+    )
     {
         if (path.Count == 0)
             return;
@@ -371,8 +405,9 @@ public partial class GameplayScene
         for (int i = 0; i < path.Count; i++)
         {
             var point = path[i];
-            int centerX = point.X * GameSettings.TileSize + GameSettings.TileSize / 2;
-            int centerY = point.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
+            Vector2 center = Map.AnchorToWorld(Map.TopLeftToAnchor(point, footprintSize));
+            int centerX = (int)center.X;
+            int centerY = (int)center.Y;
 
             TextureManager.DrawRect(
                 spriteBatch,
@@ -383,8 +418,9 @@ public partial class GameplayScene
             if (i < path.Count - 1)
             {
                 var next = path[i + 1];
-                int nextCenterX = next.X * GameSettings.TileSize + GameSettings.TileSize / 2;
-                int nextCenterY = next.Y * GameSettings.TileSize + GameSettings.TileSize / 2;
+                Vector2 nextCenter = Map.AnchorToWorld(Map.TopLeftToAnchor(next, footprintSize));
+                int nextCenterX = (int)nextCenter.X;
+                int nextCenterY = (int)nextCenter.Y;
 
                 if (next.Y == point.Y)
                 {
@@ -416,6 +452,17 @@ public partial class GameplayScene
                 }
             }
         }
+
+        // Destination footprint indicator (reuses existing rectangle helpers).
+        // Makes the final occupied tiles explicit for multi-tile towers.
+        Point destinationTopLeft = path[^1];
+        DrawFootprintHover(
+            spriteBatch,
+            destinationTopLeft,
+            footprintSize,
+            Color.White * 0.22f,
+            Color.White * 0.7f
+        );
     }
 
     private static Rectangle GetSellButtonRect(Tower tower)
@@ -437,10 +484,35 @@ public partial class GameplayScene
     private static Rectangle GetWallPlacementButtonRect(Tower wallingTower)
     {
         const int btnSize = 18;
-        const float spriteHalfWidth = 15f; // SpriteSize(30) / 2
         Vector2 pos = wallingTower.DrawPosition;
-        int bx = (int)(pos.X + spriteHalfWidth + 4);
-        int by = (int)(pos.Y - spriteHalfWidth - btnSize - 2);
+        Vector2 drawSize = wallingTower.DrawSize;
+        int bx = (int)(pos.X + drawSize.X / 2f + 4f);
+        int by = (int)(pos.Y - drawSize.Y / 2f - btnSize - 2f);
         return new Rectangle(bx, by, btnSize, btnSize);
+    }
+
+    private void DrawFootprintHover(
+        SpriteBatch spriteBatch,
+        Point topLeft,
+        Point footprintSize,
+        Color fillColor,
+        Color outlineColor
+    )
+    {
+        int tileSize = GameSettings.TileSize;
+        for (int y = 0; y < footprintSize.Y; y++)
+        {
+            for (int x = 0; x < footprintSize.X; x++)
+            {
+                int gx = topLeft.X + x;
+                int gy = topLeft.Y + y;
+                if (gx < 0 || gx >= _map.Columns || gy < 0 || gy >= _map.Rows)
+                    continue;
+
+                var rect = new Rectangle(gx * tileSize, gy * tileSize, tileSize, tileSize);
+                TextureManager.DrawRect(spriteBatch, rect, fillColor);
+                TextureManager.DrawRectOutline(spriteBatch, rect, outlineColor, 1);
+            }
+        }
     }
 }

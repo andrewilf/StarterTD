@@ -90,7 +90,7 @@ public partial class TowerManager
     {
         return _wallConnectedSets.TryGetValue(wallingTower, out var cached)
             ? new HashSet<Point>(cached)
-            : BuildConnectedWallSet([wallingTower.GridPosition]);
+            : BuildConnectedWallSet(wallingTower.OccupiedTiles);
     }
 
     private static bool IsAdjacentToConnectedSet(Point point, HashSet<Point> connected)
@@ -286,7 +286,7 @@ public partial class TowerManager
         // before the first Update (e.g. during initial placement validation).
         var connected = _wallConnectedSets.TryGetValue(wallingTower, out var cached)
             ? cached
-            : BuildConnectedWallSet([wallingTower.GridPosition]);
+            : BuildConnectedWallSet(wallingTower.OccupiedTiles);
 
         Point[] dirs = [new(0, -1), new(0, 1), new(-1, 0), new(1, 0)];
         foreach (var dir in dirs)

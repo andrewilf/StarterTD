@@ -11,55 +11,42 @@ namespace StarterTD.Entities;
 /// </summary>
 internal static class TowerDrawingHelper
 {
-    private const float SpriteSize = 30f;
-
     public static void Draw(SpriteBatch spriteBatch, Tower tower)
     {
         Vector2 drawPosition = tower.DrawPosition;
+        Vector2 drawSize = tower.DrawSize;
 
-        // Champions (DrawScale.Y > 1.0) use bottom-center origin so they grow upward.
-        // Generic towers use centered origin (default behavior).
-        Vector2 spriteOrigin;
-        if (tower.DrawScale.Y > 1.0f)
-        {
-            // Position so bottom sits at same level as generic tower's bottom.
-            // Generic bottom = WorldPosition.Y + SpriteSize/2
-            spriteOrigin = new Vector2(0.5f, 1.0f);
-            drawPosition.Y += SpriteSize / 2f;
-        }
-        else
-        {
-            spriteOrigin = new Vector2(0.5f, 0.5f);
-        }
-
-        // Ability aura: two concentric circles give a soft glow effect
+        // Ability aura: two concentric circles give a soft glow effect.
         if (tower.IsAbilityBuffActive)
         {
+            float auraOuterRadius = MathF.Max(drawSize.X, drawSize.Y) * 0.7f;
+            float auraInnerRadius = MathF.Max(drawSize.X, drawSize.Y) * 0.45f;
+
             TextureManager.DrawFilledCircle(
                 spriteBatch,
-                tower.DrawPosition,
-                SpriteSize * 1.4f,
+                drawPosition,
+                auraOuterRadius,
                 Color.Gold * 0.25f
             );
             TextureManager.DrawFilledCircle(
                 spriteBatch,
-                tower.DrawPosition,
-                SpriteSize * 0.9f,
+                drawPosition,
+                auraInnerRadius,
                 Color.Gold * 0.45f
             );
         }
 
-        // Semi-transparent when moving so tower looks ghostly (non-blocking)
+        // Semi-transparent when moving so tower looks ghostly (non-blocking).
         Color bodyColor =
             tower.CurrentState == TowerState.Moving ? tower.TowerColor * 0.5f : tower.TowerColor;
 
         TextureManager.DrawSprite(
             spriteBatch,
             drawPosition,
-            new Vector2(SpriteSize * tower.DrawScale.X, SpriteSize * tower.DrawScale.Y),
+            drawSize,
             bodyColor,
             rotation: 0f,
-            origin: spriteOrigin,
+            origin: new Vector2(0.5f, 0.5f),
             drawOutline: true
         );
 
@@ -71,22 +58,15 @@ internal static class TowerDrawingHelper
         // Wall segments use a split bar (green/red/orange) against their growth cap.
         if (showHealthBar)
         {
-            float healthBarWidth = SpriteSize;
-            float healthBarHeight = 4f;
+            int barWidth = (int)MathF.Round(MathF.Max(24f, drawSize.X));
+            const int barHeight = 4;
 
-            int barX = (int)(drawPosition.X - healthBarWidth / 2f);
-            int barY = (int)(drawPosition.Y - (SpriteSize * tower.DrawScale.Y) / 2f - 8f);
+            int barX = (int)(drawPosition.X - barWidth / 2f);
+            int barY = (int)(drawPosition.Y - drawSize.Y / 2f - 8f);
 
             if (isWallSegment)
             {
-                DrawWallSegmentHealthBar(
-                    spriteBatch,
-                    tower,
-                    barX,
-                    barY,
-                    (int)healthBarWidth,
-                    (int)healthBarHeight
-                );
+                DrawWallSegmentHealthBar(spriteBatch, tower, barX, barY, barWidth, barHeight);
             }
             else
             {
@@ -94,26 +74,21 @@ internal static class TowerDrawingHelper
 
                 TextureManager.DrawRect(
                     spriteBatch,
-                    new Rectangle(barX, barY, (int)healthBarWidth, (int)healthBarHeight),
+                    new Rectangle(barX, barY, barWidth, barHeight),
                     Color.Red
                 );
                 TextureManager.DrawRect(
                     spriteBatch,
-                    new Rectangle(
-                        barX,
-                        barY,
-                        (int)(healthBarWidth * healthPercent),
-                        (int)healthBarHeight
-                    ),
+                    new Rectangle(barX, barY, (int)(barWidth * healthPercent), barHeight),
                     Color.LimeGreen
                 );
             }
         }
 
-        DrawCapacityBar(spriteBatch, tower, drawPosition);
+        DrawCapacityBar(spriteBatch, tower, drawPosition, drawSize);
 
         if (tower.CurrentState == TowerState.Cooldown)
-            DrawMoveCooldownBar(spriteBatch, tower, drawPosition);
+            DrawMoveCooldownBar(spriteBatch, tower, drawPosition, drawSize);
 
         foreach (var proj in tower.Projectiles)
             proj.Draw(spriteBatch);
@@ -129,16 +104,23 @@ internal static class TowerDrawingHelper
         );
     }
 
-    private static void DrawCapacityBar(SpriteBatch spriteBatch, Tower tower, Vector2 drawPosition)
+    private static void DrawCapacityBar(
+        SpriteBatch spriteBatch,
+        Tower tower,
+        Vector2 drawPosition,
+        Vector2 drawSize
+    )
     {
-        float barWidth = SpriteSize;
-        float barHeight = 3f;
+        if (tower.BlockCapacity <= 0)
+            return;
+
+        float barWidth = MathF.Max(24f, drawSize.X);
+        const float barHeight = 3f;
         float remainingPercent =
             (float)(tower.BlockCapacity - tower.CurrentEngagedCount) / tower.BlockCapacity;
 
         int barX = (int)(drawPosition.X - barWidth / 2f);
-        // Scale Y offset by DrawScale.Y so bar stays at top of scaled tower
-        int barY = (int)(drawPosition.Y - (SpriteSize * tower.DrawScale.Y) / 2f - 8f + 5f);
+        int barY = (int)(drawPosition.Y - drawSize.Y / 2f - 3f);
 
         TextureManager.DrawRect(
             spriteBatch,
@@ -211,17 +193,18 @@ internal static class TowerDrawingHelper
     private static void DrawMoveCooldownBar(
         SpriteBatch spriteBatch,
         Tower tower,
-        Vector2 drawPosition
+        Vector2 drawPosition,
+        Vector2 drawSize
     )
     {
-        float barWidth = SpriteSize;
-        float barHeight = 3f;
+        float barWidth = MathF.Max(24f, drawSize.X);
+        const float barHeight = 3f;
         // Fills from 0% (just arrived) to 100% (ready to move again)
         float progress = tower.MoveCooldownProgress;
 
         int barX = (int)(drawPosition.X - barWidth / 2f);
-        // Position below capacity bar: health bar at -8f, capacity at -3f, this at +2f
-        int barY = (int)(drawPosition.Y - (SpriteSize * tower.DrawScale.Y) / 2f - 8f + 10f);
+        // Position below capacity bar
+        int barY = (int)(drawPosition.Y - drawSize.Y / 2f + 2f);
 
         TextureManager.DrawRect(
             spriteBatch,
