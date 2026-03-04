@@ -73,6 +73,11 @@ public partial class GameplayScene : IScene
     private Point _mouseGrid;
     private float _selectedTowerRange;
     private List<Point>? _towerMovePreviewPath;
+    private bool _isTowerMoveDragArmed;
+    private Vector2 _towerMoveDragStartWorld;
+    private bool _isTowerMoveDragActive;
+    private Point _towerMoveDragStartGrid;
+    private Point _towerMoveDragCurrentGrid;
     private bool _isWallDragActive;
     private Point _wallDragStartGrid;
     private Point _wallDragCurrentGrid;
@@ -88,6 +93,11 @@ public partial class GameplayScene : IScene
     /// button on a selected walling tower. Press-drag-release on the grid places wall segments.
     /// </summary>
     private bool _wallPlacementMode;
+    private bool _isLaserRedirectArmed;
+    private bool _isLaserRedirectActive;
+    private Vector2 _laserRedirectTargetWorld;
+    private Vector2 _laserRedirectStartWorld;
+    private const float TowerMoveDragStartThreshold = 6f;
 
     public GameplayScene(Game1 game, string mapId)
     {
@@ -96,8 +106,16 @@ public partial class GameplayScene : IScene
     }
 
     // Maps any champion type to ChampionGun (shared pool key); generics map to themselves.
-    private static TowerType GetCooldownPoolKey(TowerType type) =>
-        type.IsChampion() ? TowerType.ChampionGun : type;
+    private static TowerType GetCooldownPoolKey(TowerType type)
+    {
+        if (type.IsChampion())
+            return TowerType.ChampionGun;
+
+        if (type == TowerType.WallSegment)
+            return TowerType.Walling;
+
+        return type;
+    }
 
     public void LoadContent()
     {
@@ -267,11 +285,12 @@ public partial class GameplayScene : IScene
         _mouseGrid = Map.WorldToGrid(ScreenToWorld(_inputManager.MousePositionVector));
         _hoveredTower = _towerManager.GetTowerAt(_mouseGrid);
 
-        // --- Compute tower movement path preview when a walkable tower is selected ---
-        // Suppressed in wall placement mode since the champion can't move while placing walls.
-        _towerMovePreviewPath = _wallPlacementMode
-            ? null
-            : _towerManager.GetPreviewPath(_mouseGrid);
+        // --- Compute tower movement path preview only while tower movement drag is active.
+        // This keeps selection from showing an eager path; path appears only after drag starts.
+        if (_isTowerMoveDragActive)
+            _towerMovePreviewPath = _towerManager.GetPreviewPath(_towerMoveDragCurrentGrid);
+        else
+            _towerMovePreviewPath = null;
 
         // --- Update laser effect ---
         if (_laserEffect != null)

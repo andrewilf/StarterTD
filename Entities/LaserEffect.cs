@@ -18,6 +18,10 @@ namespace StarterTD.Entities;
 /// </summary>
 public class LaserEffect
 {
+    private static readonly Vector2 BeamOrigin = new(1224f, -200f);
+
+    public static Vector2 BeamOriginWorld => BeamOrigin;
+
     public bool IsActive { get; private set; } = true;
 
     public void Cancel() => IsActive = false;
@@ -42,9 +46,6 @@ public class LaserEffect
     // px/s — ordered moves are faster than auto-tracking
     private const float SweepSpeed = 100f;
     private const float TrackSpeed = 50f;
-
-    // Fixed pivot: top-right, off-screen. Beam is drawn from here down to the contact point.
-    private static readonly Vector2 BeamOrigin = new(1224f, -200f);
 
     // Wind-up anchor (world position where rings converge)
     private readonly Vector2 _windUpTarget;

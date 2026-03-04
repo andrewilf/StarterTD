@@ -62,7 +62,14 @@ public partial class GameplayScene
             UpdateWallDragPreview(wallingAnchor);
 
             if (_wallDragPreviewPath != null && _wallDragPreviewPath.Count > 0)
-                _towerManager.TryPlaceWallPath(_wallDragPreviewPath, wallingAnchor);
+            {
+                int placedCount = _towerManager.TryPlaceWallPath(
+                    _wallDragPreviewPath,
+                    wallingAnchor
+                );
+                if (placedCount > 0)
+                    _wallPlacementMode = false;
+            }
         }
 
         CancelWallDrag();

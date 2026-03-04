@@ -57,6 +57,7 @@ public partial class GameplayScene
             spike.Draw(spriteBatch);
 
         _laserEffect?.Draw(spriteBatch);
+        DrawLaserRedirectPreview(spriteBatch);
 
         // Hover indicator on grid (world-space so it aligns with tiles)
         if (
@@ -66,6 +67,7 @@ public partial class GameplayScene
             && _mouseGrid.Y < _map.Rows
             && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
             && !(_wallPlacementMode && _isWallDragActive)
+            && !_isTowerMoveDragActive
         )
         {
             DrawHoverIndicator(spriteBatch);
@@ -208,6 +210,36 @@ public partial class GameplayScene
         }
     }
 
+    private void DrawLaserRedirectPreview(SpriteBatch spriteBatch)
+    {
+        if (!_isLaserRedirectArmed || !_laserSelected || _laserEffect == null)
+            return;
+
+        Vector2 laserTarget = _isLaserRedirectActive
+            ? _laserRedirectTargetWorld
+            : _laserRedirectStartWorld;
+
+        if (Vector2.DistanceSquared(LaserEffect.BeamOriginWorld, laserTarget) < 1f)
+            return;
+
+        Vector2 start = LaserEffect.BeamOriginWorld;
+        Vector2 end = laserTarget;
+        Vector2 direction = end - start;
+        float length = direction.Length();
+        if (length <= 0f)
+            return;
+
+        float rotation = MathF.Atan2(direction.Y, direction.X);
+        Vector2 center = (start + end) * 0.5f;
+        TextureManager.DrawSprite(
+            spriteBatch,
+            center,
+            new Vector2(length, 4f),
+            Color.Red * 0.75f,
+            rotation
+        );
+    }
+
     private void DrawWallDragPreview(SpriteBatch spriteBatch)
     {
         if (!_wallPlacementMode || !_isWallDragActive || _wallDragPreviewPath == null)
@@ -236,8 +268,8 @@ public partial class GameplayScene
     }
 
     /// <summary>
-    /// Draw a red rectangle outline around the selected tower or enemy.
-    /// For the walling champion, also draws the world-space wall placement toggle button.
+    /// Draw a yellow rectangle outline around the selected tower or enemy.
+    /// Also renders in-world controls for the selected tower.
     /// </summary>
     private void DrawSelectionIndicators(SpriteBatch spriteBatch)
     {
@@ -258,6 +290,34 @@ public partial class GameplayScene
                 h
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Yellow, borderThickness);
+
+            var sellRect = GetSellButtonRect(tower);
+            const int sellGlyphThickness = 2;
+            const int sellGlyphLengthOffset = 4;
+            TextureManager.DrawRect(spriteBatch, sellRect, new Color(130, 0, 0));
+            TextureManager.DrawRectOutline(spriteBatch, sellRect, Color.DarkRed, 2);
+
+            Vector2 sellCenter = new Vector2(
+                sellRect.X + sellRect.Width / 2f,
+                sellRect.Y + sellRect.Height / 2f
+            );
+            int sellGlyphLength = sellRect.Width - sellGlyphLengthOffset;
+            TextureManager.DrawSprite(
+                spriteBatch,
+                sellCenter,
+                new Vector2(sellGlyphThickness, sellGlyphLength),
+                Color.White,
+                MathF.PI / 4f,
+                new Vector2(0.5f, 0.5f)
+            );
+            TextureManager.DrawSprite(
+                spriteBatch,
+                sellCenter,
+                new Vector2(sellGlyphThickness, sellGlyphLength),
+                Color.White,
+                -MathF.PI / 4f,
+                new Vector2(0.5f, 0.5f)
+            );
 
             if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
             {
@@ -356,6 +416,18 @@ public partial class GameplayScene
                 }
             }
         }
+    }
+
+    private static Rectangle GetSellButtonRect(Tower tower)
+    {
+        const int btnSize = 18;
+        var wallBtnRect = GetWallPlacementButtonRect(tower);
+        int bx = wallBtnRect.X;
+        int by =
+            tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric()
+                ? wallBtnRect.Y - btnSize - 2
+                : wallBtnRect.Y;
+        return new Rectangle(bx, by, btnSize, btnSize);
     }
 
     /// <summary>

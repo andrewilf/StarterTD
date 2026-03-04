@@ -42,10 +42,26 @@ public partial class GameplayScene
             HandleLeftClick();
 
         if (_inputManager.IsLeftHeld())
+        {
             UpdateWallDrag();
+            UpdateTowerMoveDrag();
+            UpdateLaserRedirectDrag();
+        }
 
         if (_inputManager.IsLeftReleased())
+        {
+            if (_isTowerMoveDragActive)
+                CommitTowerMoveDrag();
+            else if (_isTowerMoveDragArmed)
+                CancelTowerMoveDrag();
+
             CommitWallDrag();
+
+            if (_isLaserRedirectActive)
+                CommitLaserRedirectDrag();
+            else if (_isLaserRedirectArmed)
+                CancelLaserRedirectDrag();
+        }
 
         if (_inputManager.IsRightClick())
             HandleRightClick();
@@ -108,6 +124,8 @@ public partial class GameplayScene
         _selectedEnemy = null;
         _wallPlacementMode = false;
         CancelWallDrag();
+        CancelTowerMoveDrag();
+        CancelLaserRedirectDrag();
     }
 
     private void HandleGridLeftClick(Vector2 worldMouse)
@@ -121,10 +139,28 @@ public partial class GameplayScene
             return;
         }
 
+        if (_laserSelected && _laserEffect != null)
+        {
+            StartLaserRedirectDrag(worldMouse);
+            return;
+        }
+
         Point gridPos = Map.WorldToGrid(worldMouse);
+        Point worldPos = worldMouse.ToPoint();
 
         var wallingAnchor = _towerManager.SelectedTower;
-        if (_wallPlacementMode && wallingAnchor != null)
+        if (
+            _towerManager.SelectedTower != null
+            && GetSellButtonRect(_towerManager.SelectedTower).Contains(worldPos)
+        )
+        {
+            var selectedTower = _towerManager.SelectedTower;
+            float penalty = _towerManager.SellTower(selectedTower);
+            var poolKey = GetCooldownPoolKey(selectedTower.TowerType);
+            _placementCooldowns[poolKey] = Math.Max(0f, _placementCooldowns[poolKey] - penalty);
+            DeselectAll();
+        }
+        else if (_wallPlacementMode && wallingAnchor != null)
         {
             StartWallDrag(gridPos);
         }
@@ -163,6 +199,14 @@ public partial class GameplayScene
         }
         else
         {
+            var clickedTower = _towerManager.GetTowerAt(gridPos);
+            if (clickedTower is { CanWalk: true, CurrentState: TowerState.Active })
+            {
+                ArmTowerMoveDrag(clickedTower, gridPos, worldMouse);
+                if (_isTowerMoveDragActive)
+                    return;
+            }
+
             var enemy = GetEnemyAt(worldMouse);
             if (enemy != null)
             {
@@ -171,7 +215,7 @@ public partial class GameplayScene
             }
             else
             {
-                var tower = _towerManager.GetTowerAt(gridPos);
+                var tower = clickedTower;
                 if (tower != _towerManager.SelectedTower)
                     DeselectAll();
                 _towerManager.SelectedTower = tower;
@@ -181,54 +225,149 @@ public partial class GameplayScene
 
     private void HandleRightClick()
     {
-        Point screenPos = _inputManager.MousePosition;
-        Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
-
-        if (_uiPanel.ContainsPoint(screenPos))
+        if (_uiPanel.ContainsPoint(_inputManager.MousePosition))
             return;
 
-        // When the laser is selected, right-click redirects the beam instead of selling/moving
+        if (_laserSelected && _laserEffect != null)
+            DeselectAll();
+    }
+
+    private void StartLaserRedirectDrag(Vector2 worldMouse)
+    {
+        if (_uiPanel.ContainsPoint(_inputManager.MousePosition))
+            return;
+
         if (_laserSelected && _laserEffect != null)
         {
-            _laserEffect.SetTarget(worldMouse);
+            _isLaserRedirectArmed = true;
+            _isLaserRedirectActive = false;
+            _laserRedirectStartWorld = worldMouse;
+            _laserRedirectTargetWorld = worldMouse;
+        }
+    }
+
+    private void UpdateLaserRedirectDrag()
+    {
+        if (!_isLaserRedirectArmed && !_isLaserRedirectActive)
+            return;
+
+        var activeLaser = _laserEffect;
+        if (!_laserSelected || activeLaser == null)
+        {
+            CancelLaserRedirectDrag();
             return;
         }
 
-        Point gridPos = Map.WorldToGrid(worldMouse);
-        var tower = _towerManager.GetTowerAt(gridPos);
+        Vector2 currentWorldMouse = ScreenToWorld(_inputManager.MousePositionVector);
+        _laserRedirectTargetWorld = currentWorldMouse;
+        if (!_isLaserRedirectActive)
+        {
+            float dragSqr = Vector2.DistanceSquared(currentWorldMouse, _laserRedirectStartWorld);
+            if (dragSqr < TowerMoveDragStartThreshold * TowerMoveDragStartThreshold)
+                return;
 
-        // Move command: selected walkable tower + right-click on empty buildable tile.
-        // Blocked when wall placement mode is active so the champion stays put.
-        var selected = _towerManager.SelectedTower;
+            _isLaserRedirectActive = true;
+        }
+
+        activeLaser.SetTarget(currentWorldMouse);
+    }
+
+    private void CommitLaserRedirectDrag()
+    {
+        if (!_isLaserRedirectActive)
+            return;
+
+        var activeLaser = _laserEffect;
+        if (_laserSelected && activeLaser != null)
+            activeLaser.SetTarget(_laserRedirectTargetWorld);
+
+        CancelLaserRedirectDrag();
+    }
+
+    private void CancelLaserRedirectDrag()
+    {
+        _isLaserRedirectArmed = false;
+        _isLaserRedirectActive = false;
+        _laserRedirectTargetWorld = Vector2.Zero;
+        _laserRedirectStartWorld = Vector2.Zero;
+    }
+
+    private void ArmTowerMoveDrag(Tower selectedTower, Point startGrid, Vector2 worldMouse)
+    {
         if (
-            selected != null
-            && selected.CanWalk
-            && selected.CurrentState == TowerState.Active
-            && !_wallPlacementMode
-            && tower == null
-            && _map.CanBuild(gridPos)
+            selectedTower.CurrentState != TowerState.Active
+            || !selectedTower.CanWalk
+            || selectedTower.GridPosition != startGrid
+        )
+            return;
+
+        _towerManager.SelectedTower = selectedTower;
+        _isTowerMoveDragArmed = true;
+        _isTowerMoveDragActive = false;
+        _towerMoveDragStartWorld = worldMouse;
+        _towerMoveDragStartGrid = startGrid;
+        _towerMoveDragCurrentGrid = startGrid;
+        _towerMovePreviewPath = null;
+    }
+
+    private void UpdateTowerMoveDrag()
+    {
+        if (!_isTowerMoveDragActive && !_isTowerMoveDragArmed)
+            return;
+
+        var selectedTower = _towerManager.SelectedTower;
+        if (
+            selectedTower == null
+            || !selectedTower.CanWalk
+            || selectedTower.CurrentState != TowerState.Active
+            || selectedTower.GridPosition != _towerMoveDragStartGrid
         )
         {
-            _towerManager.MoveTower(selected, gridPos);
-            _towerManager.SelectedTower = null;
-            _towerMovePreviewPath = null;
+            CancelTowerMoveDrag();
+            return;
         }
-        else if (tower != null)
-        {
-            if (_towerManager.SelectedTower == tower)
-            {
-                _towerManager.SelectedTower = null;
-                _wallPlacementMode = false;
-                CancelWallDrag();
-            }
 
-            float penalty = _towerManager.SellTower(tower);
-            // Reduce that type's placement pool by CooldownPenalty (capped at 0)
-            if (penalty > 0f)
-            {
-                var poolKey = GetCooldownPoolKey(tower.TowerType);
-                _placementCooldowns[poolKey] = Math.Max(0f, _placementCooldowns[poolKey] - penalty);
-            }
+        Vector2 currentWorldMouse = ScreenToWorld(_inputManager.MousePositionVector);
+        if (!_isTowerMoveDragActive)
+        {
+            float dragSqr = Vector2.DistanceSquared(currentWorldMouse, _towerMoveDragStartWorld);
+            if (dragSqr < TowerMoveDragStartThreshold * TowerMoveDragStartThreshold)
+                return;
+
+            _isTowerMoveDragActive = true;
         }
+
+        _towerMoveDragCurrentGrid = Map.WorldToGrid(currentWorldMouse);
+        _towerMovePreviewPath = _towerManager.GetPreviewPath(_towerMoveDragCurrentGrid);
+    }
+
+    private void CommitTowerMoveDrag()
+    {
+        if (!_isTowerMoveDragActive)
+            return;
+
+        var selectedTower = _towerManager.SelectedTower;
+        if (
+            selectedTower != null
+            && selectedTower.CurrentState == TowerState.Active
+            && selectedTower.CanWalk
+            && _towerMovePreviewPath is { Count: > 1 }
+        )
+        {
+            _towerManager.MoveTower(selectedTower, _towerMoveDragCurrentGrid);
+            _towerManager.SelectedTower = null;
+        }
+
+        CancelTowerMoveDrag();
+    }
+
+    private void CancelTowerMoveDrag()
+    {
+        _isTowerMoveDragArmed = false;
+        _isTowerMoveDragActive = false;
+        _towerMoveDragCurrentGrid = default;
+        _towerMoveDragStartGrid = default;
+        _towerMoveDragStartWorld = Vector2.Zero;
+        _towerMovePreviewPath = null;
     }
 }
