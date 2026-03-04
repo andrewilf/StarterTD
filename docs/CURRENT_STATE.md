@@ -23,6 +23,8 @@
 - Placement cooldown system: each tower type has a shared pool (`_placementCooldowns` in `GameplayScene`). On placement: `pool += BaseCooldown + CooldownPenalty × (towers already in pool)`. On sell: `pool -= CooldownPenalty` (capped at 0). All champions share one pool (keyed on `ChampionGun`). Pools tick down using scaled game time (time-slow extends the wait). `GameplayScene.GetCooldownPoolKey()` maps any champion type → `ChampionGun`
 - UI: consolidated tower buttons (one per type) — champion mode when dead, generic mode when alive; cooldown/"Locked" sub-labels; ability button per tower type (disabled/CD/ready states)
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
+- Movement input: selected walkable champions move with left-click drag-and-release from the selected tower tile; right-click move commands were removed (right-click still redirects cannon laser only)
+- Sell flow: selected tower exposes an in-world `X` button next to it for selling; right-click no longer triggers any tower sell action
 - Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
 - Enemy FSM (Moving/Attacking); waves driven by `Content/Waves/{mapId}.json` (fallback to hardcoded waves if no file)
 - Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Wave JSON assigns each enemy to a named spawn point
