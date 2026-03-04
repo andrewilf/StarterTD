@@ -261,12 +261,8 @@ public static class TextureManager
         if (TerrainTileset != null)
         {
             int col = (int)tileType;
-            var sourceRect = new Rectangle(
-                col * GameSettings.TileSize,
-                0,
-                GameSettings.TileSize,
-                GameSettings.TileSize
-            );
+            int srcSize = GameSettings.TerrainSourceTileSize;
+            var sourceRect = new Rectangle(col * srcSize, 0, srcSize, srcSize);
             spriteBatch.Draw(TerrainTileset, destRect, sourceRect, Color.White);
         }
         else

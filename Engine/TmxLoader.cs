@@ -60,6 +60,11 @@ public static class TmxLoader
         int columns = (int)root.Attribute("width")!;
         int rows = (int)root.Attribute("height")!;
 
+        // Use tile size from the .tmx file (not GameSettings.TileSize) so Tiled maps
+        // stay decoupled from the display tile size — no manual .tmx edits needed.
+        int tmxTileWidth = (int)root.Attribute("tilewidth")!;
+        int tmxTileHeight = (int)root.Attribute("tileheight")!;
+
         var layerElement =
             root.Element("layer")
             ?? throw new InvalidOperationException($"TMX '{filePath}': no <layer> element found");
@@ -93,9 +98,9 @@ public static class TmxLoader
             if (name == null)
                 continue;
 
-            // Tiled stores top-left pixel coords; integer-divide by TileSize for grid coords
-            int gridX = (int)(float.Parse((string)obj.Attribute("x")!) / GameSettings.TileSize);
-            int gridY = (int)(float.Parse((string)obj.Attribute("y")!) / GameSettings.TileSize);
+            // Tiled stores top-left pixel coords; divide by the .tmx tile size for grid coords
+            int gridX = (int)(float.Parse((string)obj.Attribute("x")!) / tmxTileWidth);
+            int gridY = (int)(float.Parse((string)obj.Attribute("y")!) / tmxTileHeight);
 
             if (name.StartsWith("spawn", StringComparison.OrdinalIgnoreCase))
                 spawnPoints[name] = new Point(gridX, gridY);

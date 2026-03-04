@@ -47,7 +47,7 @@ public partial class GameplayScene
             return;
         }
 
-        _wallDragCurrentGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
+        _wallDragCurrentGrid = Map.WorldToGrid(ScreenToWorld(_inputManager.MousePositionVector));
         UpdateWallDragPreview(wallingAnchor);
     }
 

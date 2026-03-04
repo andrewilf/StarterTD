@@ -32,9 +32,13 @@ public class Game1 : Game
 
     protected override void Initialize()
     {
-        // Set window size
+        GameSettings.Initialize(GraphicsDevice);
+
         _graphics.PreferredBackBufferWidth = GameSettings.ScreenWidth;
         _graphics.PreferredBackBufferHeight = GameSettings.ScreenHeight;
+        Window.IsBorderless = true;
+        _graphics.IsFullScreen = true;
+        _graphics.HardwareModeSwitch = false; // borderless, not exclusive fullscreen
         _graphics.ApplyChanges();
 
         Window.Title = "StarterTD — Tower Defense";

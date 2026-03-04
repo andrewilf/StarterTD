@@ -24,6 +24,18 @@ public partial class GameplayScene : IScene
     private InputManager _inputManager = null!;
     private UIPanel _uiPanel = null!;
 
+    /// <summary>
+    /// Pixel offset to center the map on the fullscreen display.
+    /// Applied as a SpriteBatch translation matrix for world-space rendering,
+    /// so GridToWorld/WorldToGrid stay in map-local coordinates (no offset needed).
+    /// </summary>
+    private Vector2 _mapOffset;
+
+    /// <summary>
+    /// Cached translation matrix built from _mapOffset. Avoids per-frame allocation.
+    /// </summary>
+    private Matrix _worldMatrix;
+
     private readonly List<IEnemy> _enemies = new();
     private readonly List<AoEEffect> _aoeEffects = new();
     private readonly List<SpikeEffect> _spikeEffects = new();
@@ -102,6 +114,14 @@ public partial class GameplayScene : IScene
             GameSettings.ScreenHeight,
             _championManager
         );
+
+        // Center the map in the screen area left of the UI panel
+        int mapPixelW = _map.Columns * GameSettings.TileSize;
+        int mapPixelH = _map.Rows * GameSettings.TileSize;
+        float ox = (GameSettings.ScreenWidth - GameSettings.UIPanelWidth - mapPixelW) / 2f;
+        float oy = (GameSettings.ScreenHeight - mapPixelH) / 2f;
+        _mapOffset = new Vector2(MathF.Floor(ox), MathF.Floor(oy));
+        _worldMatrix = Matrix.CreateTranslation(_mapOffset.X, _mapOffset.Y, 0);
 
         _lives = GameSettings.StartingLives;
         _gameOver = false;
@@ -244,7 +264,7 @@ public partial class GameplayScene : IScene
         _towerManager.Update(activeTime, _enemies);
 
         // --- Detect hovered tower for range indicator ---
-        _mouseGrid = Map.WorldToGrid(_inputManager.MousePositionVector);
+        _mouseGrid = Map.WorldToGrid(ScreenToWorld(_inputManager.MousePositionVector));
         _hoveredTower = _towerManager.GetTowerAt(_mouseGrid);
 
         // --- Compute tower movement path preview when a walkable tower is selected ---
@@ -295,6 +315,12 @@ public partial class GameplayScene : IScene
                 concreteEnemy.UpdatePath(_map);
         }
     }
+
+    /// <summary>
+    /// Convert a screen-space position (e.g. mouse) to map-local world coordinates
+    /// by subtracting the map centering offset.
+    /// </summary>
+    private Vector2 ScreenToWorld(Vector2 screenPos) => screenPos - _mapOffset;
 
     /// <summary>
     /// Get the enemy at a specific world position, or null.
