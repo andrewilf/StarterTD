@@ -53,30 +53,31 @@ public partial class GameplayScene
 
     private void HandleLeftClick()
     {
-        Point mousePos = _inputManager.MousePosition;
+        Point screenPos = _inputManager.MousePosition;
+        // World-space mouse position (map-local coords, offset removed)
+        Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
+        Point worldPos = worldMouse.ToPoint();
 
         // Check if the world-space wall placement button was clicked.
-        // This takes priority over grid clicks so it is checked before panel/grid routing.
+        // Button rect is in world-space, so test against worldPos.
         var selectedWalling = GetSelectedWallingAnchor();
         if (
             selectedWalling != null
-            && GetWallPlacementButtonRect(selectedWalling).Contains(mousePos)
+            && GetWallPlacementButtonRect(selectedWalling).Contains(worldPos)
         )
         {
             _wallPlacementMode = !_wallPlacementMode;
             if (!_wallPlacementMode)
                 CancelWallDrag();
         }
-        // Check if click is on UI panel first
-        else if (_uiPanel.ContainsPoint(mousePos))
+        // Check if click is on UI panel (screen-space)
+        else if (_uiPanel.ContainsPoint(screenPos))
         {
-            _uiPanel.HandleClick(mousePos, _placementCooldowns);
+            _uiPanel.HandleClick(screenPos, _placementCooldowns);
 
-            // Selecting a tower to place clears any existing selection
             if (_uiPanel.SelectedTowerType.HasValue)
                 DeselectAll();
 
-            // Cache selected tower range to avoid per-frame GetStats allocation in Draw
             _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
                 ? TowerData.GetStats(_uiPanel.SelectedTowerType.Value).Range
                 : 0f;
@@ -89,7 +90,7 @@ public partial class GameplayScene
         }
         else
         {
-            HandleGridLeftClick(mousePos);
+            HandleGridLeftClick(worldMouse);
         }
     }
 
@@ -109,10 +110,10 @@ public partial class GameplayScene
         CancelWallDrag();
     }
 
-    private void HandleGridLeftClick(Point mousePos)
+    private void HandleGridLeftClick(Vector2 worldMouse)
     {
         // Left-clicking the active laser beam selects it so right-click can redirect it.
-        if (_laserEffect != null && _laserEffect.ContainsPoint(mousePos.ToVector2()))
+        if (_laserEffect != null && _laserEffect.ContainsPoint(worldMouse))
         {
             DeselectAll();
             _laserSelected = true;
@@ -120,9 +121,8 @@ public partial class GameplayScene
             return;
         }
 
-        Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
+        Point gridPos = Map.WorldToGrid(worldMouse);
 
-        // Preserve wall drag if the selected walling tower is still selected
         var wallingAnchor = _towerManager.SelectedTower;
         if (_wallPlacementMode && wallingAnchor != null)
         {
@@ -145,10 +145,8 @@ public partial class GameplayScene
         {
             var towerType = _uiPanel.SelectedTowerType.Value;
             var poolKey = GetCooldownPoolKey(towerType);
-            // UIPanel already blocks selection during cooldown, but guard here as well
             if (_placementCooldowns[poolKey] <= 0f)
             {
-                // Count placed towers in this pool before placement so penalty scales with stack size.
                 int poolCount = _towerManager.Towers.Count(t =>
                     GetCooldownPoolKey(t.TowerType) == poolKey
                 );
@@ -165,8 +163,7 @@ public partial class GameplayScene
         }
         else
         {
-            // Try to select an enemy first, then a tower
-            var enemy = GetEnemyAt(mousePos.ToVector2());
+            var enemy = GetEnemyAt(worldMouse);
             if (enemy != null)
             {
                 DeselectAll();
@@ -175,7 +172,6 @@ public partial class GameplayScene
             else
             {
                 var tower = _towerManager.GetTowerAt(gridPos);
-                // Selecting a different tower resets wall mode
                 if (tower != _towerManager.SelectedTower)
                     DeselectAll();
                 _towerManager.SelectedTower = tower;
@@ -185,19 +181,20 @@ public partial class GameplayScene
 
     private void HandleRightClick()
     {
-        Point mousePos = _inputManager.MousePosition;
+        Point screenPos = _inputManager.MousePosition;
+        Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
 
-        if (_uiPanel.ContainsPoint(mousePos))
+        if (_uiPanel.ContainsPoint(screenPos))
             return;
 
         // When the laser is selected, right-click redirects the beam instead of selling/moving
         if (_laserSelected && _laserEffect != null)
         {
-            _laserEffect.SetTarget(mousePos.ToVector2());
+            _laserEffect.SetTarget(worldMouse);
             return;
         }
 
-        Point gridPos = Map.WorldToGrid(mousePos.ToVector2());
+        Point gridPos = Map.WorldToGrid(worldMouse);
         var tower = _towerManager.GetTowerAt(gridPos);
 
         // Move command: selected walkable tower + right-click on empty buildable tile.

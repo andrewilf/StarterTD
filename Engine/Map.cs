@@ -190,9 +190,11 @@ public class Map
     /// </summary>
     public static Point WorldToGrid(Vector2 worldPos)
     {
+        // Floor instead of truncate: negative coords (mouse in black border) must
+        // produce negative grid values so bounds checks reject them correctly.
         return new Point(
-            (int)(worldPos.X / GameSettings.TileSize),
-            (int)(worldPos.Y / GameSettings.TileSize)
+            (int)MathF.Floor(worldPos.X / GameSettings.TileSize),
+            (int)MathF.Floor(worldPos.Y / GameSettings.TileSize)
         );
     }
 

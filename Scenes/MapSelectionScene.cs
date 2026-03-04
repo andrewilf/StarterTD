@@ -23,9 +23,13 @@ public class MapSelectionScene : IScene
 
     private List<MapData> _availableMaps = [];
     private List<RectangleF> _cardBounds = [];
+    private RectangleF _exitButtonBounds;
+    private int _layoutWidth;
+    private int _layoutHeight;
 
     // Track which card is currently hovered (-1 = none)
     private int _hoveredCardIndex = -1;
+    private bool _isExitHovered;
 
     private const int CardsPerRow = 3;
     private const int CardWidth = 280;
@@ -33,6 +37,9 @@ public class MapSelectionScene : IScene
     private const int VerticalGap = 30;
     private const int TitleAreaHeight = 120; // space reserved at top for title
     private const int ScreenPadding = 30; // bottom margin
+    private const int ExitButtonWidth = 150;
+    private const int ExitButtonHeight = 52;
+    private const int ExitButtonMargin = 24;
 
     public MapSelectionScene(Game1 game)
     {
@@ -44,32 +51,8 @@ public class MapSelectionScene : IScene
         _inputManager = new InputManager();
 
         _availableMaps = MapDataRepository.GetAvailableMaps().ConvertAll(MapDataRepository.GetMap);
-
-        int count = _availableMaps.Count;
-        int rowCount = (int)Math.Ceiling(count / (double)CardsPerRow);
-
-        // Compute card height so all rows fit vertically within the screen.
-        int availableHeight =
-            GameSettings.ScreenHeight
-            - TitleAreaHeight
-            - ScreenPadding
-            - (VerticalGap * (rowCount - 1));
-        int cardHeight = rowCount > 0 ? availableHeight / rowCount : 200;
-
-        // Center the grid horizontally. If there is only one partial row, center that too.
-        int colsThisLayout = Math.Min(count, CardsPerRow);
-        int totalWidth = (CardWidth * colsThisLayout) + (HorizontalGap * (colsThisLayout - 1));
-        int startX = (GameSettings.ScreenWidth - totalWidth) / 2;
-
-        _cardBounds = [];
-        for (int i = 0; i < count; i++)
-        {
-            int col = i % CardsPerRow;
-            int row = i / CardsPerRow;
-            int x = startX + col * (CardWidth + HorizontalGap);
-            int y = TitleAreaHeight + row * (cardHeight + VerticalGap);
-            _cardBounds.Add(new RectangleF(x, y, CardWidth, cardHeight));
-        }
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+        RebuildLayout(viewportWidth, viewportHeight);
 
         try
         {
@@ -86,10 +69,12 @@ public class MapSelectionScene : IScene
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
+        HandleViewportResize();
 
         Vector2 mousePos = _inputManager.MousePosition.ToVector2();
 
         _hoveredCardIndex = -1;
+        _isExitHovered = _exitButtonBounds.Contains(mousePos);
         for (int i = 0; i < _cardBounds.Count; i++)
         {
             if (_cardBounds[i].Contains(mousePos))
@@ -103,16 +88,38 @@ public class MapSelectionScene : IScene
         if (
             currentMouse.LeftButton == ButtonState.Pressed
             && _previousMouse.LeftButton == ButtonState.Released
-            && _hoveredCardIndex >= 0
         )
         {
-            string selectedMapId = _availableMaps[_hoveredCardIndex].Id;
-            var gameplayScene = new GameplayScene(_game, selectedMapId);
-            _game.SetScene(gameplayScene);
+            if (_isExitHovered)
+            {
+                _game.Exit();
+            }
+            else if (_hoveredCardIndex >= 0)
+            {
+                string selectedMapId = _availableMaps[_hoveredCardIndex].Id;
+                var gameplayScene = new GameplayScene(_game, selectedMapId);
+                _game.SetScene(gameplayScene);
+            }
         }
 
         _previousMouse = currentMouse;
     }
+
+    private void HandleViewportResize()
+    {
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+
+        if (viewportWidth == _layoutWidth && viewportHeight == _layoutHeight)
+            return;
+
+        RebuildLayout(viewportWidth, viewportHeight);
+    }
+
+    private (int width, int height) GetViewportSize() =>
+        (
+            Math.Max(1, _game.GraphicsDevice.Viewport.Width),
+            Math.Max(1, _game.GraphicsDevice.Viewport.Height)
+        );
 
     public void Draw(SpriteBatch spriteBatch)
     {
@@ -125,6 +132,8 @@ public class MapSelectionScene : IScene
             spriteBatch.DrawString(_font, title, titlePos + new Vector2(2, 2), Color.Black);
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
+
+        DrawExitButton(spriteBatch);
 
         for (int i = 0; i < _availableMaps.Count; i++)
         {
@@ -190,7 +199,10 @@ public class MapSelectionScene : IScene
     /// </summary>
     private static void DrawMapPreview(SpriteBatch spriteBatch, MapData mapData, Rectangle bounds)
     {
-        const int miniTileSize = 13;
+        int miniTileSize = Math.Max(
+            2,
+            Math.Min(bounds.Width / mapData.Columns, bounds.Height / mapData.Rows)
+        );
 
         int gridWidth = mapData.Columns * miniTileSize;
         int gridHeight = mapData.Rows * miniTileSize;
@@ -231,5 +243,64 @@ public class MapSelectionScene : IScene
 
         Rectangle gridBounds = new Rectangle(startX, startY, gridWidth, gridHeight);
         TextureManager.DrawRectOutline(spriteBatch, gridBounds, Color.White * 0.39f, 2);
+    }
+
+    private void RebuildLayout(int viewportWidth, int viewportHeight)
+    {
+        _layoutWidth = viewportWidth;
+        _layoutHeight = viewportHeight;
+        GameSettings.SetScreenSize(viewportWidth, viewportHeight);
+
+        int count = _availableMaps.Count;
+        int rowCount = (int)Math.Ceiling(count / (double)CardsPerRow);
+
+        // Compute card height so all rows fit vertically within the current window height.
+        int availableHeight =
+            viewportHeight - TitleAreaHeight - ScreenPadding - (VerticalGap * (rowCount - 1));
+        int cardHeight = rowCount > 0 ? availableHeight / rowCount : 200;
+
+        // Center the grid horizontally. If there is only one partial row, center that too.
+        int colsThisLayout = Math.Min(count, CardsPerRow);
+        int totalWidth = (CardWidth * colsThisLayout) + (HorizontalGap * (colsThisLayout - 1));
+        int startX = (viewportWidth - totalWidth) / 2;
+
+        _cardBounds = [];
+        for (int i = 0; i < count; i++)
+        {
+            int col = i % CardsPerRow;
+            int row = i / CardsPerRow;
+            int x = startX + col * (CardWidth + HorizontalGap);
+            int y = TitleAreaHeight + row * (cardHeight + VerticalGap);
+            _cardBounds.Add(new RectangleF(x, y, CardWidth, cardHeight));
+        }
+
+        _exitButtonBounds = new RectangleF(
+            viewportWidth - ExitButtonWidth - ExitButtonMargin,
+            ExitButtonMargin,
+            ExitButtonWidth,
+            ExitButtonHeight
+        );
+    }
+
+    private void DrawExitButton(SpriteBatch spriteBatch)
+    {
+        Color fill = _isExitHovered ? Color.IndianRed : Color.Maroon;
+        Color border = _isExitHovered ? Color.White : Color.Salmon;
+        Rectangle rect = _exitButtonBounds.ToRectangle();
+
+        TextureManager.DrawRect(spriteBatch, rect, fill);
+        TextureManager.DrawRectOutline(spriteBatch, rect, border, 3);
+
+        if (_font == null)
+            return;
+
+        string label = "Exit";
+        Vector2 size = _font.MeasureString(label);
+        Vector2 pos = new Vector2(
+            _exitButtonBounds.X + (_exitButtonBounds.Width - size.X) / 2f,
+            _exitButtonBounds.Y + (_exitButtonBounds.Height - size.Y) / 2f
+        );
+        spriteBatch.DrawString(_font, label, pos + new Vector2(1, 1), Color.Black);
+        spriteBatch.DrawString(_font, label, pos, Color.White);
     }
 }

@@ -2,6 +2,10 @@
 
 ## Active Systems
 - Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — drop files in `Content/Maps/`, no code changes)
+- Display starts in windowed maximized mode (not fullscreen). Main map-selection screen includes a clickable Exit button
+- Map selection layout auto-reflows to current viewport size; map preview tiles scale to fit card bounds
+- Gameplay rendering uses world-space + screen-space spritebatch passes; map is centered via `_worldMatrix` translation and gameplay input is converted through `ScreenToWorld`
+- Tile sizes are decoupled: display tile size is 32 while terrain spritesheet source tile size stays 40; TMX object marker conversion uses TMX tilewidth/tileheight
 - Pause: P to toggle, ESC/Resume button
 - MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
 - Dijkstra pathfinding with per-enemy rerouting (`Math.Max` tile/tower costs prevents pathing through HighGround towers). Enemies store `_spawnName` and pass it on reroute so multi-lane maps keep correct exit assignment after tower changes
@@ -26,7 +30,7 @@
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others
 - Range indicators, AoE visuals, victory/defeat flow
 - Debug sidebar: Place High Ground tiles, Spawn Enemy
-- Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, wave spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank tracks real (wall-clock) time, unaffected by the slowdown itself
+- Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, wave spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank uses real (wall-clock) time, unaffected by the slowdown itself
 
 ## Backlog
 

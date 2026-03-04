@@ -5,9 +5,10 @@
 - Scenes: `MapSelectionScene`, `GameplayScene`, `PauseScene`
 
 ## Data Flow
-- Down: Scene → managers via `Update()` args
-- Up: Managers → Scene via `Action<T>` callbacks. Managers never reference each other
+- Down: Scene -> managers via `Update()` args
+- Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
 - Rendering: `SpriteBatch`/fonts passed via `Draw()`
+- Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns
 `Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`
@@ -41,7 +42,7 @@
 - `CannonChampionTower.ActivateLaser()`: sets `IsAbilityBuffActive = true` + `IsLaserActive = true`; suppresses projectile firing via `IsFiringSuppressed` override. `Tower.CancelAbility()`: public wrapper that calls `DeactivateAbilityBuff()` if active; `OnAbilityDeactivated()` hook clears `IsLaserActive`
 - Laser ability chain: `TriggerChampionAbility(type, enemies)` resolves initial target (last living target → closest enemy → 1 tile left of tower) → fires `TowerManager.OnLaserActivated` → `GameplayScene` spawns `LaserEffect`. Interruption: `MoveTower`/`RemoveTower` pattern-match `is CannonChampionTower` → `CancelAbility()` + `TowerManager.OnLaserCancelled` → `GameplayScene` nulls `_laserEffect`
 - `LaserEffect` (`Entities/LaserEffect.cs`): self-contained wind-up + beam effect. `_currentContact` tracks live damage point; beam renders from `BeamOrigin` (top-right off-screen) to `_currentContact`. `IsSelected` enables right-click redirect. `Cancel()` sets `IsActive = false`
-- `WallingTower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(WallingTower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`; `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
+- `WallingTower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(WallingTower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`. `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
 - `TowerStats.AbilityCooldown`: per-champion CD; generics default 0
 - Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
 - `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: grid-snapped
@@ -51,8 +52,15 @@
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)
 - `MapDataRepository.GetAvailableMaps()` scans `Content/Maps/*.tmx` at runtime
-- `TextureManager.DrawTile()`: `terrain.png` spritesheet (col = `(int)TileType`); fallback colored rect
+- Tile sizing is decoupled: `GameSettings.TileSize` is display tile size (32), `GameSettings.TerrainSourceTileSize` is spritesheet source tile size (40)
+- `TextureManager.DrawTile()`: `terrain.png` spritesheet (col = `(int)TileType`) sampled at source size and scaled to display size; fallback colored rect
+- `TmxLoader` converts object pixel coords to grid coords using TMX `tilewidth`/`tileheight` (not `GameSettings.TileSize`)
 - Multi-spawn/exit: `MapData.SpawnPoints/ExitPoints: Dictionary<string, Point>`. Lane pairing: `spawn_a` → `exit_a` by suffix; fallback first exit. `Map.ActivePaths`: spawn name → path. `Enemy._spawnName` preserved on reroute via `Map.ComputePathFromPosition()`
+
+## Rendering/Window
+- `GameplayScene.Draw()` runs two `SpriteBatch` passes: world-space with `_worldMatrix` translation, then screen-space for panel/overlays
+- Gameplay input converts screen coords to world coords (`ScreenToWorld`) before world hit tests and grid conversion
+- Startup window mode is windowed maximized (not fullscreen); `GameSettings.ScreenWidth/ScreenHeight` sync to final client bounds
 
 ## Tile System
 - `TileType`: HighGround, Path, Rock. Stats: `Engine/TileTypes/<Type>Tile.cs`; registry: `TileData.GetStats()`

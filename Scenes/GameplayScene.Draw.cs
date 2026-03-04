@@ -10,14 +10,34 @@ namespace StarterTD.Scenes;
 
 /// <summary>
 /// Rendering methods for GameplayScene. Partial class split from GameplayScene.cs.
+///
+/// Uses two SpriteBatch passes:
+///   1. World-space — translated by _mapOffset so the map renders centered on screen.
+///   2. Screen-space — no transform, used for the UI panel and fullscreen overlays.
+///
+/// Game1.Draw() opens a batch before calling this, so we End() it first,
+/// then re-open a screen-space batch at the end so Game1's FPS counter draws correctly.
 /// </summary>
 public partial class GameplayScene
 {
     public void Draw(SpriteBatch spriteBatch)
     {
+        // --- Close Game1's default batch so we can open our own with a matrix ---
+        spriteBatch.End();
+
+        // === World-space pass (map-local coords translated to screen center) ===
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            null,
+            null,
+            null,
+            _worldMatrix
+        );
+
         _map.Draw(spriteBatch);
 
-        // Draw tower movement path preview (before towers so towers render on top)
         if (_towerMovePreviewPath != null)
             DrawTowerMovePreview(spriteBatch, _towerMovePreviewPath);
 
@@ -38,6 +58,33 @@ public partial class GameplayScene
 
         _laserEffect?.Draw(spriteBatch);
 
+        // Hover indicator on grid (world-space so it aligns with tiles)
+        if (
+            _mouseGrid.X >= 0
+            && _mouseGrid.X < _map.Columns
+            && _mouseGrid.Y >= 0
+            && _mouseGrid.Y < _map.Rows
+            && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
+            && !(_wallPlacementMode && _isWallDragActive)
+        )
+        {
+            DrawHoverIndicator(spriteBatch);
+        }
+
+        spriteBatch.End();
+
+        // === Screen-space pass (UI panel, overlays — no matrix) ===
+        // Left open so Game1.Draw() can append the FPS counter and call End().
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            null,
+            null,
+            null,
+            null
+        );
+
         bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
         _uiPanel.Draw(
             spriteBatch,
@@ -50,19 +97,6 @@ public partial class GameplayScene
             _towerManager.SelectedTower,
             _selectedEnemy
         );
-
-        // Hover indicator on grid
-        if (
-            _mouseGrid.X >= 0
-            && _mouseGrid.X < _map.Columns
-            && _mouseGrid.Y >= 0
-            && _mouseGrid.Y < _map.Rows
-            && !_uiPanel.ContainsPoint(_inputManager.MousePosition)
-            && !(_wallPlacementMode && _isWallDragActive)
-        )
-        {
-            DrawHoverIndicator(spriteBatch);
-        }
 
         if (_gameOver || _gameWon)
             DrawGameOverOverlay(spriteBatch, _uiPanel.GetFont());
@@ -85,7 +119,6 @@ public partial class GameplayScene
         Color hoverColor;
         if (isWallMode)
         {
-            // Green if the tile is a valid wall placement, red otherwise
             bool canPlaceWall =
                 _map.CanBuild(_mouseGrid)
                 && _towerManager.IsAdjacentToWallingNetwork(_mouseGrid, wallingAnchor!);
@@ -98,7 +131,6 @@ public partial class GameplayScene
         else
             hoverColor = Color.Red * 0.16f;
 
-        // Show range preview when placing a tower
         if (_selectedTowerRange > 0f)
         {
             Vector2 hoverCenter = Map.GridToWorld(_mouseGrid);
@@ -137,7 +169,6 @@ public partial class GameplayScene
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2(centerX - titleSize.X / 2, centerY - 100);
 
-            // Shadow + main text for readability
             spriteBatch.DrawString(font, title, titlePos + new Vector2(2, 2), Color.Black);
             spriteBatch.DrawString(font, title, titlePos, titleColor);
 
@@ -168,7 +199,6 @@ public partial class GameplayScene
         }
         else
         {
-            // Fallback: colored block indicator when font is unavailable
             Color indicatorColor = _gameWon ? Color.Gold : Color.Red;
             TextureManager.DrawRect(
                 spriteBatch,
@@ -229,8 +259,6 @@ public partial class GameplayScene
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Yellow, borderThickness);
 
-            // World-space wall placement button: shown when any walling tower is selected.
-            // Active (wall mode on) = dark green filled; inactive = dark outline only.
             if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
             {
                 var btnRect = GetWallPlacementButtonRect(tower);
@@ -239,7 +267,6 @@ public partial class GameplayScene
                 TextureManager.DrawRect(spriteBatch, btnRect, btnBg);
                 TextureManager.DrawRectOutline(spriteBatch, btnRect, btnOutline, 2);
 
-                // "+" symbol: two thin rectangles (horizontal and vertical bars)
                 int cx = btnRect.X + btnRect.Width / 2;
                 int cy = btnRect.Y + btnRect.Height / 2;
                 TextureManager.DrawRect(
@@ -332,7 +359,7 @@ public partial class GameplayScene
     }
 
     /// <summary>
-    /// Returns the screen-space rectangle for the world-space wall placement button
+    /// Returns the world-space rectangle for the wall placement button
     /// shown top-right of the walling champion sprite when it is selected.
     /// </summary>
     private static Rectangle GetWallPlacementButtonRect(Tower wallingTower)

@@ -10,6 +10,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Tower System**: 2 Generic (Gun, Cannon) + 2 Champion tower types with walking, abilities, and blocking capacity.
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.
 * **Game Loop**: Map Selection → Gameplay → Victory/Defeat.
+* **Windowing**: Launches in windowed maximized mode with native window controls. Map selection includes an `Exit` button.
 
 ## Build & Run
     # Restore dependencies
@@ -29,13 +30,14 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 | Input | Context | Action |
 | :--- | :--- | :--- |
 | **Left Click** | Map Selection | Select Map |
+| **Left Click** | Map Selection | Click `Exit` button to quit |
 | **Left Click** | Gameplay | Place Tower |
 | **Key 'R'** | Game Over | Restart / Return to Menu |
 
 ## Map Workflow
 
 Maps are `.tmx` files created in [Tiled map editor](https://www.mapeditor.org) (free).
-The tileset is `Content/Maps/terrain.png` — a horizontal spritesheet, 40×40px per tile:
+The tileset is `Content/Maps/terrain.png` — a horizontal spritesheet, currently 40×40px source tiles (rendered at 32×32 in-game):
 
 | Column | GID | Tile type | Meaning |
 | :--- | :--- | :--- | :--- |
@@ -47,13 +49,13 @@ The tileset is `Content/Maps/terrain.png` — a horizontal spritesheet, 40×40px
 
 1. Open Tiled → **File → New → New Map**
    - Orientation: Orthogonal, Layer Format: **CSV**
-   - Map size: **20 × 15** tiles, Tile size: **40 × 40** px
+   - Map size: **20 × 15** tiles, Tile size: **40 × 40** px (matches current source assets)
 2. Add the tileset: click **+** in the Tilesets panel → choose `Content/Maps/terrain.png`, tile size 40×40
 3. Paint a **Terrain** tile layer using GIDs 1/2/3
 4. Add an **Object Layer** named `Markers` with point objects for spawn and exit tiles:
    - At minimum: one object named `spawn` and one named `exit`
    - For multiple lanes: use `spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc. Lane pairing is by suffix — `spawn_a` routes to `exit_a`
-   - Pixel coords = `col × 40`, `row × 40` (top-left of tile)
+   - Pixel coords = `col × tilewidth`, `row × tileheight` (top-left of tile)
 5. Optionally set a display name: **Map → Map Properties → +** → string property `name`
 6. Save as `Content/Maps/<your_id>.tmx`
 7. Run `dotnet build` — the file is picked up automatically via the `*.tmx` glob in the project
@@ -100,7 +102,7 @@ If no JSON file exists for the selected map, the game falls back to 5 built-in w
 
 ### Tileset tips
 
-- Keep the tileset image at exactly **120 × 40 px** (3 tiles of 40×40). Adding tile types requires updating `TileType.cs`, `TileData.cs`, and `TmxLoader.cs`.
+- Keep the tileset image at exactly **120 × 40 px** (3 tiles of 40×40 source). Runtime display scales each tile to 32×32.
 - `terrain.png` is embedded in each `.tmx` via the tileset reference — the image path is only used by Tiled's editor display and is not loaded at runtime.
 
 ## License
