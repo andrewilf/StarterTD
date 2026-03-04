@@ -180,16 +180,17 @@ public partial class GameplayScene
         else if (_uiPanel.SelectedTowerType.HasValue)
         {
             var towerType = _uiPanel.SelectedTowerType.Value;
+            var stats = TowerData.GetStats(towerType);
+            Point placementTopLeft = Map.SnapWorldToTopLeft(worldMouse, stats.FootprintTiles);
             var poolKey = GetCooldownPoolKey(towerType);
             if (_placementCooldowns[poolKey] <= 0f)
             {
                 int poolCount = _towerManager.Towers.Count(t =>
                     GetCooldownPoolKey(t.TowerType) == poolKey
                 );
-                bool placed = _towerManager.TryPlaceTower(towerType, gridPos);
+                bool placed = _towerManager.TryPlaceTower(towerType, placementTopLeft);
                 if (placed)
                 {
-                    var stats = TowerData.GetStats(towerType);
                     _placementCooldowns[poolKey] +=
                         stats.BaseCooldown + stats.CooldownPenalty * poolCount;
                     _uiPanel.SelectedTowerType = null;
@@ -297,7 +298,7 @@ public partial class GameplayScene
         if (
             selectedTower.CurrentState != TowerState.Active
             || !selectedTower.CanWalk
-            || selectedTower.GridPosition != startGrid
+            || !selectedTower.OccupiesTile(startGrid)
         )
             return;
 
@@ -320,7 +321,7 @@ public partial class GameplayScene
             selectedTower == null
             || !selectedTower.CanWalk
             || selectedTower.CurrentState != TowerState.Active
-            || selectedTower.GridPosition != _towerMoveDragStartGrid
+            || !selectedTower.OccupiesTile(_towerMoveDragStartGrid)
         )
         {
             CancelTowerMoveDrag();
@@ -337,7 +338,10 @@ public partial class GameplayScene
             _isTowerMoveDragActive = true;
         }
 
-        _towerMoveDragCurrentGrid = Map.WorldToGrid(currentWorldMouse);
+        _towerMoveDragCurrentGrid = Map.SnapWorldToTopLeft(
+            currentWorldMouse,
+            selectedTower.FootprintSize
+        );
         _towerMovePreviewPath = _towerManager.GetPreviewPath(_towerMoveDragCurrentGrid);
     }
 

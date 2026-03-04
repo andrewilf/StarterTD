@@ -17,6 +17,8 @@ public static class WallingTowerStats
         Color: Color.DarkGreen,
         MaxHealth: 80,
         BlockCapacity: 3,
+        FootprintTiles: new Point(1, 1),
+        PlaceholderDrawSize: new Vector2(32f, 32f),
         DrawScale: new Vector2(1.0f, 1.0f),
         CanWalk: false,
         AbilityDuration: 3f,

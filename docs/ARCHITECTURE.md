@@ -15,25 +15,25 @@
 
 ## Tower System
 - `TowerType` enum: Generic (Gun, Cannon, Walling) + Champion (ChampionGun, ChampionCannon, ChampionWalling) + WallSegment
-- Stats: `Entities/Towers/Stats/<Type>TowerStats.cs`; registry: `TowerData.GetStats()`. Each stat record carries `BaseCooldown` (flat seconds added to pool on placement) and `CooldownPenalty` (additional seconds per tower already in that pool). WallSegment: both zero (no throttle)
+- Stats: `Entities/Towers/Stats/<Type>TowerStats.cs`; registry: `TowerData.GetStats()`. Each stat record carries `BaseCooldown` (flat seconds added to pool on placement), `CooldownPenalty` (additional seconds per tower already in that pool), `FootprintTiles`, and `PlaceholderDrawSize`. Champions use `FootprintTiles = 2x2`; generics/walls use `1x1`
 - Variant mapping: `TowerType.GetChampionVariant()` / `GetGenericVariant()`
 - `TowerTypeExtensions`: `IsChampion()`, `IsWallingChampion()`, `IsWallingGeneric()`, `IsWallSegment()`
 - **Tower class hierarchy**: `Tower` (base) → `WallSegmentTower` (growth/decay), `WallingTower` (Walling + ChampionWalling; frenzy), `CannonChampionTower` (laser). Gun/Cannon/ChampionGun use `Tower` directly. Instantiate via `Tower.Create(type, pos)` factory — never `new Tower(...)` directly
 - Virtual hooks on base: `HealthBarCapacity`, `IsFiringSuppressed`, `OnUpdateStart(dt)`, `OnAbilityDeactivated()`, `UpdateChampionStatus(bool)`
-- Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). `Map.CanBuild()` rejects if any reservation/occupant is non-null. `TileType` immutable after init
-- `DrawScale`: Generics {1,1}, Champions {1,1.5}. Champions: bottom-center origin (0.5,1.0), Y offset grows upward. Bars use `SpriteSize * DrawScale.Y`
-- `Tower.Draw()`: origin conditional on `DrawScale.Y > 1.0f`; champions offset Y by `SpriteSize / 2f`
+- Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). For 2x2 champions, all 4 footprint tiles are marked occupied/reserved. `Map.CanBuildFootprint(topLeft, size)` is the source of truth for placement/move validation. `Map.CanBuild()` is the 1x1 convenience wrapper
+- `DrawScale`: multiplier applied to `PlaceholderDrawSize` (generics currently render at 32x32, champions at 64x64 placeholders)
+- `Tower` position model: canonical `GridAnchor` (half-tile coordinates), derived `GridPosition` (top-left footprint tile), and `OccupiedTiles` (all currently blocked tiles)
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
 - AoE chain: `Projectile.OnAOEImpact` → `Tower` → `TowerManager` → `GameplayScene` spawns visual
 - Wall-attack chain: `Tower.WallNetworkTargetFinder` (set per-frame by `TowerManager`) → on fire: instant `TakeDamage` + `ApplySlow(_abilityDuration)` → `Tower.OnWallAttack` → `TowerManager.OnWallAttack` → `GameplayScene` spawns `SpikeEffect`. `_abilityDuration` = `TowerStats.AbilityDuration` (ChampionWalling: 5s, Walling: 3s)
 - `CanWalk`: Champions `true`, Generics `false`. `MoveSpeed`/`CooldownDuration` default `0f`, only set when `CanWalk: true`
-- `TowerState` (Active/Moving/Cooldown). Moving: `_drawPosition` interpolates, `GridPosition` updates on cell arrival, origin cleared (ghost). Cooldown: timer only — tower still fires. Active+Cooldown both run `UpdateActive()`. `OnMovementComplete` → `TowerManager` re-occupies dest + triggers reroute
-- `TowerManager.GetPreviewPath(dest)`: `List<Point>?` for move hover — checks `CanWalk`, `Active`, `CanBuild`
+- `TowerState` (Active/Moving/Cooldown). Moving: `_drawPosition` interpolates, `GridAnchor`/`GridPosition` update on cell arrival, origin footprint is cleared (ghost). Cooldown: timer only — tower still fires. Active+Cooldown both run `UpdateActive()`. `OnMovementComplete` → `TowerManager` re-occupies destination footprint + triggers reroute
+- `TowerManager.GetPreviewPath(destTopLeft)`: `List<Point>?` for move hover — checks `CanWalk`, `Active`, `CanBuildFootprint` (ignoring self occupancy), and footprint-aware path viability. `GameplayScene.DrawTowerMovePreview` renders anchor-centered nodes/segments and a white translucent destination footprint overlay (all occupied end tiles)
 - `Tower.UpdateActive()`: guarded by `Range <= 0f && WallNetworkTargetFinder == null` — skips fire loop entirely (avoids `CountdownTimer` overflow). Wall targeting uses `WallNetworkTargetFinder` delegate, deals instant damage (no projectile)
 - `TargetingStrategy` enum (`Closest`, `LowestHP`, `MostGrouped`) on `TowerStats.Targeting`/`Tower._targeting`. Gun+ChampionGun: `LowestHP`. Cannon+ChampionCannon: `MostGrouped` (count alive enemies within `AOERadius`, tie-break lowest HP). Wall bypasses `SelectTarget`
 - `TowerManager.BuildAttackZone(wallSet)`: all in-bounds tiles 1 step outside `wallSet` in all 8 directions. Used by `DrawWallRangeIndicatorForSet`, `FindWallNetworkTarget`, `UpdateWallFrenzy`. Target preference: closest non-slowed → closest slowed
 - `WallSegmentTower.ApplyDecayDamage(float dt)`: accumulates fractional HP; used by wall segment decay
-- Wall segments: `TowerType.WallSegment` → `WallSegmentTower`, high movement cost, deferred spawn pipeline. `TryPlaceWallPath()` reserves valid path tiles first (`ReservedForPendingWallBy`), then spawns segments sequentially as each prior segment reaches cap. Spawned segment starts at low max/current HP and grows via `WallSegmentTower.InitializeWallGrowth()` + `StartWallGrowth()`. On anchor loss: pending reservations canceled and active segment growth stopped. If active segment dies pre-cap: remaining pending reservations in that chain are canceled. `_wallConnectedSets: Dictionary<Tower, HashSet<Point>>` — rebuilt each `Update` as single-root BFS per `WallingTower`; disconnected towers don't share zones. `UpdateWallDecay()` unions all sets; orphaned segments decay 1 HP/sec per exposed cardinal side. Runs before dead-tower sweep
+- Wall segments: `TowerType.WallSegment` → `WallSegmentTower`, high movement cost, deferred spawn pipeline. `TryPlaceWallPath()` reserves valid path tiles first (`ReservedForPendingWallBy`), then spawns segments sequentially as each prior segment reaches cap. Spawned segment starts at low max/current HP and grows via `WallSegmentTower.InitializeWallGrowth()` + `StartWallGrowth()`. On anchor loss: pending reservations canceled and active segment growth stopped. If active segment dies pre-cap: remaining pending reservations in that chain are canceled. `_wallConnectedSets: Dictionary<Tower, HashSet<Point>>` — rebuilt each `Update` as BFS per `WallingTower` seeded from `OccupiedTiles` (champion walling uses all 4 anchor footprint tiles); disconnected towers don't share zones. `UpdateWallDecay()` unions all sets; orphaned segments decay 1 HP/sec per exposed cardinal side. Runs before dead-tower sweep
 - `TowerManager.DrawPendingWallReservations()`: renders ghost tiles for reserved-but-not-yet-spawned wall segments
 - `TowerManager.IsAdjacentToWallingNetwork(Point, Tower)`: public; uses `_wallConnectedSets[tower]` cache, falls back to fresh BFS if called before first `Update`
 - `TowerManager.TryPlaceWallPath(path, tower)`: validates contiguous prefix, reserves pending path, and starts deferred sequential spawning. `GetWallPathValidPrefixLength(path, tower)` simulates contiguous prefix validity without mutating map state (preview/corner choice only)
@@ -45,9 +45,9 @@
 - `WallingTower.ActivateFrenzy(float duration)`: sets `IsAbilityBuffActive = true` + `_abilityTimer`, no stat change. `UpdateWallFrenzy(WallingTower, wallSet)` multi-hits all enemies in attack zone at `tower.FireRate`. `WallNetworkTargetFinder` nulled during frenzy to prevent double-hits
 - `TowerStats.AbilityCooldown`: per-champion CD; generics default 0
 - Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
-- `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: grid-snapped
-- `TowerManager.MoveTower(tower, dest)`: ghost origin → `destTile.ReservedByTower = tower` → reroute → `StartMoving()`. `HandleMovementComplete`: clear reservation → re-occupy → reroute. `RemoveTower()` calls `ClearReservationFor()` on mid-move death
-- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()`. Costs defined per tile type; Rock=impassable. Ignores enemies
+- `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: anchor-snapped (center of 1x1 or 2x2 footprint)
+- `TowerManager.MoveTower(tower, destTopLeft)`: clear origin footprint → reserve destination footprint → reroute → `StartMoving()`. `HandleMovementComplete`: clear destination reservation footprint → re-occupy footprint → reroute. `RemoveTower()` calls `ClearReservationFor()` on mid-move death
+- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()` over top-left footprint tiles. Each candidate step validates the full footprint (bounds/terrain/reservations), so 2x2 champions cannot pass through 1-tile corridors
 
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)
@@ -81,7 +81,7 @@
 
 ## Wall Placement Mode
 - `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path. L direction locks based on which axis the user drags first from the start tile (`_wallDragLockedHorizontalFirst`); returning to a straight line resets the lock. Falls back to the other candidate only if it has a strictly longer valid prefix (blocked tiles). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move
-- `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` (tracks during cooldown movement)
+- `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` + `tower.DrawSize` (tracks movement and 32/64 placeholder sizes)
 - Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise. During drag, preview draws valid prefix in dark green and blocked remainder in red
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold
 

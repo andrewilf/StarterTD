@@ -89,10 +89,9 @@ public partial class TowerManager
     /// </summary>
     public bool TryPlaceTower(TowerType type, Point gridPos)
     {
-        if (!_map.CanBuild(gridPos))
+        var stats = TowerData.GetStats(type);
+        if (!_map.CanBuildFootprint(gridPos, stats.FootprintTiles))
             return false;
-
-        var tile = _map.Tiles[gridPos.X, gridPos.Y];
 
         bool isChampion = type.IsChampion();
         bool canPlace = isChampion
@@ -109,7 +108,7 @@ public partial class TowerManager
         // Wire AoE callback once at placement (not per-frame)
         tower.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
         _towers.Add(tower);
-        tile.OccupyingTower = tower;
+        SetOccupancyFor(tower, occupied: true);
 
         if (isChampion)
             _championManager.OnChampionPlaced(type);
@@ -124,12 +123,10 @@ public partial class TowerManager
     /// </summary>
     public Tower? GetTowerAt(Point gridPos)
     {
-        foreach (var tower in _towers)
-        {
-            if (tower.GridPosition == gridPos)
-                return tower;
-        }
-        return null;
+        if (gridPos.X < 0 || gridPos.X >= _map.Columns || gridPos.Y < 0 || gridPos.Y >= _map.Rows)
+            return null;
+
+        return _map.Tiles[gridPos.X, gridPos.Y].OccupyingTower;
     }
 
     /// <summary>
@@ -142,10 +139,16 @@ public partial class TowerManager
         if (tower == null || !tower.CanWalk || tower.CurrentState != TowerState.Active)
             return null;
 
-        if (!_map.CanBuild(destination))
+        if (!_map.CanBuildFootprint(destination, tower.FootprintSize, tower))
             return null;
 
-        var queue = TowerPathfinder.FindPath(tower.GridPosition, destination, _map);
+        var queue = TowerPathfinder.FindPath(
+            tower.GridPosition,
+            destination,
+            tower.FootprintSize,
+            _map,
+            tower
+        );
         if (queue == null || queue.Count <= 1)
             return null;
 
@@ -168,9 +171,7 @@ public partial class TowerManager
     /// </summary>
     private void RemoveTower(Tower tower)
     {
-        var tile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
-        if (tile.OccupyingTower == tower)
-            tile.OccupyingTower = null;
+        SetOccupancyFor(tower, occupied: false);
 
         // If the tower died while moving, its reserved destination tile must be freed
         if (tower.CurrentState == TowerState.Moving)
@@ -204,9 +205,62 @@ public partial class TowerManager
             for (int y = 0; y < _map.Rows; y++)
             {
                 if (_map.Tiles[x, y].ReservedByTower == tower)
-                {
                     _map.Tiles[x, y].ReservedByTower = null;
-                    return;
+            }
+        }
+    }
+
+    private void SetOccupancyFor(Tower tower, bool occupied)
+    {
+        foreach (var tilePos in tower.OccupiedTiles)
+        {
+            if (
+                tilePos.X < 0
+                || tilePos.X >= _map.Columns
+                || tilePos.Y < 0
+                || tilePos.Y >= _map.Rows
+            )
+                continue;
+
+            var tile = _map.Tiles[tilePos.X, tilePos.Y];
+            if (occupied)
+            {
+                tile.OccupyingTower = tower;
+            }
+            else if (tile.OccupyingTower == tower)
+            {
+                tile.OccupyingTower = null;
+            }
+        }
+    }
+
+    private void SetReservationFor(
+        Point topLeft,
+        Point footprintSize,
+        Tower? setReservationFor,
+        Tower? clearReservationFor = null
+    )
+    {
+        for (int y = 0; y < footprintSize.Y; y++)
+        {
+            for (int x = 0; x < footprintSize.X; x++)
+            {
+                int gx = topLeft.X + x;
+                int gy = topLeft.Y + y;
+                if (gx < 0 || gx >= _map.Columns || gy < 0 || gy >= _map.Rows)
+                    continue;
+
+                var tile = _map.Tiles[gx, gy];
+                if (setReservationFor != null)
+                {
+                    tile.ReservedByTower = setReservationFor;
+                }
+                else if (
+                    tile.ReservedByTower != null
+                    && (clearReservationFor == null || tile.ReservedByTower == clearReservationFor)
+                )
+                {
+                    tile.ReservedByTower = null;
                 }
             }
         }
@@ -218,17 +272,24 @@ public partial class TowerManager
     /// </summary>
     public void MoveTower(Tower tower, Point destination)
     {
-        var path = TowerPathfinder.FindPath(tower.GridPosition, destination, _map);
+        if (!_map.CanBuildFootprint(destination, tower.FootprintSize, tower))
+            return;
+
+        var path = TowerPathfinder.FindPath(
+            tower.GridPosition,
+            destination,
+            tower.FootprintSize,
+            _map,
+            tower
+        );
         if (path == null || path.Count <= 1)
             return;
 
-        // Ghost: remove tower from origin tile so enemies treat it as open
-        var originTile = _map.Tiles[tower.GridPosition.X, tower.GridPosition.Y];
-        originTile.OccupyingTower = null;
+        // Ghost: remove tower from origin footprint so enemies treat it as open.
+        SetOccupancyFor(tower, occupied: false);
 
-        // Reserve destination immediately — blocks placement and other movement commands mid-transit
-        var destTile = _map.Tiles[destination.X, destination.Y];
-        destTile.ReservedByTower = tower;
+        // Reserve destination footprint immediately — blocks placement and other movement commands mid-transit.
+        SetReservationFor(destination, tower.FootprintSize, tower);
 
         // Wire completion callback before starting (handles single-frame edge case)
         tower.OnMovementComplete = () => HandleMovementComplete(tower, destination);
@@ -251,9 +312,13 @@ public partial class TowerManager
     /// </summary>
     private void HandleMovementComplete(Tower tower, Point destination)
     {
-        var destTile = _map.Tiles[destination.X, destination.Y];
-        destTile.ReservedByTower = null;
-        destTile.OccupyingTower = tower;
+        SetReservationFor(
+            destination,
+            tower.FootprintSize,
+            setReservationFor: null,
+            clearReservationFor: tower
+        );
+        SetOccupancyFor(tower, occupied: true);
 
         OnTowerPlaced?.Invoke(destination);
     }
@@ -333,7 +398,7 @@ public partial class TowerManager
         var wallingTowers = _towers.OfType<WallingTower>().ToList();
         _wallConnectedSets = wallingTowers.ToDictionary(
             t => (Tower)t,
-            t => BuildConnectedWallSet([t.GridPosition])
+            t => BuildConnectedWallSet(t.OccupiedTiles)
         );
 
         // Wire wall-network targeting on each WallingTower using its own connected set.
