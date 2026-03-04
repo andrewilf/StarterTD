@@ -93,6 +93,10 @@ public partial class GameplayScene : IScene
     /// button on a selected walling tower. Press-drag-release on the grid places wall segments.
     /// </summary>
     private bool _wallPlacementMode;
+    private bool _isLaserRedirectArmed;
+    private bool _isLaserRedirectActive;
+    private Vector2 _laserRedirectTargetWorld;
+    private Vector2 _laserRedirectStartWorld;
     private const float TowerMoveDragStartThreshold = 6f;
 
     public GameplayScene(Game1 game, string mapId)
@@ -102,8 +106,16 @@ public partial class GameplayScene : IScene
     }
 
     // Maps any champion type to ChampionGun (shared pool key); generics map to themselves.
-    private static TowerType GetCooldownPoolKey(TowerType type) =>
-        type.IsChampion() ? TowerType.ChampionGun : type;
+    private static TowerType GetCooldownPoolKey(TowerType type)
+    {
+        if (type.IsChampion())
+            return TowerType.ChampionGun;
+
+        if (type == TowerType.WallSegment)
+            return TowerType.Walling;
+
+        return type;
+    }
 
     public void LoadContent()
     {

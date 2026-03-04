@@ -45,6 +45,7 @@ public partial class GameplayScene
         {
             UpdateWallDrag();
             UpdateTowerMoveDrag();
+            UpdateLaserRedirectDrag();
         }
 
         if (_inputManager.IsLeftReleased())
@@ -55,6 +56,11 @@ public partial class GameplayScene
                 CancelTowerMoveDrag();
 
             CommitWallDrag();
+
+            if (_isLaserRedirectActive)
+                CommitLaserRedirectDrag();
+            else if (_isLaserRedirectArmed)
+                CancelLaserRedirectDrag();
         }
 
         if (_inputManager.IsRightClick())
@@ -119,6 +125,7 @@ public partial class GameplayScene
         _wallPlacementMode = false;
         CancelWallDrag();
         CancelTowerMoveDrag();
+        CancelLaserRedirectDrag();
     }
 
     private void HandleGridLeftClick(Vector2 worldMouse)
@@ -129,6 +136,12 @@ public partial class GameplayScene
             DeselectAll();
             _laserSelected = true;
             _laserEffect.IsSelected = true;
+            return;
+        }
+
+        if (_laserSelected && _laserEffect != null)
+        {
+            StartLaserRedirectDrag(worldMouse);
             return;
         }
 
@@ -187,10 +200,7 @@ public partial class GameplayScene
         else
         {
             var clickedTower = _towerManager.GetTowerAt(gridPos);
-            if (
-                clickedTower is { CanWalk: true, CurrentState: TowerState.Active }
-                && clickedTower.GridPosition == gridPos
-            )
+            if (clickedTower is { CanWalk: true, CurrentState: TowerState.Active })
             {
                 ArmTowerMoveDrag(clickedTower, gridPos, worldMouse);
                 if (_isTowerMoveDragActive)
@@ -215,17 +225,71 @@ public partial class GameplayScene
 
     private void HandleRightClick()
     {
-        Point screenPos = _inputManager.MousePosition;
-        Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
-
-        if (_uiPanel.ContainsPoint(screenPos))
+        if (_uiPanel.ContainsPoint(_inputManager.MousePosition))
             return;
 
-        // When the laser is selected, right-click redirects the beam.
+        if (_laserSelected && _laserEffect != null)
+            DeselectAll();
+    }
+
+    private void StartLaserRedirectDrag(Vector2 worldMouse)
+    {
+        if (_uiPanel.ContainsPoint(_inputManager.MousePosition))
+            return;
+
         if (_laserSelected && _laserEffect != null)
         {
-            _laserEffect.SetTarget(worldMouse);
+            _isLaserRedirectArmed = true;
+            _isLaserRedirectActive = false;
+            _laserRedirectStartWorld = worldMouse;
+            _laserRedirectTargetWorld = worldMouse;
         }
+    }
+
+    private void UpdateLaserRedirectDrag()
+    {
+        if (!_isLaserRedirectArmed && !_isLaserRedirectActive)
+            return;
+
+        var activeLaser = _laserEffect;
+        if (!_laserSelected || activeLaser == null)
+        {
+            CancelLaserRedirectDrag();
+            return;
+        }
+
+        Vector2 currentWorldMouse = ScreenToWorld(_inputManager.MousePositionVector);
+        _laserRedirectTargetWorld = currentWorldMouse;
+        if (!_isLaserRedirectActive)
+        {
+            float dragSqr = Vector2.DistanceSquared(currentWorldMouse, _laserRedirectStartWorld);
+            if (dragSqr < TowerMoveDragStartThreshold * TowerMoveDragStartThreshold)
+                return;
+
+            _isLaserRedirectActive = true;
+        }
+
+        activeLaser.SetTarget(currentWorldMouse);
+    }
+
+    private void CommitLaserRedirectDrag()
+    {
+        if (!_isLaserRedirectActive)
+            return;
+
+        var activeLaser = _laserEffect;
+        if (_laserSelected && activeLaser != null)
+            activeLaser.SetTarget(_laserRedirectTargetWorld);
+
+        CancelLaserRedirectDrag();
+    }
+
+    private void CancelLaserRedirectDrag()
+    {
+        _isLaserRedirectArmed = false;
+        _isLaserRedirectActive = false;
+        _laserRedirectTargetWorld = Vector2.Zero;
+        _laserRedirectStartWorld = Vector2.Zero;
     }
 
     private void ArmTowerMoveDrag(Tower selectedTower, Point startGrid, Vector2 worldMouse)

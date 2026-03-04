@@ -57,6 +57,7 @@ public partial class GameplayScene
             spike.Draw(spriteBatch);
 
         _laserEffect?.Draw(spriteBatch);
+        DrawLaserRedirectPreview(spriteBatch);
 
         // Hover indicator on grid (world-space so it aligns with tiles)
         if (
@@ -207,6 +208,36 @@ public partial class GameplayScene
                 indicatorColor
             );
         }
+    }
+
+    private void DrawLaserRedirectPreview(SpriteBatch spriteBatch)
+    {
+        if (!_isLaserRedirectArmed || !_laserSelected || _laserEffect == null)
+            return;
+
+        Vector2 laserTarget = _isLaserRedirectActive
+            ? _laserRedirectTargetWorld
+            : _laserRedirectStartWorld;
+
+        if (Vector2.DistanceSquared(LaserEffect.BeamOriginWorld, laserTarget) < 1f)
+            return;
+
+        Vector2 start = LaserEffect.BeamOriginWorld;
+        Vector2 end = laserTarget;
+        Vector2 direction = end - start;
+        float length = direction.Length();
+        if (length <= 0f)
+            return;
+
+        float rotation = MathF.Atan2(direction.Y, direction.X);
+        Vector2 center = (start + end) * 0.5f;
+        TextureManager.DrawSprite(
+            spriteBatch,
+            center,
+            new Vector2(length, 4f),
+            Color.Red * 0.75f,
+            rotation
+        );
     }
 
     private void DrawWallDragPreview(SpriteBatch spriteBatch)

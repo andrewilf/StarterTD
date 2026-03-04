@@ -57,6 +57,19 @@ public class InputManager
             && _previousMouse.RightButton == ButtonState.Released;
     }
 
+    /// <summary>True while the right mouse button is held down.</summary>
+    public bool IsRightHeld()
+    {
+        return _currentMouse.RightButton == ButtonState.Pressed;
+    }
+
+    /// <summary>True on the single frame the right mouse button is released.</summary>
+    public bool IsRightReleased()
+    {
+        return _currentMouse.RightButton == ButtonState.Released
+            && _previousMouse.RightButton == ButtonState.Pressed;
+    }
+
     /// <summary>True on the single frame a key is pressed.</summary>
     public bool IsKeyPressed(Keys key)
     {
