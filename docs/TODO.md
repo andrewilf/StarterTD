@@ -196,12 +196,11 @@
 
 ### 8.1 Placeholder Tile Pack with Standard Tile Sizes
 - **Priority**: P1 | **Effort**: M
-- **Current State**: 3 solid-color 40x40 tiles in `terrain.png`. No visual variety or edge blending.
+- **Current State**: 3 solid-color source tiles in `terrain.png` (40x40 source, rendered at 32x32). No visual variety or edge blending.
 - **Goal**: Replace with a cohesive tileset that supports auto-tiling (section 3.1) and looks like an actual game.
-- **Tile Size Decision**: Current game uses 40x40. Most free asset packs use **32x32** or **16x16**.
-  - **Option A**: Switch to 32x32 (matches most free packs, industry standard for pixel art TD games)
-  - **Option B**: Stay at 40x40 (avoids refactoring `GameSettings.TileSize` and all dependent calculations)
-  - **Recommendation**: Switch to 32x32. The refactor is mechanical (change `TileSize` constant, update sprite sizes), and it unlocks access to a vast library of free assets.
+- **Tile Size Note**: Display tile size is already 32. Source tile size is currently 40 via `GameSettings.TerrainSourceTileSize`.
+  - **Option A**: Keep 40x40 source tiles and continue scaling to 32 display
+  - **Option B**: Move to native 32x32 source tiles and update `TerrainSourceTileSize`
 - **Asset Packs to Evaluate**:
   - [Schwarnhild Basic Tileset (32x32)](https://schwarnhild.itch.io/basic-tileset-and-asset-pack-32x32-pixels) — simple, clean, good for prototyping
   - [itch.io 32x32 tag](https://itch.io/game-assets/tag-32x32) — browse for TD-appropriate packs
@@ -209,8 +208,8 @@
   - [Pixel Frog Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords) — fantasy themed, may include tower/unit sprites
 - **Tasks**:
   - [ ] Evaluate each pack for: tile variety, auto-tile compatibility (edge/corner variants), tower sprites, enemy sprites, UI elements
-  - [ ] Decide on tile size (32x32 recommended)
-  - [ ] If switching tile size: update `GameSettings.TileSize`, `TextureManager`, sprite dimensions, UI layout calculations, Tiled map tile size
+  - [ ] Decide source tile size policy (keep 40 source or move to native 32 source)
+  - [ ] If moving source size: update `GameSettings.TerrainSourceTileSize`, source spritesheets, and Tiled tileset metadata
   - [ ] Create new `terrain.png` spritesheet (or multiple sheets) with selected assets
   - [ ] Update `Content.mgcb` if adding new texture files
   - [ ] Update Tiled tilesets to match new sprites
@@ -251,6 +250,6 @@ A recommended sequence that respects dependencies and delivers playable value ea
 2. **Cooldown system tuning**: Values live in each `*TowerStats.cs` — tune `BaseCooldown` and `CooldownPenalty` per type. WallSegment intentionally zero.
 3. **Healing tower toggle UX**: Should mode-switch be instant or have a brief wind-up/transition animation?
 4. **Healing tower rail-gun**: Piercing rounds vs. explosion-on-impact? Does it apply slow to all enemies hit or only on landing?
-5. **Tile size change**: Switching from 40x40 to 32x32 unlocks free asset packs but requires a refactor pass. Approve?
+5. **Source tile size policy**: Keep 40x40 source art with scaling, or move to native 32x32 source assets and update `TerrainSourceTileSize`?
 7. **Crowding approach**: Option A (speed penalty, simple) vs Option C (sub-grid, major refactor)? Recommend A first.
 8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.

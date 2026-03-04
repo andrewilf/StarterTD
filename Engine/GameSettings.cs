@@ -5,7 +5,7 @@ namespace StarterTD.Engine;
 
 /// <summary>
 /// Central configuration for the game.
-/// ScreenWidth/Height are set at startup from the monitor resolution.
+/// ScreenWidth/Height are set at startup from the window client size.
 /// </summary>
 public static class GameSettings
 {
@@ -29,11 +29,22 @@ public static class GameSettings
     public static int UIPanelWidth => Math.Clamp(ScreenWidth * 200 / 1024, 160, 280);
 
     /// <summary>
-    /// Read the monitor's native resolution. Call once from Game1.Initialize().
+    /// Initialize default dimensions from the monitor's native resolution.
     /// </summary>
     public static void Initialize(GraphicsDevice graphicsDevice)
     {
-        ScreenWidth = graphicsDevice.Adapter.CurrentDisplayMode.Width;
-        ScreenHeight = graphicsDevice.Adapter.CurrentDisplayMode.Height;
+        SetScreenSize(
+            graphicsDevice.Adapter.CurrentDisplayMode.Width,
+            graphicsDevice.Adapter.CurrentDisplayMode.Height
+        );
+    }
+
+    /// <summary>
+    /// Update active screen dimensions after the final window size is decided.
+    /// </summary>
+    public static void SetScreenSize(int width, int height)
+    {
+        ScreenWidth = width;
+        ScreenHeight = height;
     }
 }

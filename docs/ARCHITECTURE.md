@@ -8,6 +8,7 @@
 - Down: Scene -> managers via `Update()` args
 - Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
 - Rendering: `SpriteBatch`/fonts passed via `Draw()`
+- Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns
 `Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`
@@ -51,8 +52,15 @@
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)
 - `MapDataRepository.GetAvailableMaps()` scans `Content/Maps/*.tmx` at runtime
-- `TextureManager.DrawTile()`: `terrain.png` spritesheet (col = `(int)TileType`); fallback colored rect
+- Tile sizing is decoupled: `GameSettings.TileSize` is display tile size (32), `GameSettings.TerrainSourceTileSize` is spritesheet source tile size (40)
+- `TextureManager.DrawTile()`: `terrain.png` spritesheet (col = `(int)TileType`) sampled at source size and scaled to display size; fallback colored rect
+- `TmxLoader` converts object pixel coords to grid coords using TMX `tilewidth`/`tileheight` (not `GameSettings.TileSize`)
 - Multi-spawn/exit: `MapData.SpawnPoints/ExitPoints: Dictionary<string, Point>`. Lane pairing: `spawn_a` → `exit_a` by suffix; fallback first exit. `Map.ActivePaths`: spawn name → path. `Enemy._spawnName` preserved on reroute via `Map.ComputePathFromPosition()`
+
+## Rendering/Window
+- `GameplayScene.Draw()` runs two `SpriteBatch` passes: world-space with `_worldMatrix` translation, then screen-space for panel/overlays
+- Gameplay input converts screen coords to world coords (`ScreenToWorld`) before world hit tests and grid conversion
+- Startup window mode is windowed maximized (not fullscreen); `GameSettings.ScreenWidth/ScreenHeight` sync to final client bounds
 
 ## Tile System
 - `TileType`: HighGround, Path, Rock. Stats: `Engine/TileTypes/<Type>Tile.cs`; registry: `TileData.GetStats()`

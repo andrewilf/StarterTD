@@ -1,6 +1,7 @@
+using System;
+using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Scenes;
@@ -14,6 +15,9 @@ namespace StarterTD;
 /// </summary>
 public class Game1 : Game
 {
+    [DllImport("SDL2", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void SDL_MaximizeWindow(IntPtr window);
+
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch _spriteBatch = null!;
     private SceneManager _sceneManager = null!;
@@ -34,12 +38,22 @@ public class Game1 : Game
     {
         GameSettings.Initialize(GraphicsDevice);
 
-        _graphics.PreferredBackBufferWidth = GameSettings.ScreenWidth;
-        _graphics.PreferredBackBufferHeight = GameSettings.ScreenHeight;
-        Window.IsBorderless = true;
-        _graphics.IsFullScreen = true;
-        _graphics.HardwareModeSwitch = false; // borderless, not exclusive fullscreen
-        _graphics.ApplyChanges();
+        // Start in windowed mode and ask the OS to maximize the window so
+        // native controls (close/minimize/move) remain available.
+        Window.IsBorderless = false;
+        Window.AllowUserResizing = true;
+        _graphics.IsFullScreen = false;
+        _graphics.HardwareModeSwitch = false;
+        SetBackBufferSize(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
+
+        TryMaximizeWindow();
+
+        Rectangle client = Window.ClientBounds;
+        if (client.Width > 0 && client.Height > 0)
+        {
+            SetBackBufferSize(client.Width, client.Height);
+            GameSettings.SetScreenSize(client.Width, client.Height);
+        }
 
         Window.Title = "StarterTD — Tower Defense";
 
@@ -94,17 +108,35 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (
-            GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed
-            || Keyboard.GetState().IsKeyDown(Keys.Escape)
-        )
-        {
-            // ESC is used in-game to deselect towers, so we don't exit here
-        }
-
         UpdateFPS(gameTime);
         _sceneManager.Update(gameTime);
         base.Update(gameTime);
+    }
+
+    private void TryMaximizeWindow()
+    {
+        try
+        {
+            SDL_MaximizeWindow(Window.Handle);
+        }
+        catch (DllNotFoundException)
+        {
+            // SDL symbol unavailable on this platform/runtime; continue with current size.
+        }
+        catch (EntryPointNotFoundException)
+        {
+            // SDL symbol unavailable on this platform/runtime; continue with current size.
+        }
+    }
+
+    /// <summary>
+    /// Keep backbuffer sizing in one place so startup/window-mode transitions stay consistent.
+    /// </summary>
+    private void SetBackBufferSize(int width, int height)
+    {
+        _graphics.PreferredBackBufferWidth = width;
+        _graphics.PreferredBackBufferHeight = height;
+        _graphics.ApplyChanges();
     }
 
     protected override void Draw(GameTime gameTime)
