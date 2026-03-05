@@ -33,7 +33,6 @@ public partial class GameplayScene
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
             _uiPanel.ClearSelection();
-            _selectedTowerRange = 0f;
             _towerMovePreviewPath = null;
             DeselectAll();
         }
@@ -93,10 +92,6 @@ public partial class GameplayScene
 
             if (_uiPanel.SelectedTowerType.HasValue)
                 DeselectAll();
-
-            _selectedTowerRange = _uiPanel.SelectedTowerType.HasValue
-                ? TowerData.GetStats(_uiPanel.SelectedTowerType.Value).Range
-                : 0f;
 
             if (_uiPanel.StartWaveClicked && !_waveManager.WaveInProgress && _allEnemiesCleared)
                 _waveManager.StartNextWave();
@@ -194,7 +189,6 @@ public partial class GameplayScene
                     _placementCooldowns[poolKey] +=
                         stats.BaseCooldown + stats.CooldownPenalty * poolCount;
                     _uiPanel.SelectedTowerType = null;
-                    _selectedTowerRange = 0f;
                 }
             }
         }

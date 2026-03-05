@@ -1,4 +1,5 @@
 using Microsoft.Xna.Framework;
+using StarterTD.Engine;
 
 namespace StarterTD.Entities;
 
@@ -18,7 +19,7 @@ public static class ChampionCannonTowerStats
         MaxHealth: 200,
         BlockCapacity: 1,
         FootprintTiles: new Point(2, 2),
-        PlaceholderDrawSize: new Vector2(64f, 64f),
+        PlaceholderDrawSize: new Vector2(GameSettings.TileSize * 2f, GameSettings.TileSize * 2f),
         DrawScale: new Vector2(1.0f, 1.0f),
         CanWalk: true,
         MoveSpeed: 80f,

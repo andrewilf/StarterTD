@@ -21,7 +21,7 @@
 - **Tower class hierarchy**: `Tower` (base) → `WallSegmentTower` (growth/decay), `WallingTower` (Walling + ChampionWalling; frenzy), `CannonChampionTower` (laser). Gun/Cannon/ChampionGun use `Tower` directly. Instantiate via `Tower.Create(type, pos)` factory — never `new Tower(...)` directly
 - Virtual hooks on base: `HealthBarCapacity`, `IsFiringSuppressed`, `OnUpdateStart(dt)`, `OnAbilityDeactivated()`, `UpdateChampionStatus(bool)`
 - Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). For 2x2 champions, all 4 footprint tiles are marked occupied/reserved. `Map.CanBuildFootprint(topLeft, size)` is the source of truth for placement/move validation. `Map.CanBuild()` is the 1x1 convenience wrapper
-- `DrawScale`: multiplier applied to `PlaceholderDrawSize` (generics currently render at 32x32, champions at 64x64 placeholders)
+- `DrawScale`: multiplier applied to `PlaceholderDrawSize` (champions use `2 * GameSettings.TileSize`, so with `TileSize=32` they render at `64x64`)
 - `Tower` position model: canonical `GridAnchor` (half-tile coordinates), derived `GridPosition` (top-left footprint tile), and `OccupiedTiles` (all currently blocked tiles)
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
 - AoE chain: `Projectile.OnAOEImpact` → `Tower` → `TowerManager` → `GameplayScene` spawns visual
@@ -59,6 +59,7 @@
 
 ## Rendering/Window
 - `GameplayScene.Draw()` runs two `SpriteBatch` passes: world-space with `_worldMatrix` translation, then screen-space for panel/overlays
+- Placement hover range preview is computed per-frame in `DrawHoverIndicator` from `UIPanel.SelectedTowerType` via `TowerData.GetStats(...)` (no cached range field in `GameplayScene`)
 - Gameplay input converts screen coords to world coords (`ScreenToWorld`) before world hit tests and grid conversion
 - Startup window mode is windowed maximized (not fullscreen); `GameSettings.ScreenWidth/ScreenHeight` sync to final client bounds
 
@@ -81,7 +82,7 @@
 
 ## Wall Placement Mode
 - `_wallPlacementMode`: toggled by 18×18 "+" button top-right of selected walling tower (champion or generic). In wall mode, left press/drag/release builds a single-corner Manhattan L path. L direction locks based on which axis the user drags first from the start tile (`_wallDragLockedHorizontalFirst`); returning to a straight line resets the lock. Falls back to the other candidate only if it has a strictly longer valid prefix (blocked tiles). On release, `TryPlaceWallPath()` commits, reserves valid tiles, and starts deferred growth from the first segment. Blocks right-click move
-- `GetWallPlacementButtonRect(tower)`: rect from `tower.DrawPosition` + `tower.DrawSize` (tracks movement and 32/64 placeholder sizes)
+- `GetWallPlacementButtonRect(tower)`: uses `TowerDrawingHelper.GetVisualBounds` for champion anchor/sprite anchoring and correct 2x2 footprint-aligned placement.
 - Hover: `DarkGreen * 0.5f` if buildable + adjacent; `Red * 0.3f` otherwise. During drag, preview draws valid prefix in dark green and blocked remainder in red
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold
 
@@ -96,4 +97,6 @@
 
 ## TextureManager
 - `DrawSprite()`: optional `origin` param (default 0.5,0.5 centered)
+- `ChampionGunTowerSprite`, `ChampionCannonTowerSprite`, and `ChampionWallingTowerSprite`: canonical champion textures loaded from `Content/Sprites/Towers/champion_<type>.png`
+- `GenericGunTowerSprite`, `GenericCannonTowerSprite`, and `GenericWallingTowerSprite`: canonical generic textures loaded from `Content/Sprites/Towers/generic_<type>.png`
 - `DrawRect()`: top-left origin. `DrawSprite()`: centered origin. Do not confuse

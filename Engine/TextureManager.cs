@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -21,6 +23,24 @@ public static class TextureManager
     /// </summary>
     public static Texture2D? TerrainTileset { get; private set; }
 
+    /// <summary>Optional sprite for Champion Gun tower.</summary>
+    public static Texture2D? ChampionGunTowerSprite { get; private set; }
+
+    /// <summary>Optional sprite for Champion Cannon tower.</summary>
+    public static Texture2D? ChampionCannonTowerSprite { get; private set; }
+
+    /// <summary>Optional sprite for Champion Walling tower.</summary>
+    public static Texture2D? ChampionWallingTowerSprite { get; private set; }
+
+    /// <summary>Optional sprite for Generic Gun tower.</summary>
+    public static Texture2D? GenericGunTowerSprite { get; private set; }
+
+    /// <summary>Optional sprite for Generic Cannon tower.</summary>
+    public static Texture2D? GenericCannonTowerSprite { get; private set; }
+
+    /// <summary>Optional sprite for Generic Walling tower.</summary>
+    public static Texture2D? GenericWallingTowerSprite { get; private set; }
+
     /// <summary>Cache of generated filled circle textures keyed by radius.</summary>
     private static readonly Dictionary<int, Texture2D> FilledCircleCache = new();
 
@@ -42,10 +62,65 @@ public static class TextureManager
             // Terrain sprite not available — Map.Draw will fall back to colored rectangles
         }
 
+        ChampionGunTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "champion_gun.png")
+        );
+        ChampionCannonTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "champion_cannon.png")
+        );
+        ChampionWallingTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "champion_walling.png")
+        );
+        GenericGunTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "generic_gun.png")
+        );
+        GenericCannonTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "generic_cannon.png")
+        );
+        GenericWallingTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "generic_walling.png")
+        );
+
         // Pre-generate circles for tower ranges and AoE effects
         GenerateFilledCircleTexture(graphicsDevice, 50); // Cannon AoE radius
         GenerateFilledCircleTexture(graphicsDevice, 100); // Cannon range
         GenerateFilledCircleTexture(graphicsDevice, 120); // Gun range
+    }
+
+    private static Texture2D? TryLoadTextureFromDisk(
+        GraphicsDevice graphicsDevice,
+        string relativePath
+    )
+    {
+        string appBasePath = Path.Combine(AppContext.BaseDirectory, relativePath);
+        var appBaseTexture = LoadTextureFromFile(graphicsDevice, appBasePath);
+        if (appBaseTexture != null)
+            return appBaseTexture;
+
+        string currentDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), relativePath);
+        return LoadTextureFromFile(graphicsDevice, currentDirectoryPath);
+    }
+
+    private static Texture2D? LoadTextureFromFile(GraphicsDevice graphicsDevice, string fullPath)
+    {
+        if (!File.Exists(fullPath))
+            return null;
+
+        try
+        {
+            using var stream = File.OpenRead(fullPath);
+            return Texture2D.FromStream(graphicsDevice, stream);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -71,78 +146,133 @@ public static class TextureManager
         int outlineThickness = 1
     )
     {
+        DrawSprite(
+            spriteBatch,
+            Pixel,
+            position,
+            size,
+            color,
+            rotation,
+            origin,
+            drawOutline,
+            outlineColor,
+            outlineThickness
+        );
+    }
+
+    /// <summary>
+    /// Draw a texture sprite at the given position, scaled to the given size.
+    /// Origin is normalized to 0-1 space for consistency with placeholder drawing.
+    /// </summary>
+    public static void DrawSprite(
+        SpriteBatch spriteBatch,
+        Texture2D texture,
+        Vector2 position,
+        Vector2 size,
+        Color color,
+        float rotation = 0f,
+        Vector2? origin = null,
+        bool drawOutline = false,
+        Color? outlineColor = null,
+        int outlineThickness = 1
+    )
+    {
         // Origin defaults to center of the 1x1 pixel (0.5, 0.5).
         // Can be overridden for different scaling anchors (e.g., bottom-center for champion towers).
         Vector2 spriteOrigin = origin ?? new Vector2(0.5f, 0.5f);
 
         if (drawOutline && outlineThickness > 0)
         {
-            float width = System.MathF.Max(1f, size.X);
-            float height = System.MathF.Max(1f, size.Y);
-            float thickness = System.MathF.Max(1f, outlineThickness);
-            Vector2 topLeft =
-                position - new Vector2(spriteOrigin.X * width, spriteOrigin.Y * height);
-            Color edgeColor = outlineColor ?? Color.Black;
-
-            // Top
-            spriteBatch.Draw(
-                Pixel,
-                new Vector2(topLeft.X - thickness, topLeft.Y - thickness),
-                sourceRectangle: null,
-                edgeColor,
-                rotation: 0f,
-                origin: Vector2.Zero,
-                scale: new Vector2(width + thickness * 2f, thickness),
-                effects: SpriteEffects.None,
-                layerDepth: 0f
-            );
-            // Bottom
-            spriteBatch.Draw(
-                Pixel,
-                new Vector2(topLeft.X - thickness, topLeft.Y + height),
-                sourceRectangle: null,
-                edgeColor,
-                rotation: 0f,
-                origin: Vector2.Zero,
-                scale: new Vector2(width + thickness * 2f, thickness),
-                effects: SpriteEffects.None,
-                layerDepth: 0f
-            );
-            // Left
-            spriteBatch.Draw(
-                Pixel,
-                new Vector2(topLeft.X - thickness, topLeft.Y),
-                sourceRectangle: null,
-                edgeColor,
-                rotation: 0f,
-                origin: Vector2.Zero,
-                scale: new Vector2(thickness, height),
-                effects: SpriteEffects.None,
-                layerDepth: 0f
-            );
-            // Right
-            spriteBatch.Draw(
-                Pixel,
-                new Vector2(topLeft.X + width, topLeft.Y),
-                sourceRectangle: null,
-                edgeColor,
-                rotation: 0f,
-                origin: Vector2.Zero,
-                scale: new Vector2(thickness, height),
-                effects: SpriteEffects.None,
-                layerDepth: 0f
+            DrawSpriteOutline(
+                spriteBatch,
+                position,
+                size,
+                spriteOrigin,
+                outlineColor,
+                outlineThickness
             );
         }
 
+        Vector2 textureOrigin = new(
+            texture.Width * spriteOrigin.X,
+            texture.Height * spriteOrigin.Y
+        );
+        Vector2 scale = new(size.X / texture.Width, size.Y / texture.Height);
+
         spriteBatch.Draw(
-            Pixel,
+            texture,
             position,
             sourceRectangle: null,
             color,
             rotation,
-            spriteOrigin,
-            scale: size,
+            textureOrigin,
+            scale,
             SpriteEffects.None,
+            layerDepth: 0f
+        );
+    }
+
+    private static void DrawSpriteOutline(
+        SpriteBatch spriteBatch,
+        Vector2 position,
+        Vector2 size,
+        Vector2 spriteOrigin,
+        Color? outlineColor,
+        int outlineThickness
+    )
+    {
+        float width = System.MathF.Max(1f, size.X);
+        float height = System.MathF.Max(1f, size.Y);
+        float thickness = System.MathF.Max(1f, outlineThickness);
+        Vector2 topLeft = position - new Vector2(spriteOrigin.X * width, spriteOrigin.Y * height);
+        Color edgeColor = outlineColor ?? Color.Black;
+
+        // Top
+        spriteBatch.Draw(
+            Pixel,
+            new Vector2(topLeft.X - thickness, topLeft.Y - thickness),
+            sourceRectangle: null,
+            edgeColor,
+            rotation: 0f,
+            origin: Vector2.Zero,
+            scale: new Vector2(width + thickness * 2f, thickness),
+            effects: SpriteEffects.None,
+            layerDepth: 0f
+        );
+        // Bottom
+        spriteBatch.Draw(
+            Pixel,
+            new Vector2(topLeft.X - thickness, topLeft.Y + height),
+            sourceRectangle: null,
+            edgeColor,
+            rotation: 0f,
+            origin: Vector2.Zero,
+            scale: new Vector2(width + thickness * 2f, thickness),
+            effects: SpriteEffects.None,
+            layerDepth: 0f
+        );
+        // Left
+        spriteBatch.Draw(
+            Pixel,
+            new Vector2(topLeft.X - thickness, topLeft.Y),
+            sourceRectangle: null,
+            edgeColor,
+            rotation: 0f,
+            origin: Vector2.Zero,
+            scale: new Vector2(thickness, height),
+            effects: SpriteEffects.None,
+            layerDepth: 0f
+        );
+        // Right
+        spriteBatch.Draw(
+            Pixel,
+            new Vector2(topLeft.X + width, topLeft.Y),
+            sourceRectangle: null,
+            edgeColor,
+            rotation: 0f,
+            origin: Vector2.Zero,
+            scale: new Vector2(thickness, height),
+            effects: SpriteEffects.None,
             layerDepth: 0f
         );
     }
