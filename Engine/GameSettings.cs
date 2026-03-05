@@ -13,10 +13,10 @@ public static class GameSettings
     public const int TileSize = 32; // display pixels per tile (change to 64 for high-detail art)
 
     /// <summary>
-    /// Pixel size of each tile in terrain.png spritesheet.
+    /// Pixel size of each tile in terrain spritesheet.
     /// Decoupled from TileSize so the spritesheet can differ from display size.
     /// </summary>
-    public const int TerrainSourceTileSize = 40;
+    public const int TerrainSourceTileSize = 32;
 
     // --- Player ---
     public const int StartingLives = 5;

@@ -17,8 +17,9 @@ public static class TextureManager
     public static Texture2D Pixel { get; private set; } = null!;
 
     /// <summary>
-    /// Terrain spritesheet from Maps/terrain.png.
-    /// Each tile is TileSize × TileSize pixels, laid out horizontally: HighGround, Path, Rock.
+    /// Terrain spritesheet from Maps/terrain32.png.
+    /// Each tile is `TerrainSourceTileSize` × `TerrainSourceTileSize` pixels,
+    /// laid out horizontally: HighGround, Path, Rock.
     /// Null if the texture failed to load (falls back to colored rects).
     /// </summary>
     public static Texture2D? TerrainTileset { get; private set; }
@@ -55,7 +56,7 @@ public static class TextureManager
 
         try
         {
-            TerrainTileset = content.Load<Texture2D>("Maps/terrain");
+            TerrainTileset = content.Load<Texture2D>("Maps/terrain32");
         }
         catch
         {
