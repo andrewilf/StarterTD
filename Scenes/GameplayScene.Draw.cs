@@ -112,13 +112,16 @@ public partial class GameplayScene
         Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
         Point placementTopLeft = _mouseGrid;
         Point placementFootprint = new Point(1, 1);
+        TowerStats? selectedTowerStats = null;
 
         if (_uiPanel.SelectedTowerType.HasValue)
         {
-            var stats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
-            placementFootprint = stats.FootprintTiles;
+            selectedTowerStats = TowerData.GetStats(_uiPanel.SelectedTowerType.Value);
+            placementFootprint = selectedTowerStats.FootprintTiles;
             placementTopLeft = Map.SnapWorldToTopLeft(worldMouse, placementFootprint);
         }
+
+        bool hasTowerSelection = selectedTowerStats != null;
 
         var hoverRect = new Rectangle(
             _mouseGrid.X * GameSettings.TileSize,
@@ -128,8 +131,7 @@ public partial class GameplayScene
         );
 
         bool canPlaceTower =
-            _uiPanel.SelectedTowerType.HasValue
-            && _map.CanBuildFootprint(placementTopLeft, placementFootprint);
+            hasTowerSelection && _map.CanBuildFootprint(placementTopLeft, placementFootprint);
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
         var wallingAnchor = GetSelectedWallingAnchor();
         bool isWallMode = _wallPlacementMode && wallingAnchor != null;
@@ -149,20 +151,21 @@ public partial class GameplayScene
         else
             hoverColor = Color.Red * 0.16f;
 
-        if (_selectedTowerRange > 0f)
+        float selectedTowerRange = selectedTowerStats?.Range ?? 0f;
+        if (selectedTowerRange > 0f)
         {
-            Vector2 hoverCenter = _uiPanel.SelectedTowerType.HasValue
+            Vector2 hoverCenter = hasTowerSelection
                 ? Map.AnchorToWorld(Map.TopLeftToAnchor(placementTopLeft, placementFootprint))
                 : Map.GridToWorld(_mouseGrid);
             TextureManager.DrawFilledCircle(
                 spriteBatch,
                 hoverCenter,
-                _selectedTowerRange,
+                selectedTowerRange,
                 Color.White * 0.15f
             );
         }
 
-        if (_uiPanel.SelectedTowerType.HasValue)
+        if (hasTowerSelection)
         {
             DrawFootprintHover(
                 spriteBatch,

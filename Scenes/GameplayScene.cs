@@ -71,7 +71,6 @@ public partial class GameplayScene : IScene
     private Tower? _hoveredTower;
     private IEnemy? _selectedEnemy;
     private Point _mouseGrid;
-    private float _selectedTowerRange;
     private List<Point>? _towerMovePreviewPath;
     private bool _isTowerMoveDragArmed;
     private Vector2 _towerMoveDragStartWorld;

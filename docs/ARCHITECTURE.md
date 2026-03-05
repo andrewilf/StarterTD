@@ -59,6 +59,7 @@
 
 ## Rendering/Window
 - `GameplayScene.Draw()` runs two `SpriteBatch` passes: world-space with `_worldMatrix` translation, then screen-space for panel/overlays
+- Placement hover range preview is computed per-frame in `DrawHoverIndicator` from `UIPanel.SelectedTowerType` via `TowerData.GetStats(...)` (no cached range field in `GameplayScene`)
 - Gameplay input converts screen coords to world coords (`ScreenToWorld`) before world hit tests and grid conversion
 - Startup window mode is windowed maximized (not fullscreen); `GameSettings.ScreenWidth/ScreenHeight` sync to final client bounds
 

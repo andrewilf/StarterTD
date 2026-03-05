@@ -39,6 +39,7 @@
 - Info panel: click tower/enemy for stats overlay (bottom-right). Dismiss: ESC/empty tile/new selection
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others
 - Range indicators, AoE visuals, victory/defeat flow
+- Placement range preview is derived at draw-time from `UIPanel.SelectedTowerType` stats (no cached range state), so champion and generic non-zero-range tower selections render consistently; walling (`Range = 0`) shows no circle
 - Debug sidebar: Place High Ground tiles, Spawn Enemy
 - Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, wave spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank uses real (wall-clock) time, unaffected by the slowdown itself
 
