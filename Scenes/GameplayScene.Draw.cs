@@ -310,12 +310,16 @@ public partial class GameplayScene
         if (_towerManager.SelectedTower != null)
         {
             var tower = _towerManager.SelectedTower;
-            Vector2 drawSize = tower.DrawSize;
+            TowerDrawingHelper.GetVisualBounds(
+                tower,
+                out Vector2 drawPosition,
+                out Vector2 drawSize
+            );
             int w = (int)MathF.Round(drawSize.X) + padding * 2;
             int h = (int)MathF.Round(drawSize.Y) + padding * 2;
             var rect = new Rectangle(
-                (int)(tower.DrawPosition.X - w / 2f),
-                (int)(tower.DrawPosition.Y - h / 2f),
+                (int)(drawPosition.X - w / 2f),
+                (int)(drawPosition.Y - h / 2f),
                 w,
                 h
             );
@@ -484,8 +488,7 @@ public partial class GameplayScene
     private static Rectangle GetWallPlacementButtonRect(Tower wallingTower)
     {
         const int btnSize = 18;
-        Vector2 pos = wallingTower.DrawPosition;
-        Vector2 drawSize = wallingTower.DrawSize;
+        TowerDrawingHelper.GetVisualBounds(wallingTower, out Vector2 pos, out Vector2 drawSize);
         int bx = (int)(pos.X + drawSize.X / 2f + 4f);
         int by = (int)(pos.Y - drawSize.Y / 2f - btnSize - 2f);
         return new Rectangle(bx, by, btnSize, btnSize);

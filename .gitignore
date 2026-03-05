@@ -18,3 +18,6 @@ packages/
 
 # ChunkHound local vector database and cache
 .chunkhound/
+
+# WIP assets
+/Content/Sprites/Towers/wip_sprites/

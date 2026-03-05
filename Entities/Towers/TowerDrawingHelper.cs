@@ -13,8 +13,19 @@ internal static class TowerDrawingHelper
 {
     public static void Draw(SpriteBatch spriteBatch, Tower tower)
     {
-        Vector2 drawPosition = tower.DrawPosition;
-        Vector2 drawSize = tower.DrawSize;
+        Texture2D? towerSprite = GetTowerSprite(tower);
+        GetVisualBounds(tower, towerSprite, out Vector2 drawPosition, out Vector2 drawSize);
+        Vector2 spritePosition = drawPosition;
+        Vector2 spriteOrigin = new Vector2(0.5f, 0.5f);
+        bool anchorToFootprintBottom = ShouldAnchorSpriteToFootprintBottom(towerSprite);
+        if (anchorToFootprintBottom)
+        {
+            // Keep tower anchor at the occupied footprint bottom so tall art overhangs upward.
+            spritePosition = GetFootprintBottomCenter(tower);
+            spriteOrigin = new Vector2(0.5f, 1f);
+        }
+
+        DrawFootprintGuide(spriteBatch, tower);
 
         // Ability aura: two concentric circles give a soft glow effect.
         if (tower.IsAbilityBuffActive)
@@ -36,19 +47,35 @@ internal static class TowerDrawingHelper
             );
         }
 
-        // Semi-transparent when moving so tower looks ghostly (non-blocking).
-        Color bodyColor =
-            tower.CurrentState == TowerState.Moving ? tower.TowerColor * 0.5f : tower.TowerColor;
+        bool isMoving = tower.CurrentState == TowerState.Moving;
+        // When a sprite exists, keep original art colors and only apply movement alpha.
+        if (towerSprite != null)
+        {
+            Color spriteTint = isMoving ? Color.White * 0.5f : Color.White;
 
-        TextureManager.DrawSprite(
-            spriteBatch,
-            drawPosition,
-            drawSize,
-            bodyColor,
-            rotation: 0f,
-            origin: new Vector2(0.5f, 0.5f),
-            drawOutline: true
-        );
+            TextureManager.DrawSprite(
+                spriteBatch,
+                towerSprite,
+                spritePosition,
+                drawSize,
+                spriteTint,
+                rotation: 0f,
+                origin: spriteOrigin
+            );
+        }
+        else
+        {
+            // Fallback placeholder for tower types without sprite assets.
+            Color bodyColor = isMoving ? tower.TowerColor * 0.5f : tower.TowerColor;
+            TextureManager.DrawSprite(
+                spriteBatch,
+                spritePosition,
+                drawSize,
+                bodyColor,
+                rotation: 0f,
+                origin: spriteOrigin
+            );
+        }
 
         bool isWallSegment = tower.TowerType.IsWallSegment();
         bool showWallGrowthBar = isWallSegment && tower.MaxHealth < tower.HealthBarCapacity;
@@ -92,6 +119,12 @@ internal static class TowerDrawingHelper
 
         foreach (var proj in tower.Projectiles)
             proj.Draw(spriteBatch);
+    }
+
+    public static void GetVisualBounds(Tower tower, out Vector2 drawPosition, out Vector2 drawSize)
+    {
+        Texture2D? towerSprite = GetTowerSprite(tower);
+        GetVisualBounds(tower, towerSprite, out drawPosition, out drawSize);
     }
 
     public static void DrawRangeIndicator(SpriteBatch spriteBatch, Tower tower)
@@ -216,5 +249,72 @@ internal static class TowerDrawingHelper
             new Rectangle(barX, barY, (int)(barWidth * progress), (int)barHeight),
             Color.Gold
         );
+    }
+
+    private static Texture2D? GetTowerSprite(Tower tower) =>
+        tower.TowerType switch
+        {
+            TowerType.Gun => TextureManager.GenericGunTowerSprite,
+            TowerType.Cannon => TextureManager.GenericCannonTowerSprite,
+            TowerType.Walling => TextureManager.GenericWallingTowerSprite,
+            TowerType.ChampionGun => TextureManager.ChampionGunTowerSprite,
+            TowerType.ChampionCannon => TextureManager.ChampionCannonTowerSprite,
+            TowerType.ChampionWalling => TextureManager.ChampionWallingTowerSprite,
+            _ => null,
+        };
+
+    private static bool ShouldAnchorSpriteToFootprintBottom(Texture2D? towerSprite) =>
+        towerSprite != null;
+
+    private static Vector2 GetFootprintBottomCenter(Tower tower)
+    {
+        float footprintHeight = tower.FootprintSize.Y * GameSettings.TileSize;
+        return tower.DrawPosition + new Vector2(0f, footprintHeight / 2f);
+    }
+
+    private static void DrawFootprintGuide(SpriteBatch spriteBatch, Tower tower)
+    {
+        const float guideAlpha = 0.16f;
+        Color guideColor = Color.Gray * guideAlpha;
+        int tileSize = GameSettings.TileSize;
+        int footprintWidth = tower.FootprintSize.X * tileSize;
+        int footprintHeight = tower.FootprintSize.Y * tileSize;
+        Vector2 topLeft =
+            tower.DrawPosition - new Vector2(footprintWidth / 2f, footprintHeight / 2f);
+
+        for (int y = 0; y < tower.FootprintSize.Y; y++)
+        {
+            for (int x = 0; x < tower.FootprintSize.X; x++)
+            {
+                int tileX = (int)MathF.Round(topLeft.X + x * tileSize);
+                int tileY = (int)MathF.Round(topLeft.Y + y * tileSize);
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    new Rectangle(tileX, tileY, tileSize, tileSize),
+                    guideColor
+                );
+            }
+        }
+    }
+
+    private static void GetVisualBounds(
+        Tower tower,
+        Texture2D? towerSprite,
+        out Vector2 drawPosition,
+        out Vector2 drawSize
+    )
+    {
+        drawPosition = tower.DrawPosition;
+        drawSize = tower.DrawSize;
+
+        if (towerSprite == null)
+            return;
+
+        drawSize = new Vector2(
+            towerSprite.Width * tower.DrawScale.X,
+            towerSprite.Height * tower.DrawScale.Y
+        );
+        if (ShouldAnchorSpriteToFootprintBottom(towerSprite))
+            drawPosition = GetFootprintBottomCenter(tower) - new Vector2(0f, drawSize.Y / 2f);
     }
 }
