@@ -14,8 +14,10 @@ public readonly record struct AnimationConfig
     public int FrameHeight { get; init; }
     public int IdleFrameCount { get; init; }
     public int IdleRow { get; init; }
+    public int IdleStartFrame { get; init; }
     public int WalkFrameCount { get; init; }
     public int WalkRow { get; init; }
+    public int WalkStartFrame { get; init; }
     public float FramesPerSecond { get; init; }
 }
 
@@ -50,8 +52,8 @@ public sealed class SpriteAnimator
     public SpriteAnimator(AnimationConfig config)
     {
         Config = config;
-        _idleFrames = PrecomputeFrames(config, config.IdleRow, config.IdleFrameCount);
-        _walkFrames = PrecomputeFrames(config, config.WalkRow, config.WalkFrameCount);
+        _idleFrames = PrecomputeFrames(config, config.IdleRow, config.IdleStartFrame, config.IdleFrameCount);
+        _walkFrames = PrecomputeFrames(config, config.WalkRow, config.WalkStartFrame, config.WalkFrameCount);
         _currentFrames = _idleFrames;
     }
 
@@ -87,7 +89,12 @@ public sealed class SpriteAnimator
         }
     }
 
-    private static Rectangle[] PrecomputeFrames(AnimationConfig config, int row, int frameCount)
+    private static Rectangle[] PrecomputeFrames(
+        AnimationConfig config,
+        int row,
+        int startFrame,
+        int frameCount
+    )
     {
         if (frameCount <= 0 || config.FrameWidth <= 0 || config.FrameHeight <= 0)
             return [];
@@ -95,7 +102,7 @@ public sealed class SpriteAnimator
         var frames = new Rectangle[frameCount];
         for (int i = 0; i < frameCount; i++)
             frames[i] = new Rectangle(
-                i * config.FrameWidth,
+                (startFrame + i) * config.FrameWidth,
                 row * config.FrameHeight,
                 config.FrameWidth,
                 config.FrameHeight
