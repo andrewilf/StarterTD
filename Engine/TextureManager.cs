@@ -41,6 +41,13 @@ public static class TextureManager
     /// <summary>Optional sprite for Generic Walling tower.</summary>
     public static Texture2D? GenericWallingTowerSprite { get; private set; }
 
+    /// <summary>
+    /// Sprite sheet for Champion Gun tower animations.
+    /// Row 0 = idle (7 frames), row 1 = walk (8 frames).
+    /// Null if the file has not been added yet — falls back to the static sprite.
+    /// </summary>
+    public static Texture2D? ChampionGunSheet { get; private set; }
+
     /// <summary>Cache of generated filled circle textures keyed by radius.</summary>
     private static readonly Dictionary<int, Texture2D> FilledCircleCache = new();
 
@@ -85,6 +92,10 @@ public static class TextureManager
         GenericWallingTowerSprite = TryLoadTextureFromDisk(
             graphicsDevice,
             Path.Combine("Content", "Sprites", "Towers", "generic_walling.png")
+        );
+        ChampionGunSheet = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "champion_gun_sheet.png")
         );
 
         // Pre-generate circles for tower ranges and AoE effects
@@ -203,6 +214,39 @@ public static class TextureManager
             texture,
             position,
             sourceRectangle: null,
+            color,
+            rotation,
+            textureOrigin,
+            scale,
+            SpriteEffects.None,
+            layerDepth: 0f
+        );
+    }
+
+    /// <summary>
+    /// Draw a single frame from a sprite sheet.
+    /// Origin is in 0-1 normalized space, applied relative to the source rectangle.
+    /// </summary>
+    public static void DrawSprite(
+        SpriteBatch spriteBatch,
+        Texture2D sheet,
+        Rectangle sourceRect,
+        Vector2 position,
+        Vector2 size,
+        Color color,
+        float rotation = 0f,
+        Vector2? origin = null
+    )
+    {
+        Vector2 spriteOrigin = origin ?? new Vector2(0.5f, 0.5f);
+        // Origin in MonoGame is in source-pixel space, relative to the source rect's top-left.
+        Vector2 textureOrigin = new(sourceRect.Width * spriteOrigin.X, sourceRect.Height * spriteOrigin.Y);
+        Vector2 scale = new(size.X / sourceRect.Width, size.Y / sourceRect.Height);
+
+        spriteBatch.Draw(
+            sheet,
+            position,
+            sourceRect,
             color,
             rotation,
             textureOrigin,

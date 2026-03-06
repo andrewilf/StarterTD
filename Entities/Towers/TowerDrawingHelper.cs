@@ -48,17 +48,35 @@ internal static class TowerDrawingHelper
         }
 
         bool isMoving = tower.CurrentState == TowerState.Moving;
-        // When a sprite exists, keep original art colors and only apply movement alpha.
-        if (towerSprite != null)
-        {
-            Color spriteTint = isMoving ? Color.White * 0.5f : Color.White;
+        Color tint = isMoving ? Color.White * 0.5f : Color.White;
 
+        bool usingSheet =
+            tower.Animator is { IsConfigured: true }
+            && TextureManager.ChampionGunSheet != null;
+
+        if (usingSheet)
+        {
+            // Sheet path: draw only the current animation frame via source rectangle.
+            TextureManager.DrawSprite(
+                spriteBatch,
+                TextureManager.ChampionGunSheet!,
+                tower.Animator!.CurrentSourceRect,
+                spritePosition,
+                drawSize,
+                tint,
+                rotation: 0f,
+                origin: spriteOrigin
+            );
+        }
+        else if (towerSprite != null)
+        {
+            // Static sprite path: keep original art colors and only apply movement alpha.
             TextureManager.DrawSprite(
                 spriteBatch,
                 towerSprite,
                 spritePosition,
                 drawSize,
-                spriteTint,
+                tint,
                 rotation: 0f,
                 origin: spriteOrigin
             );
@@ -306,6 +324,15 @@ internal static class TowerDrawingHelper
     {
         drawPosition = tower.DrawPosition;
         drawSize = tower.DrawSize;
+
+        if (tower.Animator is { IsConfigured: true } && TextureManager.ChampionGunSheet != null)
+        {
+            // Frame size drives draw bounds so health bars and UI align to the actual sprite.
+            var cfg = tower.Animator.Config;
+            drawSize = new Vector2(cfg.FrameWidth * tower.DrawScale.X, cfg.FrameHeight * tower.DrawScale.Y);
+            drawPosition = GetFootprintBottomCenter(tower) - new Vector2(0f, drawSize.Y / 2f);
+            return;
+        }
 
         if (towerSprite == null)
             return;

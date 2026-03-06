@@ -113,6 +113,12 @@ public class Tower : ITower
     /// <summary>The last enemy this tower successfully targeted. Used by laser activation to aim the initial beam.</summary>
     public IEnemy? LastTarget { get; private set; }
 
+    /// <summary>
+    /// Sprite sheet animator. Non-null only for tower types that have sheet-based animations.
+    /// Read by TowerDrawingHelper to select the correct source rectangle when drawing.
+    /// </summary>
+    public SpriteAnimator? Animator { get; private set; }
+
     /// <summary>List of active projectiles fired by this tower.</summary>
     public List<Projectile> Projectiles { get; } = new();
 
@@ -158,7 +164,22 @@ public class Tower : ITower
 
         BaseCooldown = stats.BaseCooldown;
         CooldownPenalty = stats.CooldownPenalty;
+
+        if (type == TowerType.ChampionGun)
+            Animator = new SpriteAnimator(ChampionGunAnimationConfig);
     }
+
+    // TODO: Set FrameWidth and FrameHeight to match champion_gun_sheet.png per-frame pixel dimensions.
+    private static readonly AnimationConfig ChampionGunAnimationConfig = new()
+    {
+        FrameWidth = 0,
+        FrameHeight = 0,
+        IdleFrameCount = 7,
+        IdleRow = 0,
+        WalkFrameCount = 8,
+        WalkRow = 1,
+        FramesPerSecond = 8f,
+    };
 
     /// <summary>
     /// Factory method: creates the correct Tower subclass for the given type.
@@ -321,6 +342,13 @@ public class Tower : ITower
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+        // Drive animation before state transitions so this frame reflects the correct state.
+        if (Animator != null)
+        {
+            Animator.SetAnimation(CurrentState == TowerState.Moving ? AnimationState.Walk : AnimationState.Idle);
+            Animator.Update(dt);
+        }
 
         OnUpdateStart(dt);
 
