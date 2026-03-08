@@ -182,6 +182,20 @@ public class Tower : ITower
     }
 
     /// <summary>
+    /// Restore tower HP by up to <paramref name="amount"/>, clamped to MaxHealth.
+    /// Returns the actual HP restored.
+    /// </summary>
+    public int Heal(int amount)
+    {
+        if (amount <= 0 || IsDead || CurrentHealth >= MaxHealth)
+            return 0;
+
+        int healed = Math.Min(amount, MaxHealth - CurrentHealth);
+        CurrentHealth += healed;
+        return healed;
+    }
+
+    /// <summary>
     /// Attempt to engage this tower. Returns true if the enemy can engage (capacity available).
     /// </summary>
     public bool TryEngage()

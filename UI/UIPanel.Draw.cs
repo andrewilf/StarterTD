@@ -63,6 +63,13 @@ public partial class UIPanel
                 championCooldown
             );
             DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
+            DrawChampionOnlyTowerButton(
+                spriteBatch,
+                _healingTowerButton,
+                TowerType.ChampionHealing,
+                championCooldown
+            );
+            DrawAbilityButton(spriteBatch, _healingAbilityButton, TowerType.ChampionHealing);
 
             spriteBatch.DrawString(
                 _font,
@@ -156,6 +163,7 @@ public partial class UIPanel
                 _wallTowerButton,
                 wallChampAlive ? TowerType.Walling : TowerType.ChampionWalling
             );
+            DrawButtonNoFont(spriteBatch, _healingTowerButton, TowerType.ChampionHealing);
 
             TextureManager.DrawRect(
                 spriteBatch,
@@ -332,6 +340,86 @@ public partial class UIPanel
                 subColor
             );
         }
+    }
+
+    private void DrawChampionOnlyTowerButton(
+        SpriteBatch spriteBatch,
+        Rectangle rect,
+        TowerType championType,
+        float championCooldown
+    )
+    {
+        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
+        bool isSelected = SelectedTowerType == championType;
+        float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
+        float respawnCooldown = _championManager?.GetRespawnCooldown(championType) ?? 0f;
+
+        Color bgColor = Color.DarkSlateGray;
+        Color textColor = Color.White;
+        string mainLabel = "Healing Champion";
+        string? subLabel = null;
+
+        if (championAlive)
+        {
+            bgColor = new Color(35, 70, 40);
+            subLabel = "Champion Active";
+        }
+        else if (championCooldown > 0f)
+        {
+            bgColor = Color.DarkGray;
+            textColor = Color.DarkGray;
+            subLabel = $"Locked: {championCooldown:F1}s";
+        }
+        else if (globalCooldown > 0f)
+        {
+            subLabel = $"Global: {globalCooldown:F1}s";
+            textColor = Color.DarkGray;
+        }
+        else if (respawnCooldown > 0f)
+        {
+            subLabel = $"Respawn: {respawnCooldown:F1}s";
+            textColor = Color.DarkGray;
+        }
+        else
+        {
+            subLabel = "Place Champion";
+        }
+
+        if (isSelected)
+            bgColor = Color.SlateGray;
+
+        TextureManager.DrawRect(spriteBatch, rect, bgColor);
+        TextureManager.DrawRectOutline(
+            spriteBatch,
+            rect,
+            isSelected ? Color.Yellow : Color.Gray,
+            2
+        );
+
+        var stats = TowerData.GetStats(championType);
+        Color swatchColor = championCooldown > 0f ? Color.DarkGray : stats.Color;
+        TextureManager.DrawRect(
+            spriteBatch,
+            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
+            swatchColor
+        );
+
+        spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
+
+        if (subLabel == null)
+            return;
+
+        Color subColor;
+        if (subLabel == "Place Champion")
+            subColor = Color.LightGreen;
+        else if (subLabel == "Champion Active")
+            subColor = Color.LightSkyBlue;
+        else if (subLabel.StartsWith("Locked"))
+            subColor = Color.OrangeRed;
+        else
+            subColor = Color.Yellow;
+
+        spriteBatch.DrawString(_font, subLabel, new Vector2(rect.X + 50, rect.Y + 28), subColor);
     }
 
     /// <summary>

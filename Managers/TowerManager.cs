@@ -24,6 +24,9 @@ public partial class TowerManager
 
     // Tracks frenzy fire timers per tower — champion and Walling generics each have independent timers.
     private readonly Dictionary<Tower, float> _frenzyFireTimers = [];
+    private const int HealingDroneCount = 3;
+    private readonly List<HealingDrone> _healingDrones = [];
+    private readonly HashSet<Tower> _claimedHealingTargets = [];
 
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
@@ -110,6 +113,13 @@ public partial class TowerManager
         _towers.Add(tower);
         SetOccupancyFor(tower, occupied: true);
 
+        if (type == TowerType.ChampionHealing)
+        {
+            _healingDrones.Clear();
+            for (int i = 0; i < HealingDroneCount; i++)
+                _healingDrones.Add(new HealingDrone(_map, tower));
+        }
+
         if (isChampion)
             _championManager.OnChampionPlaced(type);
 
@@ -182,6 +192,8 @@ public partial class TowerManager
             tower.CancelAbility();
             OnLaserCancelled?.Invoke();
         }
+
+        _healingDrones.RemoveAll(d => d.Owner == tower);
 
         _towers.Remove(tower);
 
@@ -350,17 +362,19 @@ public partial class TowerManager
             return;
         }
 
-        var genericType = championType.GetGenericVariant();
+        bool hasGenericVariant = championType.TryGetGenericVariant(out var genericType);
 
         Tower? champion = null;
         foreach (var tower in _towers)
         {
-            if (tower.TowerType == championType || tower.TowerType == genericType)
-            {
-                TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
-                if (tower.TowerType == championType)
-                    champion = tower;
-            }
+            bool matchesChampion = tower.TowerType == championType;
+            bool matchesGeneric = hasGenericVariant && tower.TowerType == genericType;
+            if (!matchesChampion && !matchesGeneric)
+                continue;
+
+            TowerData.GetStats(tower.TowerType).AbilityEffect?.Invoke(tower);
+            if (matchesChampion)
+                champion = tower;
         }
 
         // Notify scene to spawn the laser effect.
@@ -432,6 +446,13 @@ public partial class TowerManager
                 RemoveTower(_towers[i]);
             }
         }
+
+        if (_healingDrones.Count > 0)
+        {
+            _claimedHealingTargets.Clear();
+            for (int i = 0; i < _healingDrones.Count; i++)
+                _healingDrones[i].Update(gameTime, _towers, _claimedHealingTargets);
+        }
     }
 
     /// <summary>
@@ -446,6 +467,9 @@ public partial class TowerManager
         {
             tower.Draw(spriteBatch, font);
         }
+
+        foreach (var drone in _healingDrones)
+            drone.Draw(spriteBatch);
 
         // Draw range indicator for hovered tower
         if (hoveredTower != null)

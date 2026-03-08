@@ -11,7 +11,7 @@
 
 ### 1.1 Rename & Rebalance Towers
 - **Priority**: P1 | **Effort**: S
-- **Current State**: 5 tower types (Gun, Cannon, Walling, ChampionGun, ChampionCannon, ChampionWalling) with placeholder balance values.
+- **Current State**: 7 tower types (Gun, Cannon, Walling, ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with placeholder balance values.
 - **Tasks**:
   - [ ] Decide on new tower names and theme (fantasy, sci-fi, etc.)
   - [ ] Rebalance stat values (damage, fire rate, range, BaseCooldown, CooldownPenalty, HP, block capacity)
@@ -21,36 +21,29 @@
 
 ---
 
-## 2. Healing Tower Mechanics (Dual-Mode Tower Type)
+## 2. Healing Champion Tower (Drone Support, v1)
 
-### 2.1 Healing Tower — Toggle Mode System
-- **Priority**: P2 | **Effort**: M
-- **Concept**: A dual-mode tower that **heals nearby allied towers in healing mode** or **attacks as a sniper tower in attack mode**. Toggle between modes via world-space UI button.
-- **Healing Mode**:
-  - [ ] Create `HealTower` type (enum, stats, registration)
-  - [ ] Stats: heal amount per tick, heal interval, heal range (circular), cost, HP
-  - [ ] Healing target selection: lowest HP ally tower in range
-  - [ ] Implement `Tower.Heal(float amount)`: clamp to MaxHealth, skip if full HP
-  - [ ] Visual: green pulse/ring effect on heal tick, green floating text showing heal amount
-  - [ ] No projectile — instant heal
-- **Attack Mode (Sniper)**:
-  - [ ] Switch to single-target high-damage sniper tower (follows gun tower targeting: lowest HP enemy)
-  - [ ] Stats differ from healing mode: damage, fire rate, range, attack projectile type
-  - [ ] Projectile type: "railgun" — piercing ammo that travels further, may pass through targets or explode on impact
-  - [ ] Visual distinction in UI: icon/label changes to indicate mode
-- **Mode Toggle**:
-  - [ ] World-space "H/S" button (or icon) to switch modes (similar to wall "+" button pattern)
-  - [ ] Persist selection until toggled again
-  - [ ] When switching modes, interrupt current action (finish attack/heal in progress, reset targeting)
-  - [ ] Assign `BaseCooldown`/`CooldownPenalty` values in `HealTowerStats` (follows cooldown placement system, section 4.1)
+### 2.1 ChampionHealing Tower + Drone Lifecycle
+- **Priority**: P2 | **Effort**: M | **Status**: `[x]` done
+- **Concept**: A **champion-only** healing tower that deploys three healing drones. No generic tower variant and no attack mode in v1.
+- **Tasks (Completed)**:
+  - [x] Add `TowerType.ChampionHealing` with champion-only tower stats registration.
+  - [x] Support champion-only variant mapping safely in tower type helpers.
+  - [x] Add `Tower.Heal(int amount)` clamped to max health.
+  - [x] Spawn exactly 3 healing drones for `ChampionHealing`.
+  - [x] Prevent simultaneous duplicate targets across drones (shared claimed-target coordination).
+  - [x] Heal at `+1 HP / 0.1s` with `-1 energy / 0.1s` while attached to a damaged valid tower.
+  - [x] Retarget to nearest valid damaged tower; exclude wall segments and owner healing champion.
+  - [x] Return to owner at zero energy and recharge at `+1 energy / 0.1s` until full.
+  - [x] Redeploy only when fully recharged and a valid unclaimed target exists.
+  - [x] Follow attached moving tower and use uniform all-tile pathing with hardcoded movement speed.
+- **Implemented**: `ChampionHealing` enum/stats/registration, champion-only UI button, `Tower.Heal()`, 3 `HealingDrone` instances with energy/tick/retarget/recharge lifecycle, shared claimed-target set prevents duplicate healing, uniform-cost drone pathing, wall segment and owner exclusion.
 
-### 2.2 Healing Tower — Champion Variant
-- **Priority**: P3 | **Effort**: S
-- **Tasks**:
-  - [ ] Create `ChampionHealTower` (free, walkable, starts in healing mode)
-  - [ ] **Healing Mode Ultimate**: "Healing Overdrive" — burst heal all allied towers on the map for a percentage of their max HP; sustained AoE healing aura around champion for duration
-  - [ ] **Attack Mode Ultimate**: "Railgun Overcharge" — fires a massive railgun shot that pierces through all enemies in a line; applies a slow debuff on hit
-  - [ ] Register variant mappings, add UI elements
+### 2.2 Placeholder Ultimate (No-op)
+- **Priority**: P3 | **Effort**: S | **Status**: `[x]` done
+- **Tasks (Completed)**:
+  - [x] Add champion ability button behavior that triggers normal cooldown flow with no gameplay effect.
+- **Implemented**: Ability button triggers normal cooldown flow with a no-op gameplay effect (short visual aura).
 
 ---
 
@@ -240,7 +233,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 |-------|-------|-----------|
 | **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves), 5.1 (cannon crossing) | ~~Gold removed~~ (done), auto-waves, terrain constraints |
 | **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 9.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
-| **Phase 3: Healing Tower** | 2.1 (dual-mode healing/sniper tower), 2.2 (champion variant) | New tower type with unique mechanics and ultimates |
+| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (placeholder ultimate)~~ | Done — drone support champion with energy lifecycle |
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
 | **Phase 5: Polish & Completeness** | 6.1 (wave JSON tooling), 3.2 (Tiled properties), 9.2 (sound), 4.3 (crowding), 7.2 (wave preview), 9.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
@@ -248,8 +241,6 @@ A recommended sequence that respects dependencies and delivers playable value ea
 
 1. **Tower theme/names**: Fantasy (Archer/Catapult), Military (Turret/Mortar), Sci-fi (Laser/Railgun)? This affects art direction.
 2. **Cooldown system tuning**: Values live in each `*TowerStats.cs` — tune `BaseCooldown` and `CooldownPenalty` per type. WallSegment intentionally zero.
-3. **Healing tower toggle UX**: Should mode-switch be instant or have a brief wind-up/transition animation?
-4. **Healing tower rail-gun**: Piercing rounds vs. explosion-on-impact? Does it apply slow to all enemies hit or only on landing?
-5. **Source tile size policy**: Keep 40x40 source art with scaling, or move to native 32x32 source assets and update `TerrainSourceTileSize`?
+3. **Source tile size policy**: Keep 40x40 source art with scaling, or move to native 32x32 source assets and update `TerrainSourceTileSize`?
 7. **Crowding approach**: Option A (speed penalty, simple) vs Option C (sub-grid, major refactor)? Recommend A first.
 8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.

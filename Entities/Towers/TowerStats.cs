@@ -43,7 +43,8 @@ public static class TowerTypeExtensions
     public static bool IsChampion(this TowerType type) =>
         type == TowerType.ChampionGun
         || type == TowerType.ChampionCannon
-        || type == TowerType.ChampionWalling;
+        || type == TowerType.ChampionWalling
+        || type == TowerType.ChampionHealing;
 
     public static bool IsWallingChampion(this TowerType type) => type == TowerType.ChampionWalling;
 
@@ -52,18 +53,60 @@ public static class TowerTypeExtensions
     public static bool IsWallSegment(this TowerType type) => type == TowerType.WallSegment;
 
     /// <summary>
+    /// Try to get the Generic variant of a Champion type.
+    /// Returns false for champion-only towers.
+    /// </summary>
+    public static bool TryGetGenericVariant(this TowerType championType, out TowerType genericType)
+    {
+        switch (championType)
+        {
+            case TowerType.ChampionGun:
+                genericType = TowerType.Gun;
+                return true;
+            case TowerType.ChampionCannon:
+                genericType = TowerType.Cannon;
+                return true;
+            case TowerType.ChampionWalling:
+                genericType = TowerType.Walling;
+                return true;
+            default:
+                genericType = default;
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Try to get the Champion variant of a Generic type.
+    /// Returns false for non-generic tower types.
+    /// </summary>
+    public static bool TryGetChampionVariant(this TowerType genericType, out TowerType championType)
+    {
+        switch (genericType)
+        {
+            case TowerType.Gun:
+                championType = TowerType.ChampionGun;
+                return true;
+            case TowerType.Cannon:
+                championType = TowerType.ChampionCannon;
+                return true;
+            case TowerType.Walling:
+                championType = TowerType.ChampionWalling;
+                return true;
+            default:
+                championType = default;
+                return false;
+        }
+    }
+
+    /// <summary>
     /// Get the Generic variant of a Champion type.
     /// Example: ChampionGun → Gun
     /// </summary>
     public static TowerType GetGenericVariant(this TowerType championType)
     {
-        return championType switch
-        {
-            TowerType.ChampionGun => TowerType.Gun,
-            TowerType.ChampionCannon => TowerType.Cannon,
-            TowerType.ChampionWalling => TowerType.Walling,
-            _ => throw new ArgumentException($"{championType} is not a champion type"),
-        };
+        return championType.TryGetGenericVariant(out var genericType)
+            ? genericType
+            : throw new ArgumentException($"{championType} has no generic variant");
     }
 
     /// <summary>
@@ -72,12 +115,8 @@ public static class TowerTypeExtensions
     /// </summary>
     public static TowerType GetChampionVariant(this TowerType genericType)
     {
-        return genericType switch
-        {
-            TowerType.Gun => TowerType.ChampionGun,
-            TowerType.Cannon => TowerType.ChampionCannon,
-            TowerType.Walling => TowerType.ChampionWalling,
-            _ => throw new ArgumentException($"{genericType} is not a generic type"),
-        };
+        return genericType.TryGetChampionVariant(out var championType)
+            ? championType
+            : throw new ArgumentException($"{genericType} has no champion variant");
     }
 }
