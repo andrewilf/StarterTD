@@ -36,6 +36,8 @@ public class Tower : ITower
     public float Range { get; private set; }
     public float Damage { get; private set; }
     public float FireRate { get; private set; }
+    public float EffectiveFireInterval =>
+        MathF.Max(FireRate / _externalAttackSpeedMultiplier, MinFireIntervalSeconds);
     public float BaseCooldown { get; }
     public float CooldownPenalty { get; }
     public bool IsAOE { get; private set; }
@@ -85,6 +87,7 @@ public class Tower : ITower
     private CountdownTimer? _fireCooldown;
     private int _currentEngagedCount;
     private const float ProjectileSpeed = 400f;
+    private const float MinFireIntervalSeconds = 0.01f;
 
     private Vector2 _drawPosition;
     private Queue<Point> _movePath = new();
@@ -104,11 +107,15 @@ public class Tower : ITower
     private float _originalDamage;
     private float _originalFireRate;
     private bool _hasStoredAbilityStats;
+    private float _externalAttackSpeedMultiplier = 1f;
+    private float _healingUltSparklePhase;
 
     private TargetingStrategy _targeting; // set once in ApplyStats; not readonly because ApplyStats is called after field init
 
     /// <summary>True while the super ability buff is active on this tower.</summary>
     public bool IsAbilityBuffActive { get; protected set; }
+    public bool HasHealingUltAttackSpeedBuff { get; private set; }
+    public float HealingUltSparklePhase => _healingUltSparklePhase;
 
     /// <summary>The last enemy this tower successfully targeted. Used by laser activation to aim the initial beam.</summary>
     public IEnemy? LastTarget { get; private set; }
@@ -171,6 +178,7 @@ public class Tower : ITower
             TowerType.Walling => new WallingTower(type, gridPos),
             TowerType.ChampionWalling => new WallingTower(type, gridPos),
             TowerType.ChampionCannon => new CannonChampionTower(gridPos),
+            TowerType.ChampionHealing => new HealingChampionTower(gridPos),
             _ => new Tower(type, gridPos),
         };
 
@@ -193,6 +201,26 @@ public class Tower : ITower
         int healed = Math.Min(amount, MaxHealth - CurrentHealth);
         CurrentHealth += healed;
         return healed;
+    }
+
+    public void SetHealingUltAttackSpeedBuff(bool isActive, float attackSpeedMultiplier)
+    {
+        float nextMultiplier = isActive ? MathF.Max(1f, attackSpeedMultiplier) : 1f;
+        if (
+            HasHealingUltAttackSpeedBuff == isActive
+            && MathF.Abs(_externalAttackSpeedMultiplier - nextMultiplier) < 0.0001f
+        )
+            return;
+
+        if (isActive)
+        {
+            _externalAttackSpeedMultiplier = nextMultiplier;
+            HasHealingUltAttackSpeedBuff = true;
+            return;
+        }
+
+        _externalAttackSpeedMultiplier = 1f;
+        HasHealingUltAttackSpeedBuff = false;
     }
 
     /// <summary>
@@ -336,6 +364,17 @@ public class Tower : ITower
     {
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        if (HasHealingUltAttackSpeedBuff)
+        {
+            _healingUltSparklePhase += dt;
+            if (_healingUltSparklePhase >= 1000f)
+                _healingUltSparklePhase -= 1000f;
+        }
+        else
+        {
+            _healingUltSparklePhase = 0f;
+        }
+
         OnUpdateStart(dt);
 
         if (IsAbilityBuffActive)
@@ -399,7 +438,7 @@ public class Tower : ITower
 
         if (target != null && canFire && !IsFiringSuppressed)
         {
-            _fireCooldown = new CountdownTimer(FireRate);
+            _fireCooldown = new CountdownTimer(EffectiveFireInterval);
             _fireCooldown.Start();
 
             if (hasWallTargeting)

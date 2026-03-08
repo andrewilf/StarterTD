@@ -43,7 +43,12 @@ public class HealingDrone
         _position = owner.DrawPosition;
     }
 
-    public void Update(GameTime gameTime, IReadOnlyList<Tower> towers, ISet<Tower> claimedTargets)
+    public void Update(
+        GameTime gameTime,
+        IReadOnlyList<Tower> towers,
+        ISet<Tower> claimedTargets,
+        bool isHealingUltActive
+    )
     {
         if (Owner.IsDead)
             return;
@@ -59,7 +64,7 @@ public class HealingDrone
                 UpdateTravelToTarget(dt, towers, claimedTargets);
                 break;
             case HealingDroneState.HealingTarget:
-                UpdateHealingTarget(dt, towers, claimedTargets);
+                UpdateHealingTarget(dt, towers, claimedTargets, isHealingUltActive);
                 break;
             case HealingDroneState.ReturningToOwner:
                 UpdateReturnToOwner(dt, towers, claimedTargets);
@@ -101,6 +106,20 @@ public class HealingDrone
                 new Rectangle(bgRect.X, bgRect.Y, fillWidth, barHeight),
                 Color.LimeGreen
             );
+        }
+    }
+
+    public void RefillForHealingUlt()
+    {
+        Energy = MaxEnergy;
+        _tickAccumulator = 0f;
+
+        if (State == HealingDroneState.ReturningToOwner || State == HealingDroneState.Recharging)
+        {
+            _targetTower = null;
+            _path = null;
+            _hasPathDestination = false;
+            State = HealingDroneState.Docked;
         }
     }
 
@@ -156,7 +175,8 @@ public class HealingDrone
     private void UpdateHealingTarget(
         float dt,
         IReadOnlyList<Tower> towers,
-        ISet<Tower> claimedTargets
+        ISet<Tower> claimedTargets,
+        bool isHealingUltActive
     )
     {
         bool canKeepTarget =
@@ -179,7 +199,7 @@ public class HealingDrone
         {
             _tickAccumulator -= TickIntervalSeconds;
 
-            if (Energy <= 0)
+            if (!isHealingUltActive && Energy <= 0)
             {
                 Energy = 0;
                 StartReturnToOwner();
@@ -187,10 +207,10 @@ public class HealingDrone
             }
 
             int healed = target.Heal(1);
-            if (healed > 0)
+            if (!isHealingUltActive && healed > 0)
                 Energy -= healed;
 
-            if (Energy <= 0)
+            if (!isHealingUltActive && Energy <= 0)
             {
                 Energy = 0;
                 StartReturnToOwner();

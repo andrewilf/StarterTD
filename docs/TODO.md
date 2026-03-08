@@ -39,11 +39,17 @@
   - [x] Follow attached moving tower and use uniform all-tile pathing with hardcoded movement speed.
 - **Implemented**: `ChampionHealing` enum/stats/registration, champion-only UI button, `Tower.Heal()`, 3 `HealingDrone` instances with energy/tick/retarget/recharge lifecycle, shared claimed-target set prevents duplicate healing, uniform-cost drone pathing, wall segment and owner exclusion.
 
-### 2.2 Placeholder Ultimate (No-op)
+### 2.2 ChampionHealing Ultimate + Passive Regen
 - **Priority**: P3 | **Effort**: S | **Status**: `[x]` done
 - **Tasks (Completed)**:
-  - [x] Add champion ability button behavior that triggers normal cooldown flow with no gameplay effect.
-- **Implemented**: Ability button triggers normal cooldown flow with a no-op gameplay effect (short visual aura).
+  - [x] Replace placeholder ChampionHealing ultimate with a 15s gameplay effect.
+  - [x] On cast, instantly refill all healing drones to max energy and force returning/recharging drones to redeploy.
+  - [x] Make drone healing consume no energy while the ultimate is active.
+  - [x] Apply +30% attack speed to all attacking towers (including walling towers) during the ultimate window.
+  - [x] Add a separate white/gold sparkle aura on towers affected by the +30% speed buff.
+  - [x] Add passive self-regeneration for ChampionHealing: `+2 HP` per `1s` tick.
+  - [x] Set ChampionHealing ultimate cooldown to `50s`.
+- **Implemented**: ChampionHealing now provides a full support ultimate (drone refill + free drone healing + global 30% attack speed buff with separate sparkle aura) and passive 1-second self-regeneration.
 
 ---
 
@@ -233,7 +239,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 |-------|-------|-----------|
 | **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves), 5.1 (cannon crossing) | ~~Gold removed~~ (done), auto-waves, terrain constraints |
 | **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 9.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
-| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (placeholder ultimate)~~ | Done — drone support champion with energy lifecycle |
+| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~ | Done — drone support champion with full ult + passive regen |
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
 | **Phase 5: Polish & Completeness** | 6.1 (wave JSON tooling), 3.2 (Tiled properties), 9.2 (sound), 4.3 (crowding), 7.2 (wave preview), 9.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
