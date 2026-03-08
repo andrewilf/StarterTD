@@ -52,8 +52,8 @@
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)
 - `MapDataRepository.GetAvailableMaps()` scans `Content/Maps/*.tmx` at runtime
-- Tile sizing is decoupled: `GameSettings.TileSize` is display tile size (32), `GameSettings.TerrainSourceTileSize` is spritesheet source tile size (40)
-- `TextureManager.DrawTile()`: `terrain.png` spritesheet (col = `(int)TileType`) sampled at source size and scaled to display size; fallback colored rect
+- Tile sizing is decoupled: `GameSettings.TileSize` is display tile size (32), `GameSettings.TerrainSourceTileSize` is spritesheet source tile size (32)
+- `TextureManager.DrawTile()`: `terrain32` spritesheet (col = `(int)TileType`) sampled at source size and scaled to display size; fallback colored rect
 - `TmxLoader` converts object pixel coords to grid coords using TMX `tilewidth`/`tileheight` (not `GameSettings.TileSize`)
 - Multi-spawn/exit: `MapData.SpawnPoints/ExitPoints: Dictionary<string, Point>`. Lane pairing: `spawn_a` → `exit_a` by suffix; fallback first exit. `Map.ActivePaths`: spawn name → path. `Enemy._spawnName` preserved on reroute via `Map.ComputePathFromPosition()`
 

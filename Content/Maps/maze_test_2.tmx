@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="40" tileheight="40" infinite="0" nextlayerid="3" nextobjectid="8">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="32" tileheight="32" infinite="0" nextlayerid="3" nextobjectid="8">
  <properties>
   <property name="name" value="Maze Test 2"/>
  </properties>
- <tileset firstgid="1" name="terrain" tilewidth="40" tileheight="40" tilecount="3" columns="3">
-  <image source="terrain.png" width="120" height="40"/>
+ <tileset firstgid="1" name="terrain" tilewidth="32" tileheight="32" tilecount="3" columns="3">
+  <image source="terrain32.png" width="96" height="32"/>
  </tileset>
  <layer id="1" name="terrain" width="20" height="15">
   <data encoding="csv">
@@ -26,16 +26,16 @@
 </data>
  </layer>
  <objectgroup id="2" name="Markers">
-  <object id="1" name="spawn_b" x="0" y="520">
+  <object id="1" name="spawn_b" x="0" y="416">
    <point/>
   </object>
-  <object id="2" name="exit_b" x="760" y="40">
+  <object id="2" name="exit_b" x="608" y="32">
    <point/>
   </object>
-  <object id="6" name="spawn_a" x="0" y="40">
+  <object id="6" name="spawn_a" x="0" y="32">
    <point/>
   </object>
-  <object id="7" name="exit_a" x="760" y="520">
+  <object id="7" name="exit_a" x="608" y="416">
    <point/>
   </object>
  </objectgroup>
