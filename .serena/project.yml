@@ -46,10 +46,10 @@ ignore_all_files_in_gitignore: true
 # Same syntax as gitignore, so you can use * and **.
 # Note: global ignored_paths from serena_config.yml are also applied additively.
 ignored_paths:
-  - obj/
-  - bin/
-  - .vs/
-  - Content/
+- obj/
+- bin/
+- .vs/
+- Content/
 
 # whether the project is in read-only mode
 # If set to true, all editing tools will be disabled and attempts to use them will result in an error
@@ -96,13 +96,13 @@ read_only: false
 #  * `think_about_whether_you_are_done`: Thinking tool for determining whether the task is truly completed.
 #  * `write_memory`: Writes a named memory (for future reference) to Serena's project-specific memory store.
 excluded_tools:
-  - execute_shell_command        # Claude Code handles shell via Bash tool
-  - activate_project             # Claude Code manages project activation
-  - remove_project               # Not needed in embedded mode
-  - prepare_for_new_conversation # Claude Code manages conversation context
-  - switch_modes                 # Not needed; modes are fixed via config
-  - get_current_config           # Internal Serena diagnostics, not useful here
-  - onboarding                   # Onboarding is done externally
+- execute_shell_command
+- activate_project
+- remove_project
+- prepare_for_new_conversation
+- switch_modes
+- get_current_config
+- onboarding
 
 # list of tools to include that would otherwise be disabled (particularly optional tools that are disabled by default)
 included_optional_tools: []
@@ -140,9 +140,12 @@ initial_prompt: |
   Build: `dotnet build`. Format: `dotnet csharpier format .`.
   Towers use high movement costs (not MaxValue) to stay pathable.
   TextureManager.DrawSprite uses centered origin; DrawRect uses top-left.
-
 # time budget (seconds) per tool call for the retrieval of additional symbol information
 # such as docstrings or parameter information.
 # This overrides the corresponding setting in the global configuration; see the documentation there.
 # If null or missing, use the setting from the global configuration.
 symbol_info_budget:
+
+# list of regex patterns which, when matched, mark a memory entry as read‑only.
+# Extends the list from the global configuration, merging the two lists.
+read_only_memory_patterns: []

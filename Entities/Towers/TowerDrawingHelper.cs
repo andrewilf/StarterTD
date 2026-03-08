@@ -260,6 +260,7 @@ internal static class TowerDrawingHelper
             TowerType.ChampionGun => TextureManager.ChampionGunTowerSprite,
             TowerType.ChampionCannon => TextureManager.ChampionCannonTowerSprite,
             TowerType.ChampionWalling => TextureManager.ChampionWallingTowerSprite,
+            TowerType.ChampionHealing => TextureManager.ChampionHealingTowerSprite,
             _ => null,
         };
 

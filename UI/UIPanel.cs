@@ -47,10 +47,10 @@ public partial class UIPanel
     private readonly Rectangle _gunAbilityButton;
     private readonly Rectangle _cannonTowerButton;
     private readonly Rectangle _cannonAbilityButton;
-
-    // Walling tower button (champion-only; wall placement is handled via world-space button)
     private readonly Rectangle _wallTowerButton;
     private readonly Rectangle _wallAbilityButton;
+    private readonly Rectangle _healingTowerButton;
+    private readonly Rectangle _healingAbilityButton;
 
     private readonly Rectangle _startWaveButton;
     private readonly Rectangle _timeSlowButton;
@@ -125,8 +125,19 @@ public partial class UIPanel
             abilityButtonHeight
         );
 
-        // Debug buttons pushed up to leave room for time-slow button above Start Wave
-        int debugStartY = _height - 270;
+        int healingStartY = wallStartY + buttonHeight + abilityGap + abilityButtonHeight + gap;
+        _healingTowerButton = new Rectangle(_x + 10, healingStartY, buttonWidth, buttonHeight);
+        _healingAbilityButton = new Rectangle(
+            _x + 10,
+            healingStartY + buttonHeight + abilityGap,
+            buttonWidth,
+            abilityButtonHeight
+        );
+
+        int minimumDebugStartY =
+            healingStartY + buttonHeight + abilityGap + abilityButtonHeight + 16;
+        // Debug buttons pushed up to leave room for time-slow button above Start Wave.
+        int debugStartY = Math.Max(_height - 270, minimumDebugStartY);
         _placeHighGroundButton = new Rectangle(_x + 10, debugStartY, buttonWidth, buttonHeight);
         _spawnEnemyButton = new Rectangle(
             _x + 10,
@@ -237,6 +248,18 @@ public partial class UIPanel
             return true;
         }
 
+        if (_healingTowerButton.Contains(mousePos))
+        {
+            HandleChampionOnlyTowerClick(TowerType.ChampionHealing, championCooldown);
+            return true;
+        }
+        if (_healingAbilityButton.Contains(mousePos))
+        {
+            if (_championManager?.IsAbilityReady(TowerType.ChampionHealing) ?? false)
+                OnAbilityTriggered?.Invoke(TowerType.ChampionHealing);
+            return true;
+        }
+
         if (_timeSlowButton.Contains(mousePos))
         {
             // Block activation when bank is below the minimum threshold.
@@ -289,6 +312,20 @@ public partial class UIPanel
             SelectedTowerType = canPlace ? genericType : null;
             SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
         }
+    }
+
+    private void HandleChampionOnlyTowerClick(TowerType championType, float championCooldown)
+    {
+        if (championCooldown > 0f)
+        {
+            SelectedTowerType = null;
+            SelectionMode = UISelectionMode.None;
+            return;
+        }
+
+        bool canPlace = _championManager?.CanPlaceChampion(championType) ?? true;
+        SelectedTowerType = canPlace ? championType : null;
+        SelectionMode = canPlace ? UISelectionMode.PlaceTower : UISelectionMode.None;
     }
 
     /// <summary>

@@ -33,6 +33,9 @@ public static class TextureManager
     /// <summary>Optional sprite for Champion Walling tower.</summary>
     public static Texture2D? ChampionWallingTowerSprite { get; private set; }
 
+    /// <summary>Optional sprite for Champion Healing tower.</summary>
+    public static Texture2D? ChampionHealingTowerSprite { get; private set; }
+
     /// <summary>Optional sprite for Generic Gun tower.</summary>
     public static Texture2D? GenericGunTowerSprite { get; private set; }
 
@@ -74,6 +77,10 @@ public static class TextureManager
         ChampionWallingTowerSprite = TryLoadTextureFromDisk(
             graphicsDevice,
             Path.Combine("Content", "Sprites", "Towers", "champion_walling.png")
+        );
+        ChampionHealingTowerSprite = TryLoadTextureFromDisk(
+            graphicsDevice,
+            Path.Combine("Content", "Sprites", "Towers", "champion_healing.png")
         );
         GenericGunTowerSprite = TryLoadTextureFromDisk(
             graphicsDevice,

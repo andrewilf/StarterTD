@@ -14,11 +14,12 @@
 `Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`
 
 ## Tower System
-- `TowerType` enum: Generic (Gun, Cannon, Walling) + Champion (ChampionGun, ChampionCannon, ChampionWalling) + WallSegment
+- `TowerType` enum: Generic (Gun, Cannon, Walling) + Champion (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) + WallSegment
 - Stats: `Entities/Towers/Stats/<Type>TowerStats.cs`; registry: `TowerData.GetStats()`. Each stat record carries `BaseCooldown` (flat seconds added to pool on placement), `CooldownPenalty` (additional seconds per tower already in that pool), `FootprintTiles`, and `PlaceholderDrawSize`. Champions use `FootprintTiles = 2x2`; generics/walls use `1x1`
-- Variant mapping: `TowerType.GetChampionVariant()` / `GetGenericVariant()`
+- Variant mapping: `TryGetChampionVariant()` / `TryGetGenericVariant()` (safe for champion-only types); throwing helpers `GetChampionVariant()` / `GetGenericVariant()` remain for strict callers
 - `TowerTypeExtensions`: `IsChampion()`, `IsWallingChampion()`, `IsWallingGeneric()`, `IsWallSegment()`
 - **Tower class hierarchy**: `Tower` (base) → `WallSegmentTower` (growth/decay), `WallingTower` (Walling + ChampionWalling; frenzy), `CannonChampionTower` (laser). Gun/Cannon/ChampionGun use `Tower` directly. Instantiate via `Tower.Create(type, pos)` factory — never `new Tower(...)` directly
+- `HealingDrone` (`Entities/HealingDrone.cs`): managed by `TowerManager`; 3 drones are spawned for `ChampionHealing`. `TowerManager` updates drones in deterministic order with a shared claimed-target set so two drones cannot heal the same tower simultaneously. Drones heal closest damaged valid allied towers, return/recharge on empty energy, and redeploy when conditions are met
 - Virtual hooks on base: `HealthBarCapacity`, `IsFiringSuppressed`, `OnUpdateStart(dt)`, `OnAbilityDeactivated()`, `UpdateChampionStatus(bool)`
 - Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). For 2x2 champions, all 4 footprint tiles are marked occupied/reserved. `Map.CanBuildFootprint(topLeft, size)` is the source of truth for placement/move validation. `Map.CanBuild()` is the 1x1 convenience wrapper
 - `DrawScale`: multiplier applied to `PlaceholderDrawSize` (champions use `2 * GameSettings.TileSize`, so with `TileSize=32` they render at `64x64`)
@@ -37,7 +38,7 @@
 - `TowerManager.DrawPendingWallReservations()`: renders ghost tiles for reserved-but-not-yet-spawned wall segments
 - `TowerManager.IsAdjacentToWallingNetwork(Point, Tower)`: public; uses `_wallConnectedSets[tower]` cache, falls back to fresh BFS if called before first `Update`
 - `TowerManager.TryPlaceWallPath(path, tower)`: validates contiguous prefix, reserves pending path, and starts deferred sequential spawning. `GetWallPathValidPrefixLength(path, tower)` simulates contiguous prefix validity without mutating map state (preview/corner choice only)
-- `TowerStats.AbilityEffect: Action<Tower>?`: called by `TriggerChampionAbility()` on champion + generics. ChampionWalling always buffs all Walling generics even if champion is dead. Lambdas that target subclass methods downcast explicitly (e.g. `((WallingTower)tower).ActivateFrenzy(...)`) — safe because the factory guarantees the correct subtype per `TowerType`
+- `TowerStats.AbilityEffect: Action<Tower>?`: called by `TriggerChampionAbility()` on champion + mapped generic (when a generic variant exists). ChampionWalling always buffs all Walling generics even if champion is dead. Lambdas that target subclass methods downcast explicitly (e.g. `((WallingTower)tower).ActivateFrenzy(...)`) — safe because the factory guarantees the correct subtype per `TowerType`
 - `Tower.ActivateAbilityBuff(damageMult, fireRateSpeedMult)`: saves originals via `_hasStoredAbilityStats` guard, sets `IsAbilityBuffActive = true`, runs for `AbilityDuration`. Re-trigger resets timer, no stacking. `DeactivateAbilityBuff()` only restores if guard set. Gold aura while active
 - `CannonChampionTower.ActivateLaser()`: sets `IsAbilityBuffActive = true` + `IsLaserActive = true`; suppresses projectile firing via `IsFiringSuppressed` override. `Tower.CancelAbility()`: public wrapper that calls `DeactivateAbilityBuff()` if active; `OnAbilityDeactivated()` hook clears `IsLaserActive`
 - Laser ability chain: `TriggerChampionAbility(type, enemies)` resolves initial target (last living target → closest enemy → 1 tile left of tower) → fires `TowerManager.OnLaserActivated` → `GameplayScene` spawns `LaserEffect`. Interruption: `MoveTower`/`RemoveTower` pattern-match `is CannonChampionTower` → `CancelAbility()` + `TowerManager.OnLaserCancelled` → `GameplayScene` nulls `_laserEffect`
@@ -68,13 +69,14 @@
 
 ## ChampionManager
 - One alive champion per type. Global 10s CD after any placement. Individual 15s respawn CD per type
-- Generics placeable only if champion variant alive
+- Generics placeable only if champion variant alive (for mapped generic/champion pairs)
 - Champion death → `UpdateChampionStatus(false)` on all matching generics
 - API: `GlobalCooldownRemaining`, `GetRespawnCooldown(type)`, `IsChampionAlive(type)`, `StartAbilityCooldown(type)`, `GetAbilityCooldownRemaining(type)`, `IsAbilityReady(type)`
 
 ## UIPanel
 - `UISelectionMode`: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
-- One consolidated button per tower type: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
+- Consolidated buttons for Gun/Cannon/Walling: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
+- ChampionHealing uses a dedicated champion-only button (`HandleChampionOnlyTowerClick`) plus standard ability button
 - `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of player money
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
@@ -97,6 +99,6 @@
 
 ## TextureManager
 - `DrawSprite()`: optional `origin` param (default 0.5,0.5 centered)
-- `ChampionGunTowerSprite`, `ChampionCannonTowerSprite`, and `ChampionWallingTowerSprite`: canonical champion textures loaded from `Content/Sprites/Towers/champion_<type>.png`
+- `ChampionGunTowerSprite`, `ChampionCannonTowerSprite`, `ChampionWallingTowerSprite`, and `ChampionHealingTowerSprite`: canonical champion textures loaded from `Content/Sprites/Towers/champion_<type>.png`
 - `GenericGunTowerSprite`, `GenericCannonTowerSprite`, and `GenericWallingTowerSprite`: canonical generic textures loaded from `Content/Sprites/Towers/generic_<type>.png`
 - `DrawRect()`: top-left origin. `DrawSprite()`: centered origin. Do not confuse

@@ -62,7 +62,9 @@ public class ChampionManager
     /// </summary>
     public bool CanPlaceGeneric(TowerType type)
     {
-        var championVariant = type.GetChampionVariant();
+        if (!type.TryGetChampionVariant(out var championVariant))
+            return false;
+
         return _aliveChampions.Contains(championVariant);
     }
 
@@ -129,7 +131,8 @@ public class ChampionManager
         _aliveChampions.Remove(type);
         _respawnCooldowns[type] = RESPAWN_COOLDOWN;
 
-        var genericVariant = type.GetGenericVariant();
+        if (!type.TryGetGenericVariant(out var genericVariant))
+            return;
 
         foreach (var tower in allTowers)
         {
