@@ -132,7 +132,7 @@
 ### 5.1 Champion Canon Tower — Prevent High Ground / Path Crossing
 - **Priority**: P2 | **Effort**: S
 - **Concept**: Champion cannon towers cannot cross between high ground and path tiles (and vice versa). Enforces arena-like spatial control — cannon champions must commit to one terrain type.
-- **Current State**: Champion towers freely move between all terrain types via `TowerPathfinder`.
+- **Current State**: Champion towers can traverse between terrain types via `TowerPathfinder`, but champion placement and movement destinations require a uniform tile type across the full 2x2 footprint.
 - **Tasks**:
   - [ ] Extend `TowerPathfinder.ComputePath()` to accept terrain-type constraint (or check per-tower)
   - [ ] For `ChampionCannonTower`: when computing movement path, block transitions between `TileType.HighGround` ↔ `TileType.Path`

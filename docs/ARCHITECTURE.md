@@ -21,7 +21,7 @@
 - **Tower class hierarchy**: `Tower` (base) → `WallSegmentTower` (growth/decay), `WallingTower` (Walling + ChampionWalling; frenzy), `CannonChampionTower` (laser). Gun/Cannon/ChampionGun use `Tower` directly. Instantiate via `Tower.Create(type, pos)` factory — never `new Tower(...)` directly
 - `HealingDrone` (`Entities/HealingDrone.cs`): managed by `TowerManager`; 3 drones are spawned for `ChampionHealing`. `TowerManager` updates drones in deterministic order with a shared claimed-target set so two drones cannot heal the same tower simultaneously. Drones heal closest damaged valid allied towers, return/recharge on empty energy, and redeploy when conditions are met
 - Virtual hooks on base: `HealthBarCapacity`, `IsFiringSuppressed`, `OnUpdateStart(dt)`, `OnAbilityDeactivated()`, `UpdateChampionStatus(bool)`
-- Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). For 2x2 champions, all 4 footprint tiles are marked occupied/reserved. `Map.CanBuildFootprint(topLeft, size)` is the source of truth for placement/move validation. `Map.CanBuild()` is the 1x1 convenience wrapper
+- Tiles: `OccupyingTower` (present) + `ReservedByTower` (movement destination) + `ReservedForPendingWallBy` (deferred wall spawn reservation). For 2x2 champions, all 4 footprint tiles are marked occupied/reserved. `Map.CanBuildFootprint(topLeft, size, ignoreTower?, requireUniformTileType?)` is the source of truth for placement/move validation; champion placement/move destination checks pass `requireUniformTileType: true` so all footprint tiles must share one buildable type. `Map.CanBuild()` is the 1x1 convenience wrapper
 - `DrawScale`: multiplier applied to `PlaceholderDrawSize` (champions use `2 * GameSettings.TileSize`, so with `TileSize=32` they render at `64x64`)
 - `Tower` position model: canonical `GridAnchor` (half-tile coordinates), derived `GridPosition` (top-left footprint tile), and `OccupiedTiles` (all currently blocked tiles)
 - `Tower.UpdateChampionStatus(bool)`: virtual hook for debuffs on champion death
@@ -48,7 +48,7 @@
 - Ability flow: `UIPanel.OnAbilityTriggered` → `GameplayScene` → `ChampionManager.StartAbilityCooldown()` + `TowerManager.TriggerChampionAbility()`
 - `Tower.DrawPosition`: interpolated visual position. `WorldPosition`: anchor-snapped (center of 1x1 or 2x2 footprint)
 - `TowerManager.MoveTower(tower, destTopLeft)`: clear origin footprint → reserve destination footprint → reroute → `StartMoving()`. `HandleMovementComplete`: clear destination reservation footprint → re-occupy footprint → reroute. `RemoveTower()` calls `ClearReservationFor()` on mid-move death
-- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()` over top-left footprint tiles. Each candidate step validates the full footprint (bounds/terrain/reservations), so 2x2 champions cannot pass through 1-tile corridors
+- `TowerPathfinder`: Dijkstra via `Pathfinder.ComputeHeatMap()` over top-left footprint tiles. Each candidate step validates the full footprint (bounds/terrain/reservations), so 2x2 champions cannot pass through 1-tile corridors. Mixed Path/HighGround footprints are still blocked at champion placement and movement destination checks via `CanBuildFootprint(..., requireUniformTileType: true)`
 
 ## Map Loading
 - Tiled `.tmx` in `Content/Maps/`. `TmxLoader.TryLoad(id)` → `MapData.TileGrid` (column-major `[col,row]`)
