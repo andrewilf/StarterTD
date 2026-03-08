@@ -464,6 +464,18 @@ public partial class TowerManager
         ApplyHealingUltAttackSpeedBuff(isActive: false);
     }
 
+    private bool IsHealingUltCasterAlive()
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var tower = _towers[i];
+            if (tower.TowerType == TowerType.ChampionHealing && !tower.IsDead)
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool CanReceiveHealingUltAttackSpeedBuff(Tower tower)
     {
         if (tower.IsDead || tower.TowerType.IsWallSegment())
@@ -484,9 +496,14 @@ public partial class TowerManager
         if (_healingUltRemainingSeconds > 0f)
             _healingUltRemainingSeconds = Math.Max(0f, _healingUltRemainingSeconds - dt);
 
-        bool isHealingUltActive = _healingUltRemainingSeconds > 0f;
-        if (wasHealingUltActive && !isHealingUltActive)
+        if (wasHealingUltActive && _healingUltRemainingSeconds <= 0f)
             EndHealingUlt();
+
+        // If the caster died earlier this frame (before dead-tower sweep), end ult before towers attack.
+        if (_healingUltRemainingSeconds > 0f && !IsHealingUltCasterAlive())
+            EndHealingUlt();
+
+        bool isHealingUltActive = _healingUltRemainingSeconds > 0f;
 
         // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
         // Each walling tower gets a single-root BFS from its own position so disconnected towers
