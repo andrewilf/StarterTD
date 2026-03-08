@@ -308,7 +308,7 @@ public partial class GameplayScene
     {
         const int borderThickness = 2;
         const int padding = 4;
-        const float enemySpriteSize = 20f;
+        const float enemySpriteSize = 30f;
 
         if (_towerManager.SelectedTower != null)
         {

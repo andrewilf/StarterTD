@@ -115,11 +115,14 @@
   - **Option B — Collision Avoidance**: Enemies maintain minimum spacing. Requires per-frame position adjustments. More realistic but harder to tune.
   - **Option C — Sub-Grid Movement**: Increase grid resolution (e.g., 2x2 or 4x4 cells per tile) so enemies have more spatial granularity. Heavy refactor of pathfinding and rendering.
 - **Tasks**:
-  - [ ] Decide on approach (recommend Option A for simplicity, with Option C as a future enhancement)
-  - [ ] If Option A: track enemy count per tile, apply speed multiplier (e.g., 1.0x for 1 enemy, 0.8x for 2, 0.6x for 3+)
-  - [ ] If Option C: refactor `Map` grid to support sub-tile resolution, update pathfinding costs, update rendering coordinates
-  - [ ] Visual feedback: show enemies visually offset within a tile so overlapping is less jarring even without full collision
-  - [ ] Balance: crowding should create interesting tactical situations (funnel enemies into AoE kill zones) without making the game feel sluggish
+  - [x] Decide on approach: Option B (physical collision avoidance) + occupancy-based spread/repel weighting
+  - [x] Track enemy count per tile for crowding spread-target selection and repel weighting (no crowd-based movement speed debuff)
+  - [ ] Option C follow-up: refactor `Map` grid to support sub-tile resolution, update pathfinding costs, update rendering coordinates
+  - [x] Visual feedback: enemies are physically offset each frame via minimum-spacing repulsion (not render-only), while keeping crowding displacement restricted to valid path tiles
+  - [~] Balance pass: switched crowding to deterministic per-tile slot targets (stable-id ordered with fixed angle slots + ring radius scaling) with vertical bias at `5+` occupancy for stronger upper/lower spread; removed pairwise force accumulation to stabilize visuals. Retains heavy smooth-damp/hysteresis, dynamic max offset growth at high density, and path-tile clamping. Blocked spread keeps sticky cardinal step targets with backline-pressure gating (rear + rear-diagonal support) plus lateral bias so attackers hold slots instead of re-targeting every frame. `BlockCapacity` remains the engage gate: overflow enemies do not engage and walk on. Still needs gameplay tuning across maps/waves
+- **Future Enhancements**:
+  - Add broad-phase optimization (e.g., spatial hash / quadtree) if enemy counts make pairwise avoidance too expensive
+  - Revisit Option C sub-grid movement if tighter lane-level crowd simulation is needed
 - **Interacts With**: Cannon "most grouped" targeting — crowding makes cannons more valuable. Wall towers — walls create natural chokepoints that trigger crowding.
 
 ### 4.4 Enemy Entrance Indicator

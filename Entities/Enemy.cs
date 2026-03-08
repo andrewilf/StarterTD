@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Timers;
@@ -25,25 +26,41 @@ public enum EnemyState
 /// </summary>
 public class Enemy : IEnemy
 {
+    private static int _nextStableId;
+
     public string Name { get; }
     public float Health { get; private set; }
     public float MaxHealth { get; }
     public float Speed { get; }
     public int Bounty { get; }
-    public Vector2 Position { get; private set; }
+    public Vector2 Position => _basePosition + _crowdingOffset;
+    public Vector2 BasePosition => _basePosition;
+    public Vector2 CrowdingOffset => _crowdingOffset;
+    public bool IsAttacking => _state == EnemyState.Attacking;
+    public Tower? TargetTower => _targetTower;
+    public Tower? BlockingTower => _blockingTower;
+    public Vector2? BlockedSpreadTarget => _blockedSpreadTarget;
     public bool IsDead => Health <= 0;
     public bool ReachedEnd { get; private set; }
     public int AttackDamage { get; }
+    public int StableId { get; }
+    public Vector2 CrowdingVelocity => _crowdingVelocity;
 
     private List<Point> _path;
     private int _currentPathIndex;
     private readonly string _spawnName;
     private readonly Color _color;
-    private const float SpriteSize = 20f;
+    private const float SpriteSize = 30f;
     private EnemyState _state;
     private Tower? _targetTower;
+    private Tower? _blockingTower;
     private CountdownTimer? _attackTimer;
     private const float AttackInterval = 1.0f;
+    private Vector2 _basePosition;
+    private Vector2 _crowdingOffset;
+    private Vector2 _crowdingVelocity;
+    private Vector2? _blockedSpreadTarget;
+    private const float BlockedSpreadMoveSpeed = 70f;
 
     private float _slowTimer;
     private const float SlowFactor = 0.4f; // Move at 40% of base speed while slowed
@@ -61,6 +78,7 @@ public class Enemy : IEnemy
         int attackDamage
     )
     {
+        StableId = Interlocked.Increment(ref _nextStableId);
         Name = name;
         Health = health;
         MaxHealth = health;
@@ -73,7 +91,9 @@ public class Enemy : IEnemy
         AttackDamage = attackDamage;
         _state = EnemyState.Moving;
         _attackTimer = null;
-        Position = Map.GridToWorld(_path[0]);
+        _basePosition = Map.GridToWorld(_path[0]);
+        _crowdingOffset = Vector2.Zero;
+        _crowdingVelocity = Vector2.Zero;
     }
 
     public void TakeDamage(float amount)
@@ -92,6 +112,26 @@ public class Enemy : IEnemy
             _slowTimer = duration;
     }
 
+    public void SetCrowdingOffset(Vector2 offset)
+    {
+        _crowdingOffset = offset;
+    }
+
+    public void SetCrowdingVelocity(Vector2 velocity)
+    {
+        _crowdingVelocity = velocity;
+    }
+
+    public void SetBlockedSpreadTarget(Vector2 worldTarget)
+    {
+        _blockedSpreadTarget = worldTarget;
+    }
+
+    public void ClearBlockedSpreadTarget()
+    {
+        _blockedSpreadTarget = null;
+    }
+
     /// <summary>
     /// Update the path this enemy follows (called when towers change in maze zones).
     /// Snaps the enemy to the closest waypoint on the new path to prevent diagonal cuts
@@ -106,7 +146,7 @@ public class Enemy : IEnemy
             return;
 
         // Convert current world position to grid cell
-        Point currentGridPos = Map.WorldToGrid(Position);
+        Point currentGridPos = Map.WorldToGrid(_basePosition);
 
         // Compute a fresh path from the enemy's current grid position to the exit.
         // Pass _spawnName so ResolveExitName pairs it back to the correct exit (e.g. "spawn_a" → "exit_a").
@@ -115,7 +155,7 @@ public class Enemy : IEnemy
         if (freshPath != null && freshPath.Count > 0)
         {
             _path = freshPath;
-            _currentPathIndex = 1; // Start at index 1 since 0 is the current cell
+            _currentPathIndex = freshPath.Count > 1 ? 1 : freshPath.Count;
 
             // When path updates, release engagement and reset to Moving state
             // The tower we were attacking might be gone, or a new path opens
@@ -125,7 +165,9 @@ public class Enemy : IEnemy
             }
             _state = EnemyState.Moving;
             _targetTower = null;
+            _blockingTower = null;
             _attackTimer = null;
+            _blockedSpreadTarget = null;
         }
     }
 
@@ -156,14 +198,14 @@ public class Enemy : IEnemy
                 UpdateMovingState(dt, map);
                 break;
             case EnemyState.Attacking:
-                UpdateAttackingState(gameTime);
+                UpdateAttackingState(gameTime, map);
                 break;
         }
     }
 
     private void UpdateMovingState(float dt, Map map)
     {
-        if (_currentPathIndex >= _path.Count)
+        if (_path.Count == 0 || _currentPathIndex < 0 || _currentPathIndex >= _path.Count)
         {
             ReachedEnd = true;
             return;
@@ -180,44 +222,57 @@ public class Enemy : IEnemy
         )
         {
             Tile nextTile = map.Tiles[nextWaypoint.X, nextWaypoint.Y];
+            Tower? blockingTower = nextTile.OccupyingTower;
 
-            if (
-                nextTile.OccupyingTower != null
-                && !nextTile.OccupyingTower.IsDead
-                && nextTile.OccupyingTower.TryEngage()
-            )
+            if (blockingTower != null && !blockingTower.IsDead && blockingTower.TryEngage())
             {
                 // Successfully engaged - switch to attacking
                 _state = EnemyState.Attacking;
-                _targetTower = nextTile.OccupyingTower;
+                _targetTower = blockingTower;
+                _blockingTower = null;
                 _attackTimer = new CountdownTimer(AttackInterval);
                 _attackTimer.Start();
+                _blockedSpreadTarget = null;
                 return; // Stop moving this frame
             }
-            // Tower at capacity or no tower - continue moving
+
+            // Tower is alive but block capacity is currently full.
+            // Do not engage. Capacity is full, so this enemy walks on.
+            if (blockingTower != null && !blockingTower.IsDead)
+            {
+                _blockingTower = null;
+                _blockedSpreadTarget = null;
+            }
         }
+
+        _blockingTower = null;
+        _blockedSpreadTarget = null;
 
         // Continue moving toward current waypoint
         Vector2 target = Map.GridToWorld(_path[_currentPathIndex]);
-        Vector2 direction = target - Position;
+        Vector2 direction = target - _basePosition;
         float distance = direction.Length();
-        float effectiveSpeed = IsSlowed ? Speed * SlowFactor : Speed;
+        float effectiveSpeed = Speed;
+        if (IsSlowed)
+            effectiveSpeed *= SlowFactor;
         float moveAmount = effectiveSpeed * dt;
 
         if (distance <= moveAmount)
         {
-            Position = target;
+            _basePosition = target;
             _currentPathIndex++;
         }
         else
         {
             direction.Normalize();
-            Position += direction * moveAmount;
+            _basePosition += direction * moveAmount;
         }
     }
 
-    private void UpdateAttackingState(GameTime gameTime)
+    private void UpdateAttackingState(GameTime gameTime, Map map)
     {
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
         // Validate target still exists and is alive
         if (_targetTower?.IsDead ?? true)
         {
@@ -225,9 +280,16 @@ public class Enemy : IEnemy
             _targetTower?.ReleaseEngagement();
             _state = EnemyState.Moving;
             _targetTower = null;
+            _blockingTower = null;
             _attackTimer = null;
+            _blockedSpreadTarget = null;
+            _ = TryRecomputePathFromCurrentPosition(map);
             return;
         }
+
+        // Under crowd pressure, attackers can step around the blocker perimeter
+        // so backline enemies can flow to other tower fronts.
+        _ = UpdateBlockedSpreadPosition(dt);
 
         // Update attack timer
         _attackTimer?.Update(gameTime);
@@ -238,6 +300,48 @@ public class Enemy : IEnemy
             _targetTower.TakeDamage(AttackDamage);
             _attackTimer.Restart();
         }
+    }
+
+    private bool UpdateBlockedSpreadPosition(float dt)
+    {
+        if (_blockedSpreadTarget is null)
+            return false;
+
+        Tower? spreadTower = _blockingTower ?? _targetTower;
+        if (dt <= 0f || spreadTower == null || spreadTower.IsDead)
+            return false;
+
+        Vector2 target = _blockedSpreadTarget.Value;
+        Vector2 delta = target - _basePosition;
+        float distance = delta.Length();
+        if (distance <= 0.75f)
+        {
+            _basePosition = target;
+            return true;
+        }
+
+        float moveAmount = BlockedSpreadMoveSpeed * dt;
+        if (distance <= moveAmount)
+        {
+            _basePosition = target;
+            return true;
+        }
+
+        delta /= distance;
+        _basePosition += delta * moveAmount;
+        return false;
+    }
+
+    private bool TryRecomputePathFromCurrentPosition(Map map)
+    {
+        Point currentGridPos = Map.WorldToGrid(_basePosition);
+        var freshPath = map.ComputePathFromPosition(currentGridPos, _spawnName);
+        if (freshPath == null || freshPath.Count == 0)
+            return false;
+
+        _path = freshPath;
+        _currentPathIndex = freshPath.Count > 1 ? 1 : freshPath.Count;
+        return true;
     }
 
     public void Draw(SpriteBatch spriteBatch)
