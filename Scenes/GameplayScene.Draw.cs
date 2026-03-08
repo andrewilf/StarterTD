@@ -131,7 +131,12 @@ public partial class GameplayScene
         );
 
         bool canPlaceTower =
-            hasTowerSelection && _map.CanBuildFootprint(placementTopLeft, placementFootprint);
+            hasTowerSelection
+            && _map.CanBuildFootprint(
+                placementTopLeft,
+                placementFootprint,
+                requireUniformTileType: _uiPanel.SelectedTowerType?.IsChampion() ?? false
+            );
         bool isHighGroundMode = _uiPanel.SelectionMode == UISelectionMode.PlaceHighGround;
         var wallingAnchor = GetSelectedWallingAnchor();
         bool isWallMode = _wallPlacementMode && wallingAnchor != null;

@@ -93,10 +93,16 @@ public partial class TowerManager
     public bool TryPlaceTower(TowerType type, Point gridPos)
     {
         var stats = TowerData.GetStats(type);
-        if (!_map.CanBuildFootprint(gridPos, stats.FootprintTiles))
+        bool isChampion = type.IsChampion();
+        if (
+            !_map.CanBuildFootprint(
+                gridPos,
+                stats.FootprintTiles,
+                requireUniformTileType: isChampion
+            )
+        )
             return false;
 
-        bool isChampion = type.IsChampion();
         bool canPlace = isChampion
             ? _championManager.CanPlaceChampion(type)
             : _championManager.CanPlaceGeneric(type);
@@ -149,7 +155,7 @@ public partial class TowerManager
         if (tower == null || !tower.CanWalk || tower.CurrentState != TowerState.Active)
             return null;
 
-        if (!_map.CanBuildFootprint(destination, tower.FootprintSize, tower))
+        if (!CanTowerOccupyDestination(tower, destination))
             return null;
 
         var queue = TowerPathfinder.FindPath(
@@ -284,7 +290,7 @@ public partial class TowerManager
     /// </summary>
     public void MoveTower(Tower tower, Point destination)
     {
-        if (!_map.CanBuildFootprint(destination, tower.FootprintSize, tower))
+        if (!CanTowerOccupyDestination(tower, destination))
             return;
 
         var path = TowerPathfinder.FindPath(
@@ -333,6 +339,20 @@ public partial class TowerManager
         SetOccupancyFor(tower, occupied: true);
 
         OnTowerPlaced?.Invoke(destination);
+    }
+
+    /// <summary>
+    /// Returns true if the tower can occupy destination as its full footprint.
+    /// Champions additionally require a uniform buildable tile type across their footprint.
+    /// </summary>
+    private bool CanTowerOccupyDestination(Tower tower, Point destination)
+    {
+        return _map.CanBuildFootprint(
+            destination,
+            tower.FootprintSize,
+            ignoreTower: tower,
+            requireUniformTileType: tower.TowerType.IsChampion()
+        );
     }
 
     /// <summary>

@@ -382,11 +382,19 @@ public class Map
     /// <summary>
     /// Check if all tiles in a footprint are buildable and unoccupied.
     /// When ignoreTower is set, occupancy/reservation by that tower is treated as free.
+    /// Optionally require every tile in the footprint to be the same TileType.
     /// </summary>
-    public bool CanBuildFootprint(Point topLeft, Point footprintSize, Tower? ignoreTower = null)
+    public bool CanBuildFootprint(
+        Point topLeft,
+        Point footprintSize,
+        Tower? ignoreTower = null,
+        bool requireUniformTileType = false
+    )
     {
         if (!IsFootprintInBounds(topLeft, footprintSize))
             return false;
+
+        TileType? footprintTileType = null;
 
         for (int y = 0; y < footprintSize.Y; y++)
         {
@@ -398,6 +406,14 @@ public class Map
 
                 if (!TileData.GetStats(tile.Type).IsBuildable)
                     return false;
+
+                if (requireUniformTileType)
+                {
+                    if (footprintTileType == null)
+                        footprintTileType = tile.Type;
+                    else if (footprintTileType.Value != tile.Type)
+                        return false;
+                }
 
                 if (tile.OccupyingTower != null && tile.OccupyingTower != ignoreTower)
                     return false;
