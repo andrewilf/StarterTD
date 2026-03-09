@@ -194,6 +194,27 @@ public partial class TowerManager
         return penalty;
     }
 
+    public bool TryToggleHealingChampionMode()
+    {
+        var healingChampion = GetAliveHealingChampion();
+        if (healingChampion == null)
+            return false;
+
+        if (!healingChampion.TryToggleMode())
+            return false;
+
+        if (healingChampion.Mode == HealingChampionMode.Attack)
+        {
+            if (_healingUltRemainingSeconds > 0f)
+                EndHealingUlt();
+
+            foreach (var drone in _healingDrones)
+                drone.ForceReturnToOwnerForAttackMode();
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// Remove a tower from the grid: clear the tile's tower reference and notify scene.
     /// </summary>
@@ -395,6 +416,10 @@ public partial class TowerManager
 
         if (championType == TowerType.ChampionHealing)
         {
+            var healingChampion = GetAliveHealingChampion();
+            if (healingChampion == null || healingChampion.Mode == HealingChampionMode.Attack)
+                return;
+
             _healingUltRemainingSeconds = HealingUltDurationSeconds;
             ApplyHealingUltAttackSpeedBuff(isActive: true);
 
@@ -528,6 +553,11 @@ public partial class TowerManager
         return tower.Range > 0f || tower is WallingTower;
     }
 
+    private HealingChampionTower? GetAliveHealingChampion()
+    {
+        return _towers.OfType<HealingChampionTower>().FirstOrDefault(t => !t.IsDead);
+    }
+
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -545,6 +575,8 @@ public partial class TowerManager
         EndChampionUltsWithDeadCasters();
 
         bool isHealingUltActive = _healingUltRemainingSeconds > 0f;
+        bool isHealingChampionAttackMode =
+            GetAliveHealingChampion()?.Mode == HealingChampionMode.Attack;
 
         // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
         // Each walling tower gets a single-root BFS from its own position so disconnected towers
@@ -592,7 +624,13 @@ public partial class TowerManager
             _claimedHealingTargets.Clear();
             for (int i = 0; i < _healingDrones.Count; i++)
                 _healingDrones[i]
-                    .Update(gameTime, _towers, _claimedHealingTargets, isHealingUltActive);
+                    .Update(
+                        gameTime,
+                        _towers,
+                        _claimedHealingTargets,
+                        isHealingUltActive,
+                        isHealingChampionAttackMode
+                    );
         }
     }
 

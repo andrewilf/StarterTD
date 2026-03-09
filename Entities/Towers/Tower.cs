@@ -33,9 +33,9 @@ public class Tower : ITower
 
     /// <summary>Visual position used for rendering. Interpolates smoothly during movement.</summary>
     public Vector2 DrawPosition => _drawPosition;
-    public float Range { get; private set; }
-    public float Damage { get; private set; }
-    public float FireRate { get; private set; }
+    public float Range { get; protected set; }
+    public float Damage { get; protected set; }
+    public float FireRate { get; protected set; }
     public float EffectiveFireInterval =>
         MathF.Max(FireRate / _externalAttackSpeedMultiplier, MinFireIntervalSeconds);
     public float BaseCooldown { get; }
@@ -87,7 +87,7 @@ public class Tower : ITower
     private CountdownTimer? _fireCooldown;
     private int _currentEngagedCount;
     private const float ProjectileSpeed = 400f;
-    private const float MinFireIntervalSeconds = 0.01f;
+    protected const float MinFireIntervalSeconds = 0.01f;
 
     private Vector2 _drawPosition;
     private Queue<Point> _movePath = new();
@@ -221,6 +221,11 @@ public class Tower : ITower
 
         _externalAttackSpeedMultiplier = 1f;
         HasHealingUltAttackSpeedBuff = false;
+    }
+
+    protected void ResetFireCooldown()
+    {
+        _fireCooldown = null;
     }
 
     /// <summary>

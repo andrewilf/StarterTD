@@ -361,6 +361,58 @@ public partial class GameplayScene
                 new Vector2(0.5f, 0.5f)
             );
 
+            if (tower is HealingChampionTower healingChampionTower)
+            {
+                var modeRect = GetHealingModeButtonRect(healingChampionTower);
+                bool isModeToggleCoolingDown =
+                    healingChampionTower.ModeToggleCooldownRemaining > 0f;
+                bool isAttackMode = healingChampionTower.Mode == HealingChampionMode.Attack;
+
+                Color modeBg = isAttackMode ? new Color(85, 18, 18) : new Color(18, 55, 88);
+                Color modeOutline = isAttackMode
+                    ? new Color(255, 110, 70)
+                    : new Color(90, 235, 255);
+                Color glyphColor = isAttackMode
+                    ? new Color(255, 215, 120)
+                    : new Color(195, 255, 215);
+
+                if (isModeToggleCoolingDown)
+                {
+                    modeBg = new Color(45, 45, 45);
+                    modeOutline = Color.DimGray;
+                    glyphColor = Color.Gray;
+                }
+
+                TextureManager.DrawRect(spriteBatch, modeRect, modeBg);
+                TextureManager.DrawRectOutline(spriteBatch, modeRect, modeOutline, 2);
+
+                if (isAttackMode)
+                    DrawAttackModeGlyph(spriteBatch, modeRect, glyphColor);
+                else
+                    DrawHealingModeGlyph(spriteBatch, modeRect, glyphColor);
+
+                if (isModeToggleCoolingDown)
+                {
+                    var font = _uiPanel.GetFont();
+                    if (font != null)
+                    {
+                        string cooldownLabel = MathF
+                            .Ceiling(healingChampionTower.ModeToggleCooldownRemaining)
+                            .ToString("0");
+                        Vector2 textSize = font.MeasureString(cooldownLabel);
+                        spriteBatch.DrawString(
+                            font,
+                            cooldownLabel,
+                            new Vector2(
+                                modeRect.X + (modeRect.Width - textSize.X) / 2f,
+                                modeRect.Y + (modeRect.Height - textSize.Y) / 2f
+                            ),
+                            Color.Yellow
+                        );
+                    }
+                }
+            }
+
             if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
             {
                 var btnRect = GetWallPlacementButtonRect(tower);
@@ -487,6 +539,38 @@ public partial class GameplayScene
                 ? wallBtnRect.Y - btnSize - 2
                 : wallBtnRect.Y;
         return new Rectangle(bx, by, btnSize, btnSize);
+    }
+
+    private static Rectangle GetHealingModeButtonRect(Tower tower)
+    {
+        const int btnSize = 18;
+        var sellRect = GetSellButtonRect(tower);
+        return new Rectangle(sellRect.X, sellRect.Bottom + 2, btnSize, btnSize);
+    }
+
+    private static void DrawHealingModeGlyph(SpriteBatch spriteBatch, Rectangle rect, Color color)
+    {
+        int cx = rect.X + rect.Width / 2;
+        int cy = rect.Y + rect.Height / 2;
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 1, cy - 5, 3, 11), color);
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 5, cy - 1, 11, 3), color);
+
+        // Support mode accent pips around the center plus.
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy - 6, 2, 2), color);
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy - 6, 2, 2), color);
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy + 4, 2, 2), color);
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy + 4, 2, 2), color);
+    }
+
+    private static void DrawAttackModeGlyph(SpriteBatch spriteBatch, Rectangle rect, Color color)
+    {
+        int cx = rect.X + rect.Width / 2;
+        int cy = rect.Y + rect.Height / 2;
+        // Attack mode uses a projectile-arrow glyph to avoid confusion with the sell "X" button.
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy - 1, 8, 3), color); // shaft
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 2, cy - 2, 2, 5), color); // head base
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy - 3, 2, 7), color); // head tip
+        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 7, cy - 2, 1, 5), color); // tail fin
     }
 
     /// <summary>

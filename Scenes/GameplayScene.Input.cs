@@ -143,13 +143,17 @@ public partial class GameplayScene
         Point gridPos = Map.WorldToGrid(worldMouse);
         Point worldPos = worldMouse.ToPoint();
 
-        var wallingAnchor = _towerManager.SelectedTower;
+        var selectedTower = _towerManager.SelectedTower;
+        var wallingAnchor = selectedTower;
         if (
-            _towerManager.SelectedTower != null
-            && GetSellButtonRect(_towerManager.SelectedTower).Contains(worldPos)
+            selectedTower is HealingChampionTower selectedHealingChampion
+            && GetHealingModeButtonRect(selectedHealingChampion).Contains(worldPos)
         )
         {
-            var selectedTower = _towerManager.SelectedTower;
+            _towerManager.TryToggleHealingChampionMode();
+        }
+        else if (selectedTower != null && GetSellButtonRect(selectedTower).Contains(worldPos))
+        {
             float penalty = _towerManager.SellTower(selectedTower);
             var poolKey = GetCooldownPoolKey(selectedTower.TowerType);
             _placementCooldowns[poolKey] = Math.Max(0f, _placementCooldowns[poolKey] - penalty);

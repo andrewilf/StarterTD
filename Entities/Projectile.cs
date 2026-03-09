@@ -66,19 +66,28 @@ public class Projectile
         if (!IsActive)
             return false;
 
-        // If target dies or escapes, lock onto last known position
-        if (!_targetLost && (_target == null || _target.IsDead || _target.ReachedEnd))
+        // Keep tracking a live target; if it dies/escapes, lock onto the last known position.
+        if (!_targetLost && _target is { IsDead: false, ReachedEnd: false } liveTarget)
+        {
+            _targetPosition = liveTarget.Position;
+        }
+        else if (!_targetLost)
         {
             _targetPosition = _target?.Position ?? _targetPosition;
             _targetLost = true;
         }
 
-        // Move toward target or last known position
+        // Move toward live target or the locked last known position.
         Vector2 direction = _targetPosition - Position;
         float distance = direction.Length();
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        float moveDistance = Speed * dt;
 
-        if (distance < HitDistance)
+        bool reachedTargetThisFrame = distance <= HitDistance || moveDistance >= distance;
+        if (reachedTargetThisFrame)
         {
+            Position = _targetPosition;
+
             // Only apply damage if target was alive when we fired
             if (!_targetLost && _target != null && !_target.IsDead)
             {
@@ -111,8 +120,7 @@ public class Projectile
 
         // Normalize and move
         direction.Normalize();
-        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        Position += direction * Speed * dt;
+        Position += direction * moveDistance;
 
         return false;
     }
