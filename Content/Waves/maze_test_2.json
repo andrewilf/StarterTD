@@ -3,40 +3,40 @@
     {
       "wave": 1,
       "spawns": [
-        { "at": 0.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
-        { "at": 0.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" },
-        { "at": 1.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
-        { "at": 1.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" },
-        { "at": 2.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
-        { "at": 2.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" }
+        { "at": 3.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
+        { "at": 3.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" },
+        { "at": 4.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
+        { "at": 4.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" },
+        { "at": 5.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Purple" },
+        { "at": 5.5, "spawnPoint": "spawn_b", "name": "Goblin", "health": 300, "speed": 90, "attackDamage": 5, "color": "Cyan" }
       ]
     },
     {
       "wave": 2,
       "spawns": [
-        { "at": 0.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
-        { "at": 0.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
-        { "at": 1.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
-        { "at": 1.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
-        { "at": 2.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
-        { "at": 2.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
         { "at": 3.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
-        { "at": 3.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" }
+        { "at": 3.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
+        { "at": 4.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
+        { "at": 4.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
+        { "at": 5.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
+        { "at": 5.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" },
+        { "at": 6.0, "spawnPoint": "spawn_a", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Purple" },
+        { "at": 6.0, "spawnPoint": "spawn_b", "name": "Goblin", "health": 400, "speed": 95, "attackDamage": 5, "color": "Cyan" }
       ]
     },
     {
       "wave": 3,
       "spawns": [
-        { "at": 0.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
-        { "at": 0.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
-        { "at": 1.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
-        { "at": 1.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
-        { "at": 2.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
-        { "at": 2.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
         { "at": 3.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
         { "at": 3.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
         { "at": 4.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
-        { "at": 4.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" }
+        { "at": 4.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
+        { "at": 5.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
+        { "at": 5.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
+        { "at": 6.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
+        { "at": 6.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" },
+        { "at": 7.0, "spawnPoint": "spawn_a", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Green" },
+        { "at": 7.0, "spawnPoint": "spawn_b", "name": "Orc", "health": 600, "speed": 100, "attackDamage": 8, "color": "Yellow" }
       ]
     }
   ]
