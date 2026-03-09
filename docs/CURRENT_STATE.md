@@ -37,6 +37,7 @@
 - Sell flow: selected tower exposes an in-world `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows an in-world mode toggle button directly under sell (`healing`/`attack` icon, disabled while 4.0s mode cooldown is active)
 - Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
 - Enemy FSM (Moving/Attacking); waves driven by `Content/Waves/{mapId}.json` (fallback to hardcoded waves if no file)
+- Wave spawn schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`
 - Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Wave JSON assigns each enemy to a named spawn point
 - Info panel: click tower/enemy for stats overlay (bottom-right). Tower fire-rate display uses effective APS (includes temporary attack-speed buffs). Dismiss: ESC/empty tile/new selection
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others

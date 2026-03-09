@@ -81,7 +81,7 @@
 - `UISelectionMode`: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
 - Consolidated buttons for Gun/Cannon/Walling: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
 - ChampionHealing uses a dedicated champion-only button (`HandleChampionOnlyTowerClick`) plus standard ability button
-- `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of player money
+- `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of a resource counter
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Tower info panel fire-rate line reads `Tower.EffectiveFireInterval` (so active speed buffs are reflected in displayed APS)
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
@@ -102,7 +102,7 @@
 
 ## Wave System
 - `Content/Waves/{mapId}.json` via `WaveLoader.TryLoad()`. Fallback: `FallbackWaves()` in `GameplayScene`
-- Schema: `{ waves: [ { wave, spawns: [ { at, spawnPoint, name, health, speed, bounty, attackDamage, color } ] } ] }`. `at` = seconds from wave start
+- Schema: `{ waves: [ { wave, spawns: [ { at, spawnPoint, name, health, speed, attackDamage, color } ] } ] }`. `at` = seconds from wave start
 - `WaveManager(Func<string, List<Point>?>, List<WaveData>)`: dequeues by elapsed time; wave ends when list empty
 - `WaveLoader.ParseColor(string)`: XNA `Color` by name via reflection
 

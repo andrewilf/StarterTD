@@ -494,7 +494,7 @@ public partial class UIPanel
         const int padding = 8;
         const int lineHeight = 20;
         int panelWidth = _width - 12;
-        int numLines = 6; // name + separator + health + speed + bounty + attack damage
+        int numLines = 5; // name + separator + health + speed + attack damage
         int panelHeight = padding * 2 + numLines * lineHeight;
         int panelX = _x + 6;
         int panelY = _startWaveButton.Y - panelHeight - 10;
@@ -533,10 +533,6 @@ public partial class UIPanel
 
         string speedText = $"Speed: {enemy.Speed:F1}";
         spriteBatch.DrawString(_font, speedText, new Vector2(textX, y), Color.CornflowerBlue);
-        y += lineHeight;
-
-        string bountyText = $"Bounty: ${enemy.Bounty}";
-        spriteBatch.DrawString(_font, bountyText, new Vector2(textX, y), Color.Gold);
         y += lineHeight;
 
         string dmgText = $"Attack Dmg: {enemy.AttackDamage}";

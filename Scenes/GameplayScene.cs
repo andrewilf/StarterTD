@@ -383,7 +383,6 @@ public partial class GameplayScene : IScene
             "Debug Enemy",
             health: 300,
             speed: 90,
-            bounty: 5,
             path,
             spawnName: "",
             Color.Purple,
@@ -403,7 +402,6 @@ public partial class GameplayScene : IScene
             int count,
             float health,
             float speed,
-            int bounty,
             float interval,
             int damage
         )
@@ -418,7 +416,6 @@ public partial class GameplayScene : IScene
                         Name: "Enemy",
                         Health: health,
                         Speed: speed,
-                        Bounty: bounty,
                         AttackDamage: damage,
                         Color: "Purple"
                     )
@@ -429,11 +426,11 @@ public partial class GameplayScene : IScene
 
         return new List<WaveData>
         {
-            new(1, MakeWave(5, 300, 90, 5, 1.0f, 5)),
-            new(2, MakeWave(8, 400, 95, 5, 0.9f, 5)),
-            new(3, MakeWave(10, 600, 100, 8, 0.8f, 8)),
-            new(4, MakeWave(12, 800, 110, 8, 0.8f, 8)),
-            new(5, MakeWave(15, 1000, 120, 10, 0.7f, 12)),
+            new(1, MakeWave(5, 300, 90, 1.0f, 5)),
+            new(2, MakeWave(8, 400, 95, 0.9f, 5)),
+            new(3, MakeWave(10, 600, 100, 0.8f, 8)),
+            new(4, MakeWave(12, 800, 110, 0.8f, 8)),
+            new(5, MakeWave(15, 1000, 120, 0.7f, 12)),
         };
     }
 }

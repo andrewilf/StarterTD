@@ -131,7 +131,7 @@ default_modes:
 initial_prompt: |
   StarterTD is a MonoGame tower-defense game in C#. Key structure:
   - Entry: Game1.cs, Program.cs
-  - Scenes/: GameplayScene.cs holds global state (Money, Lives)
+  - Scenes/: GameplayScene.cs holds global state (Lives, wave progression)
   - Entities/: enemies, towers (broken into specialised subclasses)
   - Managers/: TextureManager, Map, etc.
   - UI/: UIPanel and draw logic split across partial classes

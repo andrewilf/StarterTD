@@ -100,7 +100,7 @@
 
 ## 4. Gameplay Flow & Tower Placement System
 
-### 4.1 Replace Money System with Cooldown-Based Placement
+### 4.1 Replace Resource System with Cooldown-Based Placement
 - **Priority**: P1 | **Effort**: L | **Status**: `[x]` done
 - **Implemented**: Per-pool cooldown timers replace gold. Each tower type has a `BaseCooldown` + `CooldownPenalty × existing pool count` added on placement. Champions share one pool. Selling refunds `CooldownPenalty`. Pools tick on scaled game time. UI shows "Locked: X.Xs" when blocked.
 - **Remaining**: Balance cooldown values (base, penalty, per-type).
@@ -165,7 +165,7 @@
 
 ### 6.1 Improved Tower/Enemy Stats Display
 - **Priority**: P1 | **Effort**: M
-- **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed, bounty) in plain text. No comparison, no DPS calculation, no visual hierarchy.
+- **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed) in plain text. No comparison, no DPS calculation, no visual hierarchy.
 - **Tasks**:
   - [ ] **DPS Display**: Calculate and show effective DPS (Damage / FireRateInterval) for towers. More meaningful than raw damage + fire rate separately
   - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
@@ -225,7 +225,7 @@ These items are from `CURRENT_STATE.md` and remain relevant:
 
 ### 8.3 Enemy Variants
 - **Priority**: P2 | **Effort**: S
-- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low bounty). Can be implemented as named presets in wave JSON rather than code archetypes.
+- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low damage). Can be implemented as named presets in wave JSON rather than code archetypes.
 
 ## 9. Suggested Implementation Order
 

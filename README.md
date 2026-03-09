@@ -83,7 +83,6 @@ Each map can have a matching wave file at `Content/Waves/{mapId}.json`. Drop the
           "name": "Goblin",
           "health": 300,
           "speed": 90,
-          "bounty": 5,
           "attackDamage": 5,
           "color": "Purple"
         }
