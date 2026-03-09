@@ -47,6 +47,8 @@ internal static class TowerDrawingHelper
             );
         }
 
+        DrawHealingUltSparkleAura(spriteBatch, tower, drawPosition, drawSize);
+
         bool isMoving = tower.CurrentState == TowerState.Moving;
         // When a sprite exists, keep original art colors and only apply movement alpha.
         if (towerSprite != null)
@@ -249,6 +251,52 @@ internal static class TowerDrawingHelper
             new Rectangle(barX, barY, (int)(barWidth * progress), (int)barHeight),
             Color.Gold
         );
+    }
+
+    private static void DrawHealingUltSparkleAura(
+        SpriteBatch spriteBatch,
+        Tower tower,
+        Vector2 drawPosition,
+        Vector2 drawSize
+    )
+    {
+        if (!tower.HasHealingUltAttackSpeedBuff)
+            return;
+
+        float baseSize = MathF.Max(drawSize.X, drawSize.Y);
+        float phase = tower.HealingUltSparklePhase;
+        float pulse = 0.85f + 0.15f * MathF.Sin(phase * 6f);
+
+        TextureManager.DrawFilledCircle(
+            spriteBatch,
+            drawPosition,
+            baseSize * 0.8f,
+            Color.Gold * (0.14f * pulse)
+        );
+        TextureManager.DrawFilledCircle(
+            spriteBatch,
+            drawPosition,
+            baseSize * 0.62f,
+            Color.White * (0.1f * pulse)
+        );
+
+        const int sparkleCount = 6;
+        for (int i = 0; i < sparkleCount; i++)
+        {
+            float angle = phase * (1.8f + i * 0.07f) + i * (MathF.Tau / sparkleCount);
+            float orbit = baseSize * (0.58f + 0.08f * MathF.Sin(phase * 3f + i));
+            float twinkle = 0.5f + 0.5f * MathF.Sin(phase * (9f + i) + i * 1.3f);
+            float sparkleSize = 3f + twinkle * 2.5f;
+            var sparkleColor = (i & 1) == 0 ? Color.White : Color.Gold;
+            var sparklePos = drawPosition + new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * orbit;
+
+            TextureManager.DrawSprite(
+                spriteBatch,
+                sparklePos,
+                new Vector2(sparkleSize, sparkleSize),
+                sparkleColor * (0.35f + twinkle * 0.45f)
+            );
+        }
     }
 
     private static Texture2D? GetTowerSprite(Tower tower) =>

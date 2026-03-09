@@ -17,7 +17,7 @@
   - [ ] Rebalance stat values (damage, fire rate, range, BaseCooldown, CooldownPenalty, HP, block capacity)
   - [ ] Update `TowerType` enum, all `*Tower.cs` stat files, `TowerData.GetStats()`, and UI labels
   - [ ] Verify wave JSON enemy stats still make sense against new tower numbers
-- **Note**: Coordinate with cooldown system (section 5.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
+- **Note**: Coordinate with cooldown system (section 4.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
 
 ---
 
@@ -39,11 +39,17 @@
   - [x] Follow attached moving tower and use uniform all-tile pathing with hardcoded movement speed.
 - **Implemented**: `ChampionHealing` enum/stats/registration, champion-only UI button, `Tower.Heal()`, 3 `HealingDrone` instances with energy/tick/retarget/recharge lifecycle, shared claimed-target set prevents duplicate healing, uniform-cost drone pathing, wall segment and owner exclusion.
 
-### 2.2 Placeholder Ultimate (No-op)
+### 2.2 ChampionHealing Ultimate + Passive Regen
 - **Priority**: P3 | **Effort**: S | **Status**: `[x]` done
 - **Tasks (Completed)**:
-  - [x] Add champion ability button behavior that triggers normal cooldown flow with no gameplay effect.
-- **Implemented**: Ability button triggers normal cooldown flow with a no-op gameplay effect (short visual aura).
+  - [x] Replace placeholder ChampionHealing ultimate with a 15s gameplay effect.
+  - [x] On cast, instantly refill all healing drones to max energy and force returning/recharging drones to redeploy.
+  - [x] Make drone healing consume no energy while the ultimate is active.
+  - [x] Apply +30% attack speed to all attacking towers (including walling towers) during the ultimate window.
+  - [x] Add a separate white/gold sparkle aura on towers affected by the +30% speed buff.
+  - [x] Add passive self-regeneration for ChampionHealing: `+2 HP` per `1s` tick.
+  - [x] Set ChampionHealing ultimate cooldown to `50s`.
+- **Implemented**: ChampionHealing now provides a full support ultimate (drone refill + free drone healing + global 30% attack speed buff with separate sparkle aura) and passive 1-second self-regeneration.
 
 ---
 
@@ -60,7 +66,7 @@
     - **Tiled's native terrain system** — can export auto-tile data in `.tmx`, read via `TmxLoader`
   - [ ] Read Tiled custom properties documentation: https://doc.mapeditor.org/en/stable/manual/custom-properties/
   - [ ] Decide approach: manual bitmask in code vs. leverage Tiled's terrain brushes + export
-  - [ ] Create or source a tileset with edge/corner variants for each tile type (see section 6 for asset packs)
+  - [ ] Create or source a tileset with edge/corner variants for each tile type (see section 7 for asset packs)
   - [ ] Update `TextureManager.DrawTile()` to select sprite variant based on neighbor context
   - [ ] Handle edge cases: map borders (treat out-of-bounds as a specific type), runtime tile changes (HighGround placement)
   - [ ] Recalculate auto-tile when tiles change at runtime (e.g., debug HighGround placement)
@@ -121,31 +127,15 @@
 - **Tasks**:
   - [ ] Detect when first enemy in a wave is ~1 tile away from spawn (or use a configurable "warning distance")
   - [ ] Display animated indicator at spawn point: pulsing red circle, arrow pointing outward, or "!" icon
-  - [ ] Play optional SFX cue (low-priority, defer to sound system 9.2)
+  - [ ] Play optional SFX cue (low-priority, defer to sound system 8.2)
   - [ ] Dismiss indicator once first enemy exits spawn or wave completes
   - [ ] Support multi-spawn maps: show indicator at all active spawn points for the current wave
 
 ---
 
-## 5. Champion Tower Movement Constraints
+## 5. Wave Spawning & JSON Tooling
 
-### 5.1 Champion Canon Tower — Prevent High Ground / Path Crossing
-- **Priority**: P2 | **Effort**: S
-- **Concept**: Champion cannon towers cannot cross between high ground and path tiles (and vice versa). Enforces arena-like spatial control — cannon champions must commit to one terrain type.
-- **Current State**: Champion towers can traverse between terrain types via `TowerPathfinder`, but champion placement and movement destinations require a uniform tile type across the full 2x2 footprint.
-- **Tasks**:
-  - [ ] Extend `TowerPathfinder.ComputePath()` to accept terrain-type constraint (or check per-tower)
-  - [ ] For `ChampionCannonTower`: when computing movement path, block transitions between `TileType.HighGround` ↔ `TileType.Path`
-  - [ ] Movement already blocked if adjacent tile is unreachable; this adds a terrain-type barrier on top
-  - [ ] Detect attempted crossing: if current tile is High Ground, disallow move to Path tile and vice versa
-  - [ ] UI feedback: grayed-out or disabled movement button if target is on opposite terrain type
-  - [ ] Note: This applies only to `ChampionCannonTower`, not `ChampionGunTower` or `ChampionWallingTower` (for now)
-
----
-
-## 6. Wave Spawning & JSON Tooling
-
-### 6.1 Excel and Script Tooling for Spawn Wave JSON
+### 5.1 Excel and Script Tooling for Spawn Wave JSON
 - **Priority**: P3 | **Effort**: M
 - **Current State**: Wave JSON files (`Content/Waves/{mapId}.json`) are hand-written with enemy spawn timings, types, and exit lanes.
 - **Goal**: Create a spreadsheet template and conversion script to reduce manual JSON editing.
@@ -159,9 +149,9 @@
 
 ---
 
-## 7. UI & Stats Improvements
+## 6. UI & Stats Improvements
 
-### 7.1 Improved Tower/Enemy Stats Display
+### 6.1 Improved Tower/Enemy Stats Display
 - **Priority**: P1 | **Effort**: M
 - **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed, bounty) in plain text. No comparison, no DPS calculation, no visual hierarchy.
 - **Tasks**:
@@ -174,7 +164,7 @@
   - [ ] **Health Bars on Enemies**: Currently in backlog — implement colored health bars above enemy sprites (green > yellow > red gradient based on % HP)
   - [ ] **Tooltip System**: Hover over UI elements for explanatory text (especially useful for new players learning tower abilities)
 
-### 7.2 Wave Preview UI
+### 6.2 Wave Preview UI
 - **Priority**: P2 | **Effort**: M
 - **Current State**: Listed in backlog but not implemented.
 - **Tasks**:
@@ -185,9 +175,9 @@
 
 ---
 
-## 8. Art & Asset Pipeline
+## 7. Art & Asset Pipeline
 
-### 8.1 Placeholder Tile Pack with Standard Tile Sizes
+### 7.1 Placeholder Tile Pack with Standard Tile Sizes
 - **Priority**: P1 | **Effort**: M
 - **Current State**: 3 solid-color source tiles in `terrain.png` (40x40 source, rendered at 32x32). No visual variety or edge blending.
 - **Goal**: Replace with a cohesive tileset that supports auto-tiling (section 3.1) and looks like an actual game.
@@ -209,33 +199,33 @@
 
 ---
 
-## 9. Existing Backlog (Carried Forward)
+## 8. Existing Backlog (Carried Forward)
 
 These items are from `CURRENT_STATE.md` and remain relevant:
 
-### 9.1 Champion Debuff on Death
+### 8.1 Champion Debuff on Death
 - **Priority**: P1 | **Effort**: S
 - **Task**: Implement `Tower.UpdateChampionStatus(bool)` — when champion dies, apply stat debuffs to its generic towers (reduced damage, fire rate, or range). When champion revives, restore stats.
 
-### 9.2 Sound System
+### 8.2 Sound System
 - **Priority**: P2 | **Effort**: M
 - **Task**: Implement SFX + BGM manager. Key sounds: tower fire, enemy death, wave start/end, ability activation, UI clicks. BGM: looping track per map or globally.
 
-### 9.3 Enemy Variants
+### 8.3 Enemy Variants
 - **Priority**: P2 | **Effort**: S
 - **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low bounty). Can be implemented as named presets in wave JSON rather than code archetypes.
 
-## 10. Suggested Implementation Order
+## 9. Suggested Implementation Order
 
 A recommended sequence that respects dependencies and delivers playable value early:
 
 | Phase | Items | Rationale |
 |-------|-------|-----------|
-| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves), 5.1 (cannon crossing) | ~~Gold removed~~ (done), auto-waves, terrain constraints |
-| **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 9.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
-| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (placeholder ultimate)~~ | Done — drone support champion with energy lifecycle |
-| **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 8.1 (tile pack), 3.1 (auto-tiling), 7.1 (UI stats) | Game looks, feels, and communicates better |
-| **Phase 5: Polish & Completeness** | 6.1 (wave JSON tooling), 3.2 (Tiled properties), 9.2 (sound), 4.3 (crowding), 7.2 (wave preview), 9.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
+| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves) | ~~Gold removed~~ (done), auto-waves |
+| **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 8.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
+| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~ | Done — drone support champion with full ult + passive regen |
+| **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 7.1 (tile pack), 3.1 (auto-tiling), 6.1 (UI stats) | Game looks, feels, and communicates better |
+| **Phase 5: Polish & Completeness** | 5.1 (wave JSON tooling), 3.2 (Tiled properties), 8.2 (sound), 4.3 (crowding), 6.2 (wave preview), 8.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
 ## Open Questions & Design Notes
 

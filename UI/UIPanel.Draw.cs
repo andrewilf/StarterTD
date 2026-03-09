@@ -481,7 +481,7 @@ public partial class UIPanel
         y += lineHeight;
 
         // Show as attacks per second for readability
-        float aps = 1f / tower.FireRate;
+        float aps = 1f / tower.EffectiveFireInterval;
         string fireText = $"Fire Rate: {aps:F1}/s";
         spriteBatch.DrawString(_font, fireText, new Vector2(textX, y), Color.White);
     }

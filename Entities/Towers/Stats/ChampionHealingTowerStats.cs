@@ -24,9 +24,9 @@ public static class ChampionHealingTowerStats
         CanWalk: true,
         MoveSpeed: 120f,
         CooldownDuration: 2.0f,
-        AbilityDuration: 2.5f,
-        AbilityCooldown: 18f,
+        AbilityDuration: 15f,
+        AbilityCooldown: 50f,
         Targeting: TargetingStrategy.Closest,
-        AbilityEffect: tower => tower.ActivateAbilityBuff(damageMult: 1f, fireRateSpeedMult: 1f)
+        AbilityEffect: null
     );
 }

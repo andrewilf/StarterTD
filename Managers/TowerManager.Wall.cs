@@ -466,7 +466,7 @@ public partial class TowerManager
         _frenzyFireTimers.TryGetValue(tower, out float timer);
         timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-        if (timer < tower.FireRate)
+        if (timer < tower.EffectiveFireInterval)
         {
             _frenzyFireTimers[tower] = timer;
             return;

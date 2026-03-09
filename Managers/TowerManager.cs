@@ -25,8 +25,11 @@ public partial class TowerManager
     // Tracks frenzy fire timers per tower — champion and Walling generics each have independent timers.
     private readonly Dictionary<Tower, float> _frenzyFireTimers = [];
     private const int HealingDroneCount = 3;
+    private const float HealingUltDurationSeconds = 15f;
+    private const float HealingUltAttackSpeedMultiplier = 1.3f;
     private readonly List<HealingDrone> _healingDrones = [];
     private readonly HashSet<Tower> _claimedHealingTargets = [];
+    private float _healingUltRemainingSeconds;
 
     /// <summary>The currently selected tower (for future info display).</summary>
     public Tower? SelectedTower { get; set; }
@@ -126,6 +129,15 @@ public partial class TowerManager
                 _healingDrones.Add(new HealingDrone(_map, tower));
         }
 
+        if (_healingUltRemainingSeconds > 0f)
+        {
+            bool shouldApplySpeedBuff = CanReceiveHealingUltAttackSpeedBuff(tower);
+            tower.SetHealingUltAttackSpeedBuff(
+                shouldApplySpeedBuff,
+                HealingUltAttackSpeedMultiplier
+            );
+        }
+
         if (isChampion)
             _championManager.OnChampionPlaced(type);
 
@@ -193,11 +205,10 @@ public partial class TowerManager
         if (tower.CurrentState == TowerState.Moving)
             ClearReservationFor(tower);
 
-        if (tower is CannonChampionTower cannon && cannon.IsLaserActive)
-        {
-            tower.CancelAbility();
-            OnLaserCancelled?.Invoke();
-        }
+        _frenzyFireTimers.Remove(tower);
+
+        if (tower.TowerType.IsChampion())
+            EndChampionUltEffects(tower.TowerType);
 
         _healingDrones.RemoveAll(d => d.Owner == tower);
 
@@ -357,7 +368,7 @@ public partial class TowerManager
 
     /// <summary>
     /// Dispatches the champion super ability to all relevant towers.
-    /// Each tower type's AbilityEffect delegate (defined in its own stats file) handles what the buff does.
+    /// Most tower types use AbilityEffect delegates from stats; ChampionHealing has custom handling here.
     /// </summary>
     public void TriggerChampionAbility(TowerType championType, List<IEnemy> enemies)
     {
@@ -379,6 +390,17 @@ public partial class TowerManager
                     .Where(t => t.TowerType == TowerType.Walling)
             )
                 TowerData.GetStats(TowerType.Walling).AbilityEffect?.Invoke(tower);
+            return;
+        }
+
+        if (championType == TowerType.ChampionHealing)
+        {
+            _healingUltRemainingSeconds = HealingUltDurationSeconds;
+            ApplyHealingUltAttackSpeedBuff(isActive: true);
+
+            foreach (var drone in _healingDrones)
+                drone.RefillForHealingUlt();
+
             return;
         }
 
@@ -422,9 +444,107 @@ public partial class TowerManager
         }
     }
 
+    private void ApplyHealingUltAttackSpeedBuff(bool isActive)
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var tower = _towers[i];
+            bool shouldApply = isActive && CanReceiveHealingUltAttackSpeedBuff(tower);
+            tower.SetHealingUltAttackSpeedBuff(shouldApply, HealingUltAttackSpeedMultiplier);
+        }
+    }
+
+    private void EndHealingUlt()
+    {
+        _healingUltRemainingSeconds = 0f;
+        ApplyHealingUltAttackSpeedBuff(isActive: false);
+    }
+
+    private void EndChampionUltEffects(TowerType championType)
+    {
+        if (!championType.IsChampion())
+            return;
+
+        if (championType == TowerType.ChampionHealing)
+        {
+            if (_healingUltRemainingSeconds > 0f)
+                EndHealingUlt();
+            return;
+        }
+
+        bool hasGenericVariant = championType.TryGetGenericVariant(out var genericType);
+        bool shouldCancelLaserVisual = false;
+
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var tower = _towers[i];
+            bool matchesChampion = tower.TowerType == championType;
+            bool matchesGeneric = hasGenericVariant && tower.TowerType == genericType;
+            if (!matchesChampion && !matchesGeneric)
+                continue;
+
+            if (tower is WallingTower)
+                _frenzyFireTimers.Remove(tower);
+
+            if (tower is CannonChampionTower cannon && cannon.IsLaserActive)
+                shouldCancelLaserVisual = true;
+
+            if (tower.IsAbilityBuffActive)
+                tower.CancelAbility();
+        }
+
+        if (shouldCancelLaserVisual)
+            OnLaserCancelled?.Invoke();
+    }
+
+    private void EndChampionUltsWithDeadCasters()
+    {
+        EndChampionUltIfCasterDead(TowerType.ChampionGun);
+        EndChampionUltIfCasterDead(TowerType.ChampionCannon);
+        EndChampionUltIfCasterDead(TowerType.ChampionWalling);
+        EndChampionUltIfCasterDead(TowerType.ChampionHealing);
+    }
+
+    private void EndChampionUltIfCasterDead(TowerType championType)
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var tower = _towers[i];
+            if (tower.TowerType == championType && !tower.IsDead)
+                return;
+        }
+
+        EndChampionUltEffects(championType);
+    }
+
+    private static bool CanReceiveHealingUltAttackSpeedBuff(Tower tower)
+    {
+        if (tower.IsDead || tower.TowerType.IsWallSegment())
+            return false;
+
+        if (tower.TowerType == TowerType.ChampionHealing)
+            return false;
+
+        return tower.Range > 0f || tower is WallingTower;
+    }
+
     public void Update(GameTime gameTime, List<IEnemy> enemies)
     {
+        float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
         _championManager.Update(gameTime);
+
+        bool wasHealingUltActive = _healingUltRemainingSeconds > 0f;
+        if (_healingUltRemainingSeconds > 0f)
+            _healingUltRemainingSeconds = Math.Max(0f, _healingUltRemainingSeconds - dt);
+
+        if (wasHealingUltActive && _healingUltRemainingSeconds <= 0f)
+            EndHealingUlt();
+
+        // If a caster died earlier this frame (before dead-tower sweep),
+        // end champion-linked ult effects before towers attack.
+        EndChampionUltsWithDeadCasters();
+
+        bool isHealingUltActive = _healingUltRemainingSeconds > 0f;
 
         // Recompute per-tower wall connectivity each frame (topology can change on tower place/sell).
         // Each walling tower gets a single-root BFS from its own position so disconnected towers
@@ -471,7 +591,8 @@ public partial class TowerManager
         {
             _claimedHealingTargets.Clear();
             for (int i = 0; i < _healingDrones.Count; i++)
-                _healingDrones[i].Update(gameTime, _towers, _claimedHealingTargets);
+                _healingDrones[i]
+                    .Update(gameTime, _towers, _claimedHealingTargets, isHealingUltActive);
         }
     }
 

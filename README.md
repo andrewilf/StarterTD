@@ -8,7 +8,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Multi-Spawn Lanes**: Maps support multiple named spawn/exit points (`spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc.), each with an independent path.
 * **JSON Wave Config**: Waves are defined in `Content/Waves/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to hardcoded waves if no file exists.
 * **Tower System**: 3 Generic (Gun, Cannon, Walling) + 4 Champion tower types (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with walking, abilities, and blocking capacity.
-* **ChampionHealing Support**: ChampionHealing deploys 3 healing drones that heal damaged allied towers, do not overlap on the same target simultaneously, and return to recharge before redeploying.
+* **ChampionHealing Support**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and has a 15s support ult (`50s` cooldown) that refills drone energy, removes drone heal energy cost, grants +30% attack speed to attacking towers (including walling), and ends early if the healing champion is sold/destroyed.
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.
 * **Game Loop**: Map Selection → Gameplay → Victory/Defeat.
 * **Windowing**: Launches in windowed maximized mode with native window controls. Map selection includes an `Exit` button.
