@@ -7,9 +7,9 @@ public static class ChampionHealingTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Champion Healing",
-        Range: 0f,
-        Damage: 0f,
-        FireRate: 1f,
+        Range: 320f,
+        Damage: 100f,
+        FireRate: 2.4f,
         BaseCooldown: 10f,
         CooldownPenalty: 3f,
         MovementCost: 300,

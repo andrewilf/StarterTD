@@ -38,6 +38,7 @@ public partial class GameplayScene : IScene
 
     private readonly List<IEnemy> _enemies = new();
     private readonly List<AoEEffect> _aoeEffects = new();
+    private readonly List<RailgunEffect> _railgunEffects = new();
     private readonly List<SpikeEffect> _spikeEffects = new();
     private LaserEffect? _laserEffect;
     private bool _laserSelected;
@@ -157,6 +158,10 @@ public partial class GameplayScene : IScene
 
         // Subscribe to AoE impact events to spawn visual effects
         _towerManager.OnAOEImpact = (pos, radius) => _aoeEffects.Add(new AoEEffect(pos, radius));
+
+        // Subscribe to healing champion railgun shots for beam visuals
+        _towerManager.OnRailgunShot = (start, end) =>
+            _railgunEffects.Add(new RailgunEffect(start, end));
 
         // Subscribe to wall spike attacks to spawn visual effects
         _towerManager.OnWallAttack = pos => _spikeEffects.Add(new SpikeEffect(pos));
@@ -317,6 +322,14 @@ public partial class GameplayScene : IScene
             if (!_spikeEffects[i].IsActive)
                 _spikeEffects.RemoveAt(i);
         }
+
+        // --- Update railgun effects ---
+        for (int i = _railgunEffects.Count - 1; i >= 0; i--)
+        {
+            _railgunEffects[i].Update(activeTime);
+            if (!_railgunEffects[i].IsActive)
+                _railgunEffects.RemoveAt(i);
+        }
     }
 
     /// <summary>
@@ -370,7 +383,6 @@ public partial class GameplayScene : IScene
             "Debug Enemy",
             health: 300,
             speed: 90,
-            bounty: 5,
             path,
             spawnName: "",
             Color.Purple,
@@ -390,7 +402,6 @@ public partial class GameplayScene : IScene
             int count,
             float health,
             float speed,
-            int bounty,
             float interval,
             int damage
         )
@@ -405,7 +416,6 @@ public partial class GameplayScene : IScene
                         Name: "Enemy",
                         Health: health,
                         Speed: speed,
-                        Bounty: bounty,
                         AttackDamage: damage,
                         Color: "Purple"
                     )
@@ -416,11 +426,11 @@ public partial class GameplayScene : IScene
 
         return new List<WaveData>
         {
-            new(1, MakeWave(5, 300, 90, 5, 1.0f, 5)),
-            new(2, MakeWave(8, 400, 95, 5, 0.9f, 5)),
-            new(3, MakeWave(10, 600, 100, 8, 0.8f, 8)),
-            new(4, MakeWave(12, 800, 110, 8, 0.8f, 8)),
-            new(5, MakeWave(15, 1000, 120, 10, 0.7f, 12)),
+            new(1, MakeWave(5, 300, 90, 1.0f, 5)),
+            new(2, MakeWave(8, 400, 95, 0.9f, 5)),
+            new(3, MakeWave(10, 600, 100, 0.8f, 8)),
+            new(4, MakeWave(12, 800, 110, 0.8f, 8)),
+            new(5, MakeWave(15, 1000, 120, 0.7f, 12)),
         };
     }
 }

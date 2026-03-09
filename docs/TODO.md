@@ -25,7 +25,7 @@
 
 ### 2.1 ChampionHealing Tower + Drone Lifecycle
 - **Priority**: P2 | **Effort**: M | **Status**: `[x]` done
-- **Concept**: A **champion-only** healing tower that deploys three healing drones. No generic tower variant and no attack mode in v1.
+- **Concept**: A **champion-only** healing tower that deploys three healing drones. No generic tower variant.
 - **Tasks (Completed)**:
   - [x] Add `TowerType.ChampionHealing` with champion-only tower stats registration.
   - [x] Support champion-only variant mapping safely in tower type helpers.
@@ -50,6 +50,18 @@
   - [x] Add passive self-regeneration for ChampionHealing: `+2 HP` per `1s` tick.
   - [x] Set ChampionHealing ultimate cooldown to `50s`.
 - **Implemented**: ChampionHealing now provides a full support ultimate (drone refill + free drone healing + global 30% attack speed buff with separate sparkle aura) and passive 1-second self-regeneration.
+
+### 2.3 ChampionHealing Attack Mode Toggle
+- **Priority**: P2 | **Effort**: S | **Status**: `[x]` done
+- **Tasks (Completed)**:
+  - [x] Add in-world mode toggle button under ChampionHealing sell button.
+  - [x] Add icon swap between healing and attack glyphs.
+  - [x] Add 4.0s cooldown between mode switches.
+  - [x] Attack mode uses ChampionHealing stats profile (`Damage 100`, `Range 320`, `FireRate 2.4s`) and Healing mode suppresses direct attacks.
+  - [x] Switching to attack immediately forces drones to return and recharge.
+  - [x] ChampionHealing ult in attack mode now activates a 5-shot powered railgun sequence (shared cooldown with healing-mode ult).
+  - [x] Switching to attack while healing ult is active ends the ult immediately.
+- **Implemented**: ChampionHealing now supports healing/attack mode swapping with world-space controls, shared ability cooldown behavior, and an attack-mode ult railgun sequence (instant beam + splash visuals, ammo indicators, and charged-shot cadence).
 
 ---
 
@@ -88,7 +100,7 @@
 
 ## 4. Gameplay Flow & Tower Placement System
 
-### 4.1 Replace Money System with Cooldown-Based Placement
+### 4.1 Replace Resource System with Cooldown-Based Placement
 - **Priority**: P1 | **Effort**: L | **Status**: `[x]` done
 - **Implemented**: Per-pool cooldown timers replace gold. Each tower type has a `BaseCooldown` + `CooldownPenalty × existing pool count` added on placement. Champions share one pool. Selling refunds `CooldownPenalty`. Pools tick on scaled game time. UI shows "Locked: X.Xs" when blocked.
 - **Remaining**: Balance cooldown values (base, penalty, per-type).
@@ -153,7 +165,7 @@
 
 ### 6.1 Improved Tower/Enemy Stats Display
 - **Priority**: P1 | **Effort**: M
-- **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed, bounty) in plain text. No comparison, no DPS calculation, no visual hierarchy.
+- **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed) in plain text. No comparison, no DPS calculation, no visual hierarchy.
 - **Tasks**:
   - [ ] **DPS Display**: Calculate and show effective DPS (Damage / FireRateInterval) for towers. More meaningful than raw damage + fire rate separately
   - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
@@ -213,7 +225,7 @@ These items are from `CURRENT_STATE.md` and remain relevant:
 
 ### 8.3 Enemy Variants
 - **Priority**: P2 | **Effort**: S
-- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low bounty). Can be implemented as named presets in wave JSON rather than code archetypes.
+- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low damage). Can be implemented as named presets in wave JSON rather than code archetypes.
 
 ## 9. Suggested Implementation Order
 
@@ -223,7 +235,7 @@ A recommended sequence that respects dependencies and delivers playable value ea
 |-------|-------|-----------|
 | **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves) | ~~Gold removed~~ (done), auto-waves |
 | **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 8.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
-| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~ | Done — drone support champion with full ult + passive regen |
+| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~, ~~2.3 (attack mode toggle)~~ | Done — hybrid healing/attack champion with drones, support ult, passive regen, and mode cooldown |
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 7.1 (tile pack), 3.1 (auto-tiling), 6.1 (UI stats) | Game looks, feels, and communicates better |
 | **Phase 5: Polish & Completeness** | 5.1 (wave JSON tooling), 3.2 (Tiled properties), 8.2 (sound), 4.3 (crowding), 6.2 (wave preview), 8.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 

@@ -47,7 +47,8 @@ public class HealingDrone
         GameTime gameTime,
         IReadOnlyList<Tower> towers,
         ISet<Tower> claimedTargets,
-        bool isHealingUltActive
+        bool isHealingUltActive,
+        bool isAttackModeActive
     )
     {
         if (Owner.IsDead)
@@ -55,10 +56,21 @@ public class HealingDrone
 
         float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+        if (
+            isAttackModeActive
+            && (
+                State == HealingDroneState.TravelingToTarget
+                || State == HealingDroneState.HealingTarget
+            )
+        )
+        {
+            StartReturnToOwner();
+        }
+
         switch (State)
         {
             case HealingDroneState.Docked:
-                UpdateDocked(towers, claimedTargets);
+                UpdateDocked(towers, claimedTargets, isAttackModeActive);
                 break;
             case HealingDroneState.TravelingToTarget:
                 UpdateTravelToTarget(dt, towers, claimedTargets);
@@ -67,10 +79,10 @@ public class HealingDrone
                 UpdateHealingTarget(dt, towers, claimedTargets, isHealingUltActive);
                 break;
             case HealingDroneState.ReturningToOwner:
-                UpdateReturnToOwner(dt, towers, claimedTargets);
+                UpdateReturnToOwner(dt, towers, claimedTargets, isAttackModeActive);
                 break;
             case HealingDroneState.Recharging:
-                UpdateRecharging(dt, towers, claimedTargets);
+                UpdateRecharging(dt, towers, claimedTargets, isAttackModeActive);
                 break;
         }
     }
@@ -123,7 +135,31 @@ public class HealingDrone
         }
     }
 
-    private void UpdateDocked(IReadOnlyList<Tower> towers, ISet<Tower> claimedTargets)
+    public void ForceReturnToOwnerForAttackMode()
+    {
+        _targetTower = null;
+        _tickAccumulator = 0f;
+
+        if (State == HealingDroneState.Docked)
+        {
+            _position = Owner.DrawPosition;
+            State = Energy < MaxEnergy ? HealingDroneState.Recharging : HealingDroneState.Docked;
+            _path = null;
+            _hasPathDestination = false;
+            return;
+        }
+
+        if (State == HealingDroneState.Recharging || State == HealingDroneState.ReturningToOwner)
+            return;
+
+        StartReturnToOwner();
+    }
+
+    private void UpdateDocked(
+        IReadOnlyList<Tower> towers,
+        ISet<Tower> claimedTargets,
+        bool isAttackModeActive
+    )
     {
         _position = Owner.DrawPosition;
         _tickAccumulator = 0f;
@@ -134,6 +170,9 @@ public class HealingDrone
             State = HealingDroneState.Recharging;
             return;
         }
+
+        if (isAttackModeActive)
+            return;
 
         TryDeployToDamagedTower(towers, claimedTargets);
     }
@@ -247,7 +286,8 @@ public class HealingDrone
     private void UpdateReturnToOwner(
         float dt,
         IReadOnlyList<Tower> towers,
-        ISet<Tower> claimedTargets
+        ISet<Tower> claimedTargets,
+        bool isAttackModeActive
     )
     {
         bool arrived = MoveToward(dt, Owner.DrawPosition);
@@ -261,11 +301,16 @@ public class HealingDrone
         _tickAccumulator = 0f;
 
         State = Energy < MaxEnergy ? HealingDroneState.Recharging : HealingDroneState.Docked;
-        if (State == HealingDroneState.Docked)
+        if (State == HealingDroneState.Docked && !isAttackModeActive)
             TryDeployToDamagedTower(towers, claimedTargets);
     }
 
-    private void UpdateRecharging(float dt, IReadOnlyList<Tower> towers, ISet<Tower> claimedTargets)
+    private void UpdateRecharging(
+        float dt,
+        IReadOnlyList<Tower> towers,
+        ISet<Tower> claimedTargets,
+        bool isAttackModeActive
+    )
     {
         _position = Owner.DrawPosition;
         _tickAccumulator += dt;
@@ -281,7 +326,8 @@ public class HealingDrone
                 Energy = MaxEnergy;
                 _tickAccumulator = 0f;
                 State = HealingDroneState.Docked;
-                TryDeployToDamagedTower(towers, claimedTargets);
+                if (!isAttackModeActive)
+                    TryDeployToDamagedTower(towers, claimedTargets);
                 return;
             }
         }

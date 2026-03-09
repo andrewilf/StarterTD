@@ -14,7 +14,6 @@ public record SpawnEntry(
     string Name,
     float Health,
     float Speed,
-    int Bounty,
     int AttackDamage,
     /// <summary>XNA Color property name (e.g. "Purple", "Red"). Case-insensitive.</summary>
     string Color

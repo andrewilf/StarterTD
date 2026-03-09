@@ -98,7 +98,6 @@ public class WaveManager
             entry.Name,
             entry.Health,
             entry.Speed,
-            entry.Bounty,
             path,
             entry.SpawnPoint,
             WaveLoader.ParseColor(entry.Color),

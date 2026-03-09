@@ -8,7 +8,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Multi-Spawn Lanes**: Maps support multiple named spawn/exit points (`spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc.), each with an independent path.
 * **JSON Wave Config**: Waves are defined in `Content/Waves/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to hardcoded waves if no file exists.
 * **Tower System**: 3 Generic (Gun, Cannon, Walling) + 4 Champion tower types (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with walking, abilities, and blocking capacity.
-* **ChampionHealing Support**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and has a 15s support ult (`50s` cooldown) that refills drone energy, removes drone heal energy cost, grants +30% attack speed to attacking towers (including walling), and ends early if the healing champion is sold/destroyed.
+* **ChampionHealing Modes + Ult**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and swaps between Healing/Attack modes. Ult uses a shared `50s` cooldown: Healing mode grants a 15s support window (drone refill + free drone healing + +30% attack speed for attacking towers), while Attack mode arms 5 instant railgun shots (`+75%` main-hit damage, `50%` pierce/impact AoE damage, `1.5x` base fire interval during charged shots).
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.
 * **Game Loop**: Map Selection → Gameplay → Victory/Defeat.
 * **Windowing**: Launches in windowed maximized mode with native window controls. Map selection includes an `Exit` button.
@@ -83,7 +83,6 @@ Each map can have a matching wave file at `Content/Waves/{mapId}.json`. Drop the
           "name": "Goblin",
           "health": 300,
           "speed": 90,
-          "bounty": 5,
           "attackDamage": 5,
           "color": "Purple"
         }

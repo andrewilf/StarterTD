@@ -22,7 +22,7 @@ This file is the canonical agent policy for this repository. `CLAUDE.md` is lega
 
 ## Implementation Rules
 1. Use `Action<T>` for cross-system events; avoid `EventHandler`.
-2. `GameplayScene` owns global state (for example Money, Lives).
+2. `GameplayScene` owns global state (for example Lives and wave progress).
 3. Remove dead/redundant code introduced by changes.
 4. Run `dotnet build` after code changes.
 5. Run `dotnet csharpier format .` once after code changes.

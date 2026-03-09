@@ -33,9 +33,9 @@ public class Tower : ITower
 
     /// <summary>Visual position used for rendering. Interpolates smoothly during movement.</summary>
     public Vector2 DrawPosition => _drawPosition;
-    public float Range { get; private set; }
-    public float Damage { get; private set; }
-    public float FireRate { get; private set; }
+    public float Range { get; protected set; }
+    public float Damage { get; protected set; }
+    public float FireRate { get; protected set; }
     public float EffectiveFireInterval =>
         MathF.Max(FireRate / _externalAttackSpeedMultiplier, MinFireIntervalSeconds);
     public float BaseCooldown { get; }
@@ -87,7 +87,7 @@ public class Tower : ITower
     private CountdownTimer? _fireCooldown;
     private int _currentEngagedCount;
     private const float ProjectileSpeed = 400f;
-    private const float MinFireIntervalSeconds = 0.01f;
+    protected const float MinFireIntervalSeconds = 0.01f;
 
     private Vector2 _drawPosition;
     private Queue<Point> _movePath = new();
@@ -128,6 +128,12 @@ public class Tower : ITower
     /// Passes the impact position and AoE radius. Bubbles up to TowerManager → GameplayScene.
     /// </summary>
     public Action<Vector2, float>? OnAOEImpact;
+
+    /// <summary>
+    /// Callback fired when an instant railgun shot is resolved.
+    /// Passes world-space start and end positions for beam visuals.
+    /// </summary>
+    public Action<Vector2, Vector2>? OnRailgunShot;
 
     /// <summary>
     /// If set, replaces circular range targeting with wall-network targeting.
@@ -221,6 +227,11 @@ public class Tower : ITower
 
         _externalAttackSpeedMultiplier = 1f;
         HasHealingUltAttackSpeedBuff = false;
+    }
+
+    protected void ResetFireCooldown()
+    {
+        _fireCooldown = null;
     }
 
     /// <summary>
@@ -413,6 +424,18 @@ public class Tower : ITower
     protected virtual void OnUpdateStart(float dt) { }
 
     /// <summary>
+    /// Override to customize the shot cadence for special tower states.
+    /// Default uses EffectiveFireInterval.
+    /// </summary>
+    protected virtual float GetNextFireIntervalSeconds() => EffectiveFireInterval;
+
+    /// <summary>
+    /// Override for special instant attacks. Return true when the shot is fully handled.
+    /// Base implementation returns false so normal wall/projectile logic runs.
+    /// </summary>
+    protected virtual bool TryResolveCustomShot(IEnemy target, List<IEnemy> enemies) => false;
+
+    /// <summary>
     /// Normal targeting and firing logic. Only runs when CurrentState == Active.
     /// Skipped entirely for towers with no range and no wall targeting delegate,
     /// to avoid passing float.MaxValue FireRate into CountdownTimer (TimeSpan overflow).
@@ -438,8 +461,11 @@ public class Tower : ITower
 
         if (target != null && canFire && !IsFiringSuppressed)
         {
-            _fireCooldown = new CountdownTimer(EffectiveFireInterval);
+            _fireCooldown = new CountdownTimer(GetNextFireIntervalSeconds());
             _fireCooldown.Start();
+
+            if (TryResolveCustomShot(target, enemies))
+                return;
 
             if (hasWallTargeting)
             {

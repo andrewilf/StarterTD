@@ -21,9 +21,6 @@ public interface IEnemy
     /// <summary>Movement speed in pixels per second.</summary>
     float Speed { get; }
 
-    /// <summary>Money awarded to the player when this enemy is killed.</summary>
-    int Bounty { get; }
-
     /// <summary>Current world-space position in pixels.</summary>
     Vector2 Position { get; }
 

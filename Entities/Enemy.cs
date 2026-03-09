@@ -29,7 +29,6 @@ public class Enemy : IEnemy
     public float Health { get; private set; }
     public float MaxHealth { get; }
     public float Speed { get; }
-    public int Bounty { get; }
     public Vector2 Position { get; private set; }
     public bool IsDead => Health <= 0;
     public bool ReachedEnd { get; private set; }
@@ -54,7 +53,6 @@ public class Enemy : IEnemy
         string name,
         float health,
         float speed,
-        int bounty,
         List<Point> path,
         string spawnName,
         Color color,
@@ -65,7 +63,6 @@ public class Enemy : IEnemy
         Health = health;
         MaxHealth = health;
         Speed = speed;
-        Bounty = bounty;
         _path = path;
         _spawnName = spawnName;
         _currentPathIndex = 0;
