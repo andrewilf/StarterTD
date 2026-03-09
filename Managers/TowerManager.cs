@@ -64,6 +64,12 @@ public partial class TowerManager
     public Action<Vector2, float>? OnAOEImpact;
 
     /// <summary>
+    /// Callback fired when the healing champion resolves an instant railgun shot.
+    /// Passes world-space start/end positions for beam visuals.
+    /// </summary>
+    public Action<Vector2, Vector2>? OnRailgunShot;
+
+    /// <summary>
     /// Callback fired when the walling champion's spike attack lands on an enemy.
     /// Passes the enemy's world position. GameplayScene uses this to spawn SpikeEffect.
     /// </summary>
@@ -119,6 +125,7 @@ public partial class TowerManager
         var tower = Tower.Create(type, gridPos);
         // Wire AoE callback once at placement (not per-frame)
         tower.OnAOEImpact = (pos, radius) => OnAOEImpact?.Invoke(pos, radius);
+        tower.OnRailgunShot = (start, end) => OnRailgunShot?.Invoke(start, end);
         _towers.Add(tower);
         SetOccupancyFor(tower, occupied: true);
 
@@ -417,8 +424,14 @@ public partial class TowerManager
         if (championType == TowerType.ChampionHealing)
         {
             var healingChampion = GetAliveHealingChampion();
-            if (healingChampion == null || healingChampion.Mode == HealingChampionMode.Attack)
+            if (healingChampion == null)
                 return;
+
+            if (healingChampion.Mode == HealingChampionMode.Attack)
+            {
+                healingChampion.ActivateRailgunShots();
+                return;
+            }
 
             _healingUltRemainingSeconds = HealingUltDurationSeconds;
             ApplyHealingUltAttackSpeedBuff(isActive: true);
@@ -494,6 +507,10 @@ public partial class TowerManager
         {
             if (_healingUltRemainingSeconds > 0f)
                 EndHealingUlt();
+
+            var healingChampion = _towers.OfType<HealingChampionTower>().FirstOrDefault();
+            healingChampion?.CancelRailgunShots();
+
             return;
         }
 

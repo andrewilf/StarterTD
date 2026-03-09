@@ -48,6 +48,7 @@ internal static class TowerDrawingHelper
         }
 
         DrawHealingUltSparkleAura(spriteBatch, tower, drawPosition, drawSize);
+        DrawHealingRailgunAura(spriteBatch, tower, drawPosition, drawSize);
 
         bool isMoving = tower.CurrentState == TowerState.Moving;
         // When a sprite exists, keep original art colors and only apply movement alpha.
@@ -121,6 +122,8 @@ internal static class TowerDrawingHelper
 
         foreach (var proj in tower.Projectiles)
             proj.Draw(spriteBatch);
+
+        DrawHealingRailgunAmmoIcons(spriteBatch, tower, drawPosition, drawSize);
     }
 
     public static void GetVisualBounds(Tower tower, out Vector2 drawPosition, out Vector2 drawSize)
@@ -295,6 +298,79 @@ internal static class TowerDrawingHelper
                 sparklePos,
                 new Vector2(sparkleSize, sparkleSize),
                 sparkleColor * (0.35f + twinkle * 0.45f)
+            );
+        }
+    }
+
+    private static void DrawHealingRailgunAura(
+        SpriteBatch spriteBatch,
+        Tower tower,
+        Vector2 drawPosition,
+        Vector2 drawSize
+    )
+    {
+        if (
+            tower is not HealingChampionTower healingChampion
+            || !healingChampion.IsRailgunEmpowered
+        )
+            return;
+
+        float baseSize = MathF.Max(drawSize.X, drawSize.Y);
+        TextureManager.DrawFilledCircle(
+            spriteBatch,
+            drawPosition,
+            baseSize * 0.78f,
+            Color.Cyan * 0.22f
+        );
+        TextureManager.DrawFilledCircle(
+            spriteBatch,
+            drawPosition,
+            baseSize * 0.55f,
+            Color.White * 0.12f
+        );
+    }
+
+    private static void DrawHealingRailgunAmmoIcons(
+        SpriteBatch spriteBatch,
+        Tower tower,
+        Vector2 drawPosition,
+        Vector2 drawSize
+    )
+    {
+        if (
+            tower is not HealingChampionTower healingChampion
+            || !healingChampion.IsRailgunEmpowered
+        )
+            return;
+
+        const int maxShots = 5;
+        const float iconWidth = 9f;
+        const float iconHeight = 4f;
+        const float iconSpacing = 3f;
+        const float iconOffsetLeft = 14f;
+
+        float stackHeight = maxShots * iconHeight + (maxShots - 1) * iconSpacing;
+        float centerX = drawPosition.X - drawSize.X / 2f - iconOffsetLeft;
+        float startY = drawPosition.Y - stackHeight / 2f + iconHeight / 2f;
+        int shotsRemaining = healingChampion.RailgunShotsRemaining;
+
+        for (int i = 0; i < maxShots; i++)
+        {
+            bool isLoaded = i < shotsRemaining;
+            Color shellColor = isLoaded ? new Color(255, 232, 120) : new Color(60, 60, 60);
+            float y = startY + i * (iconHeight + iconSpacing);
+
+            TextureManager.DrawSprite(
+                spriteBatch,
+                new Vector2(centerX, y),
+                new Vector2(iconWidth, iconHeight),
+                shellColor
+            );
+            TextureManager.DrawSprite(
+                spriteBatch,
+                new Vector2(centerX + iconWidth / 2f, y),
+                new Vector2(2f, iconHeight + 2f),
+                shellColor
             );
         }
     }

@@ -59,9 +59,9 @@
   - [x] Add 4.0s cooldown between mode switches.
   - [x] Attack mode uses ChampionHealing stats profile (`Damage 100`, `Range 320`, `FireRate 2.4s`) and Healing mode suppresses direct attacks.
   - [x] Switching to attack immediately forces drones to return and recharge.
-  - [x] ChampionHealing ult in attack mode applies no effect (cooldown still shared/consumed).
+  - [x] ChampionHealing ult in attack mode now activates a 5-shot powered railgun sequence (shared cooldown with healing-mode ult).
   - [x] Switching to attack while healing ult is active ends the ult immediately.
-- **Implemented**: ChampionHealing now supports healing/attack mode swapping with world-space controls and shared ability cooldown behavior.
+- **Implemented**: ChampionHealing now supports healing/attack mode swapping with world-space controls, shared ability cooldown behavior, and an attack-mode ult railgun sequence (instant beam + splash visuals, ammo indicators, and charged-shot cadence).
 
 ---
 

@@ -130,6 +130,12 @@ public class Tower : ITower
     public Action<Vector2, float>? OnAOEImpact;
 
     /// <summary>
+    /// Callback fired when an instant railgun shot is resolved.
+    /// Passes world-space start and end positions for beam visuals.
+    /// </summary>
+    public Action<Vector2, Vector2>? OnRailgunShot;
+
+    /// <summary>
     /// If set, replaces circular range targeting with wall-network targeting.
     /// Returns the best enemy to attack from within the wall attack zone.
     /// Set each frame by TowerManager for walling towers.
@@ -418,6 +424,18 @@ public class Tower : ITower
     protected virtual void OnUpdateStart(float dt) { }
 
     /// <summary>
+    /// Override to customize the shot cadence for special tower states.
+    /// Default uses EffectiveFireInterval.
+    /// </summary>
+    protected virtual float GetNextFireIntervalSeconds() => EffectiveFireInterval;
+
+    /// <summary>
+    /// Override for special instant attacks. Return true when the shot is fully handled.
+    /// Base implementation returns false so normal wall/projectile logic runs.
+    /// </summary>
+    protected virtual bool TryResolveCustomShot(IEnemy target, List<IEnemy> enemies) => false;
+
+    /// <summary>
     /// Normal targeting and firing logic. Only runs when CurrentState == Active.
     /// Skipped entirely for towers with no range and no wall targeting delegate,
     /// to avoid passing float.MaxValue FireRate into CountdownTimer (TimeSpan overflow).
@@ -443,8 +461,11 @@ public class Tower : ITower
 
         if (target != null && canFire && !IsFiringSuppressed)
         {
-            _fireCooldown = new CountdownTimer(EffectiveFireInterval);
+            _fireCooldown = new CountdownTimer(GetNextFireIntervalSeconds());
             _fireCooldown.Start();
+
+            if (TryResolveCustomShot(target, enemies))
+                return;
 
             if (hasWallTargeting)
             {

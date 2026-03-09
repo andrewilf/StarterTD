@@ -59,6 +59,9 @@ public partial class GameplayScene
         foreach (var spike in _spikeEffects)
             spike.Draw(spriteBatch);
 
+        foreach (var railgun in _railgunEffects)
+            railgun.Draw(spriteBatch);
+
         _laserEffect?.Draw(spriteBatch);
         DrawLaserRedirectPreview(spriteBatch);
 
