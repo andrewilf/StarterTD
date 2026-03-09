@@ -205,14 +205,10 @@ public partial class TowerManager
         if (tower.CurrentState == TowerState.Moving)
             ClearReservationFor(tower);
 
-        if (tower is CannonChampionTower cannon && cannon.IsLaserActive)
-        {
-            tower.CancelAbility();
-            OnLaserCancelled?.Invoke();
-        }
+        _frenzyFireTimers.Remove(tower);
 
-        if (tower.TowerType == TowerType.ChampionHealing && _healingUltRemainingSeconds > 0f)
-            EndHealingUlt();
+        if (tower.TowerType.IsChampion())
+            EndChampionUltEffects(tower.TowerType);
 
         _healingDrones.RemoveAll(d => d.Owner == tower);
 
@@ -464,16 +460,61 @@ public partial class TowerManager
         ApplyHealingUltAttackSpeedBuff(isActive: false);
     }
 
-    private bool IsHealingUltCasterAlive()
+    private void EndChampionUltEffects(TowerType championType)
+    {
+        if (!championType.IsChampion())
+            return;
+
+        if (championType == TowerType.ChampionHealing)
+        {
+            if (_healingUltRemainingSeconds > 0f)
+                EndHealingUlt();
+            return;
+        }
+
+        bool hasGenericVariant = championType.TryGetGenericVariant(out var genericType);
+        bool shouldCancelLaserVisual = false;
+
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var tower = _towers[i];
+            bool matchesChampion = tower.TowerType == championType;
+            bool matchesGeneric = hasGenericVariant && tower.TowerType == genericType;
+            if (!matchesChampion && !matchesGeneric)
+                continue;
+
+            if (tower is WallingTower)
+                _frenzyFireTimers.Remove(tower);
+
+            if (tower is CannonChampionTower cannon && cannon.IsLaserActive)
+                shouldCancelLaserVisual = true;
+
+            if (tower.IsAbilityBuffActive)
+                tower.CancelAbility();
+        }
+
+        if (shouldCancelLaserVisual)
+            OnLaserCancelled?.Invoke();
+    }
+
+    private void EndChampionUltsWithDeadCasters()
+    {
+        EndChampionUltIfCasterDead(TowerType.ChampionGun);
+        EndChampionUltIfCasterDead(TowerType.ChampionCannon);
+        EndChampionUltIfCasterDead(TowerType.ChampionWalling);
+        EndChampionUltIfCasterDead(TowerType.ChampionHealing);
+    }
+
+    private void EndChampionUltIfCasterDead(TowerType championType)
     {
         for (int i = 0; i < _towers.Count; i++)
         {
             var tower = _towers[i];
-            if (tower.TowerType == TowerType.ChampionHealing && !tower.IsDead)
-                return true;
+            if (tower.TowerType == championType && !tower.IsDead)
+                return;
         }
 
-        return false;
+        EndChampionUltEffects(championType);
     }
 
     private static bool CanReceiveHealingUltAttackSpeedBuff(Tower tower)
@@ -499,9 +540,9 @@ public partial class TowerManager
         if (wasHealingUltActive && _healingUltRemainingSeconds <= 0f)
             EndHealingUlt();
 
-        // If the caster died earlier this frame (before dead-tower sweep), end ult before towers attack.
-        if (_healingUltRemainingSeconds > 0f && !IsHealingUltCasterAlive())
-            EndHealingUlt();
+        // If a caster died earlier this frame (before dead-tower sweep),
+        // end champion-linked ult effects before towers attack.
+        EndChampionUltsWithDeadCasters();
 
         bool isHealingUltActive = _healingUltRemainingSeconds > 0f;
 
