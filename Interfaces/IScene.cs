@@ -11,6 +11,12 @@ public interface IScene
     /// <summary>Called once when the scene is first loaded.</summary>
     void LoadContent();
 
+    /// <summary>
+    /// Called when the scene is removed from the scene stack.
+    /// Use this to detach transient resources such as Gum roots and callbacks.
+    /// </summary>
+    void UnloadContent();
+
     /// <summary>Called every frame to update scene logic.</summary>
     void Update(GameTime gameTime);
 

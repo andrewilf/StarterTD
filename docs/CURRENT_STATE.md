@@ -4,6 +4,9 @@
 - Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — drop files in `Content/Maps/`, no code changes)
 - Display starts in windowed maximized mode (not fullscreen). Launch flow opens a start screen with `Start`, `Settings` (no-op), and `Exit`; `Start` opens map selection, and map selection now uses a top-right `Back` button plus `Esc` to return to the start screen
 - Start/menu navigation uses a reusable short slide/fade scene transition via `SceneManager.TransitionToScene()` and render-target compositing. Gameplay and pause scene changes remain instant
+- Gum runtime is initialized once in `Game1` (`GumService.Default.Initialize(..., DefaultVisualsVersion.V3)`), updated each frame from `Game1.Update`, and resized from `Window.ClientSizeChanged` by syncing `GraphicalUiElement.CanvasWidth/CanvasHeight` plus `UpdateLayout()`/`UpdateToFontValues()`
+- Start menu buttons are Gum code-only controls (`StartMenuGumView` + `GumMenuButtonFactory`) with shared reusable construction; `Start` transitions to map select, `Settings` remains a no-op, and `Exit` closes the game
+- Scene lifecycle now includes `IScene.UnloadContent()`. `SceneManager` unloads scenes on replace/pop and also unloads preloaded incoming scenes if a transition is canceled
 - `InputManager` primes current/previous input snapshots on construction, so held clicks/keys do not replay as fresh presses after scene transitions
 - FPS counter samples rendered `Draw()` cadence over a 0.5s window, so it reports displayed frame rate instead of fixed-step `Update()` ticks
 - Map selection layout auto-reflows to current viewport size; map preview tiles scale to fit card bounds

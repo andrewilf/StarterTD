@@ -219,6 +219,24 @@ public partial class GameplayScene : IScene
         }
     }
 
+    public void UnloadContent()
+    {
+        if (_uiPanel != null)
+            _uiPanel.OnAbilityTriggered = null;
+
+        if (_towerManager != null)
+        {
+            _towerManager.OnValidatePlacement = null;
+            _towerManager.OnTowerPlaced = null;
+            _towerManager.OnTowerDestroyed = null;
+            _towerManager.OnAOEImpact = null;
+            _towerManager.OnRailgunShot = null;
+            _towerManager.OnWallAttack = null;
+            _towerManager.OnLaserActivated = null;
+            _towerManager.OnLaserCancelled = null;
+        }
+    }
+
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();

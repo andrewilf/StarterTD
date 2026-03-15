@@ -1,9 +1,10 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
-using StarterTD.Managers;
+using StarterTD.UI;
 
 namespace StarterTD.Scenes;
 
@@ -14,23 +15,12 @@ namespace StarterTD.Scenes;
 public class StartMenuScene : IScene
 {
     private readonly Game1 _game;
-    private InputManager _inputManager = null!;
+    private StartMenuGumView? _gumView;
     private SpriteFont? _font;
-
-    private Rectangle _startButton;
-    private Rectangle _settingsButton;
-    private Rectangle _exitButton;
     private int _layoutWidth;
     private int _layoutHeight;
-
-    private bool _isStartHovered;
-    private bool _isSettingsHovered;
-    private bool _isExitHovered;
-
-    private const int ButtonWidth = 260;
-    private const int ButtonHeight = 64;
-    private const int ButtonGap = 22;
-    private const int TitleTopMargin = 110;
+    private bool _isNavigatingAway;
+    private const int TitleTopMargin = 100;
 
     public StartMenuScene(Game1 game)
     {
@@ -39,8 +29,6 @@ public class StartMenuScene : IScene
 
     public void LoadContent()
     {
-        _inputManager = new InputManager();
-
         try
         {
             _font = _game.Content.Load<SpriteFont>("DefaultFont");
@@ -50,45 +38,32 @@ public class StartMenuScene : IScene
             // Font not available - menu falls back to shape-only rendering.
         }
 
+        _isNavigatingAway = false;
+        _gumView = new StartMenuGumView(
+            onStartClicked: HandleStartClicked,
+            onSettingsClicked: HandleSettingsClicked,
+            onExitClicked: HandleExitClicked
+        );
+
         var (viewportWidth, viewportHeight) = GetViewportSize();
         RebuildLayout(viewportWidth, viewportHeight);
+        _gumView.AttachToRoot();
     }
 
-    public void Update(GameTime gameTime)
+    public void UnloadContent()
     {
-        _inputManager.Update();
-        HandleViewportResize();
-
-        Point mousePos = _inputManager.MousePosition;
-        _isStartHovered = _startButton.Contains(mousePos);
-        _isSettingsHovered = _settingsButton.Contains(mousePos);
-        _isExitHovered = _exitButton.Contains(mousePos);
-
-        if (!_inputManager.IsLeftClick())
-            return;
-
-        if (_isStartHovered)
-        {
-            _game.TransitionToScene(
-                new MapSelectionScene(_game),
-                SceneTransitionPreset.MenuForwardSlideFade
-            );
-            return;
-        }
-
-        if (_isSettingsHovered)
-            return;
-
-        if (_isExitHovered)
-            _game.Exit();
+        _gumView?.Dispose();
+        _gumView = null;
     }
+
+    public void Update(GameTime gameTime) => HandleViewportResize();
 
     public void Draw(SpriteBatch spriteBatch)
     {
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-            new Color(18, 24, 34)
+            new Color(16, 22, 32)
         );
 
         if (_font != null)
@@ -104,35 +79,21 @@ public class StartMenuScene : IScene
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
 
-        DrawButton(
-            spriteBatch,
-            _startButton,
-            "Start",
-            _isStartHovered,
-            Color.DarkSlateGray,
-            Color.CadetBlue,
-            Color.LightGray,
-            Color.White
-        );
-        DrawButton(
-            spriteBatch,
-            _settingsButton,
-            "Settings",
-            _isSettingsHovered,
-            Color.DarkSlateGray,
-            Color.SlateGray,
-            Color.LightGray,
-            Color.White
-        );
-        DrawButton(
-            spriteBatch,
-            _exitButton,
-            "Exit",
-            _isExitHovered,
-            Color.Maroon,
-            Color.IndianRed,
-            Color.Salmon,
-            Color.White
+        if (!GumService.Default.IsInitialized)
+            return;
+
+        // SceneManager has already started a SpriteBatch. Gum renders with its own pipeline,
+        // so we briefly close this batch, draw Gum, then restore SceneManager's expected state.
+        spriteBatch.End();
+        GumService.Default.Draw();
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            null,
+            null,
+            null,
+            null
         );
     }
 
@@ -156,46 +117,32 @@ public class StartMenuScene : IScene
         _layoutWidth = viewportWidth;
         _layoutHeight = viewportHeight;
         GameSettings.SetScreenSize(viewportWidth, viewportHeight);
-
-        int totalHeight = (ButtonHeight * 3) + (ButtonGap * 2);
-        int startY = (viewportHeight - totalHeight) / 2;
-        int startX = (viewportWidth - ButtonWidth) / 2;
-
-        _startButton = CreateButtonRect(startX, startY, 0);
-        _settingsButton = CreateButtonRect(startX, startY, 1);
-        _exitButton = CreateButtonRect(startX, startY, 2);
+        _gumView?.ResizeToViewport(viewportWidth, viewportHeight);
     }
 
-    private static Rectangle CreateButtonRect(int x, int startY, int index)
+    private void HandleStartClicked()
     {
-        int y = startY + (index * (ButtonHeight + ButtonGap));
-        return new Rectangle(x, y, ButtonWidth, ButtonHeight);
-    }
-
-    private void DrawButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        string label,
-        bool isHovered,
-        Color fill,
-        Color hoverFill,
-        Color border,
-        Color hoverBorder
-    )
-    {
-        TextureManager.DrawRect(spriteBatch, rect, isHovered ? hoverFill : fill);
-        TextureManager.DrawRectOutline(spriteBatch, rect, isHovered ? hoverBorder : border, 3);
-
-        if (_font == null)
+        if (_isNavigatingAway)
             return;
 
-        Vector2 textSize = _font.MeasureString(label);
-        Vector2 textPos = new Vector2(
-            rect.X + (rect.Width - textSize.X) / 2f,
-            rect.Y + (rect.Height - textSize.Y) / 2f
+        _isNavigatingAway = true;
+        _game.TransitionToScene(
+            new MapSelectionScene(_game),
+            SceneTransitionPreset.MenuForwardSlideFade
         );
+    }
 
-        spriteBatch.DrawString(_font, label, textPos + new Vector2(1, 1), Color.Black);
-        spriteBatch.DrawString(_font, label, textPos, Color.White);
+    private void HandleSettingsClicked()
+    {
+        // Settings screen is intentionally deferred for a later iteration.
+    }
+
+    private void HandleExitClicked()
+    {
+        if (_isNavigatingAway)
+            return;
+
+        _isNavigatingAway = true;
+        _game.Exit();
     }
 }

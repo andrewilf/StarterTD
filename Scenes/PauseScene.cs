@@ -54,6 +54,8 @@ public class PauseScene : IScene
         }
     }
 
+    public void UnloadContent() { }
+
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
