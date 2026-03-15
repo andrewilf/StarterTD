@@ -38,16 +38,16 @@ This file is the canonical agent policy for this repository. `CLAUDE.md` is lega
 
 ## Skills
 A skill is a local instruction set in `SKILL.md`. Use these when matched:
-- create-branch-and-set-upstream
-- document-changes-from-last-merge
-- document-changes-uncommitted
-- optimizing-ai-content
-- refactor-and-build-from-last-merge
-- refactor-and-build-uncommitted
-- linear
-- playwright
-- skill-creator
-- skill-installer
+- smithery-ai-cli
+- nuget-manager
+- csharp-pro
+- 2d-games
+
+### Skill Notes
+- `smithery-ai-cli`: use when discovering or installing new skills, MCPs, or external integrations.
+- `nuget-manager`: use for NuGet package add/update/remove flows and package-version checks.
+- `csharp-pro`: use for C# implementation/refactor guidance, especially when touching unfamiliar C# patterns.
+- `2d-games`: use for MonoGame / 2D gameplay architecture questions, especially UI and game-loop tradeoffs.
 
 ## Practical Use Notes
 - Treat this file as instruction policy.
