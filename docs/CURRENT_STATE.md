@@ -39,6 +39,8 @@
 - Enemy FSM (Moving/Attacking); waves driven by `Content/Waves/{mapId}.json` (fallback to hardcoded waves if no file)
 - Wave spawn schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`
 - Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Wave JSON assigns each enemy to a named spawn point
+- Enemy entrance indicator: spawn-driven, per-lane warnings render as flashy pulsing red exclamation markers with burst rays. For each lane, pre-spawn warning uses lead time `warningDistance * 2.5 / speed + 0.4s`, is gated by a 5.0s lane cooldown since the last actual spawn, and tracks a spawned enemy only while it remains within 1 tile of spawn. Unknown spawn names still fall back to the map's default spawn lane
+- Wave timing retune for warning validation: all wave files (`line`, `maze_test_1`, `maze_test_2`, `maze_test_3`) use burst + quiet-window timing so warning suppression/reappearance can be observed clearly under the 5.0s lane cooldown
 - Info panel: click tower/enemy for stats overlay (bottom-right). Tower fire-rate display uses effective APS (includes temporary attack-speed buffs). Dismiss: ESC/empty tile/new selection
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others
 - Range indicators, AoE visuals, railgun beam visuals, victory/defeat flow

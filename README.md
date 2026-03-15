@@ -7,6 +7,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Tiled Maps**: Maps are `.tmx` files in `Content/Maps/`, edited in [Tiled map editor](https://www.mapeditor.org).
 * **Multi-Spawn Lanes**: Maps support multiple named spawn/exit points (`spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc.), each with an independent path.
 * **JSON Wave Config**: Waves are defined in `Content/Waves/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to hardcoded waves if no file exists.
+* **Entrance Warnings**: Per-lane spawn indicators render in world-space as pulsing `!` markers with flash/burst effects; warnings are spawn-driven with speed-based pre-spawn lead time and a 5s per-lane cooldown to avoid spam.
 * **Tower System**: 3 Generic (Gun, Cannon, Walling) + 4 Champion tower types (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with walking, abilities, and blocking capacity.
 * **ChampionHealing Modes + Ult**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and swaps between Healing/Attack modes. Ult uses a shared `50s` cooldown: Healing mode grants a 15s support window (drone refill + free drone healing + +30% attack speed for attacking towers), while Attack mode arms 5 instant railgun shots (`+75%` main-hit damage, `50%` pierce/impact AoE damage, `1.5x` base fire interval during charged shots).
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.

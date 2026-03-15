@@ -22,6 +22,8 @@ public class WaveManager
     public int TotalWaves => _waves.Count;
     public bool AllWavesComplete { get; private set; }
     public bool WaveInProgress { get; private set; }
+    public float CurrentWaveElapsed => _waveElapsed;
+    public int PendingSpawnCount => _pendingSpawns.Count;
 
     // Key = spawn point name (matches Map.ActivePaths key), Value = path provider for that spawn
     private readonly Func<string, List<Point>?> _pathProvider;
@@ -86,6 +88,21 @@ public class WaveManager
 
         if (_pendingSpawns.Count == 0)
             WaveInProgress = false;
+    }
+
+    /// <summary>
+    /// Gets a pending spawn entry by index without allocating or copying the queue.
+    /// </summary>
+    public bool TryGetPendingSpawn(int index, out SpawnEntry spawn)
+    {
+        if (index < 0 || index >= _pendingSpawns.Count)
+        {
+            spawn = default!;
+            return false;
+        }
+
+        spawn = _pendingSpawns[index];
+        return true;
     }
 
     private void SpawnEnemy(SpawnEntry entry)

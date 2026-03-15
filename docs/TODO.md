@@ -134,14 +134,16 @@
 - **Interacts With**: Cannon "most grouped" targeting — crowding makes cannons more valuable. Wall towers — walls create natural chokepoints that trigger crowding.
 
 ### 4.4 Enemy Entrance Indicator
-- **Priority**: P2 | **Effort**: S
+- **Priority**: P2 | **Effort**: S | **Status**: `[x]` done
 - **Concept**: Visual indicator at spawn point(s) warning the player when enemies are about to emerge.
-- **Tasks**:
-  - [ ] Detect when first enemy in a wave is ~1 tile away from spawn (or use a configurable "warning distance")
-  - [ ] Display animated indicator at spawn point: pulsing red circle, arrow pointing outward, or "!" icon
-  - [ ] Play optional SFX cue (low-priority, defer to sound system 8.2)
-  - [ ] Dismiss indicator once first enemy exits spawn or wave completes
-  - [ ] Support multi-spawn maps: show indicator at all active spawn points for the current wave
+- **Tasks (Completed)**:
+  - [x] Drive warning windows from upcoming per-lane spawns (not wave-start initialization) using configurable distance-to-speed lead time (1 tile default)
+  - [x] Display animated spawn indicator with pulsing red base + exclamation icon in world-space
+  - [x] Keep SFX deferred to sound-system backlog item 8.2
+  - [x] Dismiss per-lane indicator when tracked enemy exits warning distance
+  - [x] Add 5.0s per-lane cooldown so rapid repeated spawns do not repeatedly retrigger warning
+  - [x] Support multi-spawn maps and legacy spawn-name fallback by resolving unknown wave lanes to the map's default spawn
+- **Implemented**: `GameplayScene` now keeps persistent per-lane warning state keyed by map spawn points, evaluates nearest pending spawn each frame, gates warning visibility behind a 5.0s lane cooldown since last actual spawn, tracks spawned enemies from spawn-tile matches while they remain near spawn, and renders the flashy pulsing `!` marker with burst rays. Wave timing in `line`, `maze_test_1`, `maze_test_2`, and `maze_test_3` was retuned into burst + quiet windows to validate suppression/reappearance behavior.
 
 ---
 

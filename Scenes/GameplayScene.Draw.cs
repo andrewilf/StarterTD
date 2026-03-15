@@ -37,6 +37,7 @@ public partial class GameplayScene
         );
 
         _map.Draw(spriteBatch);
+        DrawEntranceWarnings(spriteBatch);
 
         if (_towerMovePreviewPath != null)
         {
