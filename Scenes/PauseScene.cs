@@ -1,9 +1,12 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Managers;
+using StarterTD.UI;
 
 namespace StarterTD.Scenes;
 
@@ -15,10 +18,14 @@ public class PauseScene : IScene
 {
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
+    private PauseMenuGumView? _gumView;
     private SpriteFont? _font;
+    private int _layoutWidth;
+    private int _layoutHeight;
+    private bool _isNavigatingAway;
 
-    private readonly Rectangle _resumeButton;
-    private readonly Rectangle _mapSelectionButton;
+    private Rectangle _resumeButton;
+    private Rectangle _mapSelectionButton;
 
     private const int ButtonWidth = 200;
     private const int ButtonHeight = 60;
@@ -27,22 +34,12 @@ public class PauseScene : IScene
     public PauseScene(Game1 game)
     {
         _game = game;
-
-        int centerX = GameSettings.ScreenWidth / 2 - ButtonWidth / 2;
-        int startY = GameSettings.ScreenHeight / 2 - 80;
-
-        _resumeButton = new Rectangle(centerX, startY, ButtonWidth, ButtonHeight);
-        _mapSelectionButton = new Rectangle(
-            centerX,
-            startY + ButtonHeight + Gap,
-            ButtonWidth,
-            ButtonHeight
-        );
     }
 
     public void LoadContent()
     {
         _inputManager = new InputManager();
+        _isNavigatingAway = false;
 
         try
         {
@@ -52,70 +49,112 @@ public class PauseScene : IScene
         {
             // Font not available — UI will use fallback rendering
         }
+
+        _gumView = new PauseMenuGumView(
+            onResumeClicked: HandleResumeClicked,
+            onMapSelectionClicked: HandleMapSelectionClicked
+        );
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+        RebuildLayout(viewportWidth, viewportHeight);
+        _gumView.AttachToRoot();
     }
 
-    public void UnloadContent() { }
+    public void UnloadContent()
+    {
+        _gumView?.Dispose();
+        _gumView = null;
+    }
 
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
+        HandleViewportResize();
 
         if (_inputManager.IsKeyPressed(Keys.Escape) || _inputManager.IsKeyPressed(Keys.P))
         {
-            _game.PopScene();
+            HandleResumeClicked();
             return;
         }
 
-        if (_inputManager.IsLeftClick())
+        // Fallback input path if Gum is unavailable.
+        if (_inputManager.IsLeftClick() && !GumService.Default.IsInitialized)
         {
             Point mousePos = _inputManager.MousePosition;
 
             if (_resumeButton.Contains(mousePos))
             {
-                _game.PopScene();
+                HandleResumeClicked();
                 return;
             }
 
             if (_mapSelectionButton.Contains(mousePos))
-            {
-                _game.SetScene(new MapSelectionScene(_game));
-            }
+                HandleMapSelectionClicked();
         }
     }
 
     public void Draw(SpriteBatch spriteBatch)
     {
+        if (GumService.Default.IsInitialized)
+            return;
+
+        // Fallback when Gum is unavailable.
         TextureManager.DrawRect(
             spriteBatch,
             new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-            Color.Black * 0.7f
+            Color.Black * 0.4f
+        );
+        DrawButton(spriteBatch, _resumeButton, "Resume (P/ESC)");
+        DrawButton(spriteBatch, _mapSelectionButton, "Map Selection");
+    }
+
+    private void HandleViewportResize()
+    {
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+
+        if (viewportWidth == _layoutWidth && viewportHeight == _layoutHeight)
+            return;
+
+        RebuildLayout(viewportWidth, viewportHeight);
+    }
+
+    private (int width, int height) GetViewportSize() =>
+        (
+            Math.Max(1, _game.GraphicsDevice.Viewport.Width),
+            Math.Max(1, _game.GraphicsDevice.Viewport.Height)
         );
 
-        if (_font != null)
-        {
-            string title = "PAUSED";
-            Vector2 titleSize = _font.MeasureString(title);
-            spriteBatch.DrawString(
-                _font,
-                title,
-                new Vector2(
-                    GameSettings.ScreenWidth / 2 - titleSize.X / 2,
-                    GameSettings.ScreenHeight / 2 - 150
-                ),
-                Color.White
-            );
+    private void RebuildLayout(int viewportWidth, int viewportHeight)
+    {
+        _layoutWidth = viewportWidth;
+        _layoutHeight = viewportHeight;
+        GameSettings.SetScreenSize(viewportWidth, viewportHeight);
 
-            DrawButton(spriteBatch, _resumeButton, "Resume (P/ESC)");
-            DrawButton(spriteBatch, _mapSelectionButton, "Map Selection");
-        }
-        else
-        {
-            TextureManager.DrawRect(spriteBatch, _resumeButton, Color.DarkSlateGray);
-            TextureManager.DrawRectOutline(spriteBatch, _resumeButton, Color.White, 2);
+        int centerX = viewportWidth / 2 - ButtonWidth / 2;
+        int startY = viewportHeight / 2 - 80;
+        _resumeButton = new Rectangle(centerX, startY, ButtonWidth, ButtonHeight);
+        _mapSelectionButton = new Rectangle(
+            centerX,
+            startY + ButtonHeight + Gap,
+            ButtonWidth,
+            ButtonHeight
+        );
 
-            TextureManager.DrawRect(spriteBatch, _mapSelectionButton, Color.DarkSlateGray);
-            TextureManager.DrawRectOutline(spriteBatch, _mapSelectionButton, Color.White, 2);
-        }
+        _gumView?.ResizeToViewport(viewportWidth, viewportHeight);
+        _gumView?.UpdateLayout(_resumeButton, _mapSelectionButton);
+    }
+
+    private void HandleResumeClicked()
+    {
+        _game.PopScene();
+    }
+
+    private void HandleMapSelectionClicked()
+    {
+        if (_isNavigatingAway)
+            return;
+
+        _isNavigatingAway = true;
+        _game.SetScene(new MapSelectionScene(_game));
     }
 
     private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string label)

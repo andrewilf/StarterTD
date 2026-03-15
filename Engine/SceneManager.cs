@@ -100,7 +100,10 @@ public class SceneManager
         CurrentScene?.Update(gameTime);
     }
 
-    /// <summary>Draw the top scene.</summary>
+    /// <summary>
+    /// Draw scenes from bottom to top so overlay scenes (for example Pause)
+    /// can render on top of their preserved underlying scene.
+    /// </summary>
     public void Draw(SpriteBatch spriteBatch)
     {
         if (_activeTransition != null)
@@ -109,8 +112,12 @@ public class SceneManager
             return;
         }
 
-        if (CurrentScene != null)
-            DrawScene(CurrentScene, spriteBatch);
+        if (_sceneStack.Count == 0)
+            return;
+
+        var scenes = _sceneStack.ToArray(); // top-first
+        for (int i = scenes.Length - 1; i >= 0; i--)
+            DrawScene(scenes[i], spriteBatch);
     }
 
     private void UpdateTransition(GameTime gameTime)

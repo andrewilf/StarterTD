@@ -1,7 +1,7 @@
 # Architecture
 
 ## Scene Stack
-- `SceneManager`: `SetScene()` replaces immediately, `TransitionToScene()` performs preset-driven full-scene swaps, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates/draws; transitions freeze scene updates and composite outgoing/incoming render targets
+- `SceneManager`: `SetScene()` replaces immediately, `TransitionToScene()` performs preset-driven full-scene swaps, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates; draw order is bottom-to-top so overlay scenes can render above preserved underlying scenes. Transitions freeze scene updates and composite outgoing/incoming render targets
 - Scene lifecycle contract: `IScene.LoadContent()` on entry and `IScene.UnloadContent()` when a scene is removed from stack ownership. `SceneManager` unloads popped/replaced scenes and unloads preloaded incoming scenes when transitions are canceled
 - Scenes: `StartMenuScene`, `MapSelectionScene`, `GameplayScene`, `PauseScene`
 - Startup flow: `Game1` enters `StartMenuScene`; `Start` currently switches immediately (`SetScene`) to `MapSelectionScene`
@@ -11,7 +11,7 @@
 - Down: Scene -> managers via `Update()` args
 - Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
 - Rendering: `Game1` clears the backbuffer and draws FPS; `SceneManager` owns scene `SpriteBatch` orchestration plus full-scene transition render targets/compositing; scenes draw into the batches they are given
-- Gum UI runtime: `Game1` owns `GumService.Default` init/update/resize plumbing. Gum controls are scene-owned roots attached/detached in scene load/unload (used by `StartMenuScene`, `MapSelectionScene`, and `GameplayScene`)
+- Gum UI runtime: `Game1` owns `GumService.Default` init/update/resize plumbing. Gum controls are scene-owned roots attached/detached in scene load/unload (used by `StartMenuScene`, `MapSelectionScene`, `GameplayScene`, and `PauseScene`)
 - Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns

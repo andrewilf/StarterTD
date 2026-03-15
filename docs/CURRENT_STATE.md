@@ -8,6 +8,8 @@
 - Start menu buttons are Gum code-only controls (`StartMenuGumView` + `GumMenuButtonFactory`) with shared reusable construction; `Start` transitions to map select, `Settings` remains a no-op, and `Exit` closes the game
 - Map selection interactions are also Gum-backed (`MapSelectionGumView`): `Back` and per-map card selection clicks are handled by Gum controls while existing card preview rendering remains scene-drawn
 - Gameplay screen buttons are now Gum-backed (`GameplayHudGumView`): right-panel tower/ability/debug/time-slow buttons and selected-tower world controls (`Sell`, healing mode, wall placement mode) are code-only Gum controls with scene-owned lifecycle/cleanup. Placement buttons currently share one unified color, and healing-mode toggle uses symbol labels (`+` heal, `>` attack)
+- Pause menu actions are Gum-backed (`PauseMenuGumView`): a full-screen 40% black Gum overlay sits above gameplay/UI roots, with `Resume (P/ESC)` and `Map Selection` buttons drawn above the overlay and scene-owned attach/detach + resize layout updates
+- Scene stack rendering draws bottom-to-top, so paused gameplay remains visible under the pause overlay while only the top scene updates
 - Scene lifecycle now includes `IScene.UnloadContent()`. `SceneManager` unloads scenes on replace/pop and also unloads preloaded incoming scenes if a transition is canceled
 - `InputManager` primes current/previous input snapshots on construction, so held clicks/keys do not replay as fresh presses after scene transitions
 - FPS counter samples rendered `Draw()` cadence over a 0.5s window, so it reports displayed frame rate instead of fixed-step `Update()` ticks
