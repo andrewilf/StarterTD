@@ -40,6 +40,14 @@ public partial class GameplayScene : IScene
     private readonly List<AoEEffect> _aoeEffects = new();
     private readonly List<RailgunEffect> _railgunEffects = new();
     private readonly List<SpikeEffect> _spikeEffects = new();
+    private readonly List<EntranceWarningLaneState> _entranceWarningLanes = new();
+    private readonly Dictionary<string, EntranceWarningLaneState> _entranceWarningBySpawn = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+    private readonly Dictionary<Point, string> _spawnNameByGrid = new();
+    private string _defaultSpawnLaneName = string.Empty;
+    private float _entranceWarningRuntimeSeconds;
+    private float _entranceWarningPulseTime;
     private LaserEffect? _laserEffect;
     private bool _laserSelected;
     private readonly Dictionary<TowerType, float> _placementCooldowns = new()
@@ -98,6 +106,8 @@ public partial class GameplayScene : IScene
     private Vector2 _laserRedirectTargetWorld;
     private Vector2 _laserRedirectStartWorld;
     private const float TowerMoveDragStartThreshold = 6f;
+    private const float EntranceWarningDistancePx = 1f * GameSettings.TileSize;
+    private const float EntranceWarningMinSpeed = 1f;
 
     public GameplayScene(Game1 game, string mapId)
     {
@@ -120,11 +130,14 @@ public partial class GameplayScene : IScene
     public void LoadContent()
     {
         _map = new Map(MapDataRepository.GetMap(_selectedMapId));
+        InitializeSpawnLaneLookup();
+
         _championManager = new ChampionManager();
         _towerManager = new TowerManager(_map, _championManager);
+        List<WaveData> waveDefinitions = WaveLoader.TryLoad(_selectedMapId) ?? FallbackWaves();
         _waveManager = new WaveManager(
             spawnName => _map.ActivePaths.GetValueOrDefault(spawnName) ?? _map.ActivePath,
-            WaveLoader.TryLoad(_selectedMapId) ?? FallbackWaves()
+            waveDefinitions
         );
         _inputManager = new InputManager();
         _uiPanel = new UIPanel(
@@ -145,9 +158,14 @@ public partial class GameplayScene : IScene
         _gameOver = false;
         _gameWon = false;
         _allEnemiesCleared = true;
+        ClearEntranceWarnings();
 
         // Wire up enemy spawning
-        _waveManager.OnEnemySpawned = enemy => _enemies.Add(enemy);
+        _waveManager.OnEnemySpawned = enemy =>
+        {
+            _enemies.Add(enemy);
+            TrackEntranceWarningEnemy(enemy);
+        };
 
         // With movement costs, placement never blocks the path — always valid
         _towerManager.OnValidatePlacement = (gridPos) => true;
@@ -275,6 +293,7 @@ public partial class GameplayScene : IScene
 
         // Check if all enemies are cleared (wave done spawning + no enemies alive)
         _allEnemiesCleared = !_waveManager.WaveInProgress && _enemies.Count == 0;
+        UpdateEntranceWarnings(activeTime);
 
         // Check win condition
         if (_waveManager.CurrentWave >= _waveManager.TotalWaves && _allEnemiesCleared)
@@ -390,6 +409,7 @@ public partial class GameplayScene : IScene
         );
 
         _enemies.Add(enemy);
+        TrackEntranceWarningEnemy(enemy);
     }
 
     /// <summary>

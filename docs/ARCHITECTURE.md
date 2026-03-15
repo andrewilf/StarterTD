@@ -12,6 +12,7 @@
 
 ## GameplayScene Owns
 `Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`, `RailgunEffects`
+- Entrance-warning lane state for spawn indicators (per-lane cooldown timing, tracked enemy near spawn, pulse animation time)
 
 ## Tower System
 - `TowerType` enum: Generic (Gun, Cannon, Walling) + Champion (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) + WallSegment
@@ -104,7 +105,9 @@
 - `Content/Waves/{mapId}.json` via `WaveLoader.TryLoad()`. Fallback: `FallbackWaves()` in `GameplayScene`
 - Schema: `{ waves: [ { wave, spawns: [ { at, spawnPoint, name, health, speed, attackDamage, color } ] } ] }`. `at` = seconds from wave start
 - `WaveManager(Func<string, List<Point>?>, List<WaveData>)`: dequeues by elapsed time; wave ends when list empty
+- `WaveManager` read APIs for warning scheduling: `CurrentWaveElapsed`, `PendingSpawnCount`, `TryGetPendingSpawn(index, out SpawnEntry)`
 - `WaveLoader.ParseColor(string)`: XNA `Color` by name via reflection
+- Entrance warning flow is spawn-driven and scene-owned: `GameplayScene` keeps persistent lane state per map spawn, resolves unknown spawn names to the default map spawn, evaluates nearest pending spawn per lane each frame, and shows pre-spawn warnings only when that lane has been quiet for at least 5 seconds
 
 ## TextureManager
 - `DrawSprite()`: optional `origin` param (default 0.5,0.5 centered)
