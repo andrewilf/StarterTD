@@ -1,246 +1,141 @@
 # Game Development TODO
 
+This file tracks active work only. Completed systems belong in `docs/CURRENT_STATE.md`.
+
 ## Legend
 - **Priority**: P0 (blocker/critical), P1 (high), P2 (medium), P3 (nice-to-have)
 - **Effort**: S (small, single system), M (medium, 2-3 systems), L (large, cross-cutting), XL (multi-session)
-- **Status**: `[ ]` not started, `[~]` in progress, `[x]` done
 
 ---
 
-## 1. Tower Rework & Rebalance
+## 1. Core Gameplay Flow
 
-### 1.1 Rename & Rebalance Towers
-- **Priority**: P1 | **Effort**: S
-- **Current State**: 7 tower types (Gun, Cannon, Walling, ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with placeholder balance values.
-- **Tasks**:
-  - [ ] Decide on new tower names and theme (fantasy, sci-fi, etc.)
-  - [ ] Rebalance stat values (damage, fire rate, range, BaseCooldown, CooldownPenalty, HP, block capacity)
-  - [ ] Update `TowerType` enum, all `*Tower.cs` stat files, `TowerData.GetStats()`, and UI labels
-  - [ ] Verify spawn schedule enemy stats still make sense against new tower numbers
-- **Note**: Coordinate with cooldown system (section 4.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
-
----
-
-## 2. Healing Champion Tower (Drone Support, v1)
-
-### 2.1 ChampionHealing Tower + Drone Lifecycle
-- **Priority**: P2 | **Effort**: M | **Status**: `[x]` done
-- **Concept**: A **champion-only** healing tower that deploys three healing drones. No generic tower variant.
-- **Tasks (Completed)**:
-  - [x] Add `TowerType.ChampionHealing` with champion-only tower stats registration.
-  - [x] Support champion-only variant mapping safely in tower type helpers.
-  - [x] Add `Tower.Heal(int amount)` clamped to max health.
-  - [x] Spawn exactly 3 healing drones for `ChampionHealing`.
-  - [x] Prevent simultaneous duplicate targets across drones (shared claimed-target coordination).
-  - [x] Heal at `+1 HP / 0.1s` with `-1 energy / 0.1s` while attached to a damaged valid tower.
-  - [x] Retarget to nearest valid damaged tower; exclude wall segments and owner healing champion.
-  - [x] Return to owner at zero energy and recharge at `+1 energy / 0.1s` until full.
-  - [x] Redeploy only when fully recharged and a valid unclaimed target exists.
-  - [x] Follow attached moving tower and use uniform all-tile pathing with hardcoded movement speed.
-- **Implemented**: `ChampionHealing` enum/stats/registration, champion-only UI button, `Tower.Heal()`, 3 `HealingDrone` instances with energy/tick/retarget/recharge lifecycle, shared claimed-target set prevents duplicate healing, uniform-cost drone pathing, wall segment and owner exclusion.
-
-### 2.2 ChampionHealing Ultimate + Passive Regen
-- **Priority**: P3 | **Effort**: S | **Status**: `[x]` done
-- **Tasks (Completed)**:
-  - [x] Replace placeholder ChampionHealing ultimate with a 15s gameplay effect.
-  - [x] On cast, instantly refill all healing drones to max energy and force returning/recharging drones to redeploy.
-  - [x] Make drone healing consume no energy while the ultimate is active.
-  - [x] Apply +30% attack speed to all attacking towers (including walling towers) during the ultimate window.
-  - [x] Add a separate white/gold sparkle aura on towers affected by the +30% speed buff.
-  - [x] Add passive self-regeneration for ChampionHealing: `+2 HP` per `1s` tick.
-  - [x] Set ChampionHealing ultimate cooldown to `50s`.
-- **Implemented**: ChampionHealing now provides a full support ultimate (drone refill + free drone healing + global 30% attack speed buff with separate sparkle aura) and passive 1-second self-regeneration.
-
-### 2.3 ChampionHealing Attack Mode Toggle
-- **Priority**: P2 | **Effort**: S | **Status**: `[x]` done
-- **Tasks (Completed)**:
-  - [x] Add in-world mode toggle button under ChampionHealing sell button.
-  - [x] Add icon swap between healing and attack glyphs.
-  - [x] Add 4.0s cooldown between mode switches.
-  - [x] Attack mode uses ChampionHealing stats profile (`Damage 100`, `Range 320`, `FireRate 2.4s`) and Healing mode suppresses direct attacks.
-  - [x] Switching to attack immediately forces drones to return and recharge.
-  - [x] ChampionHealing ult in attack mode now activates a 5-shot powered railgun sequence (shared cooldown with healing-mode ult).
-  - [x] Switching to attack while healing ult is active ends the ult immediately.
-- **Implemented**: ChampionHealing now supports healing/attack mode swapping with world-space controls, shared ability cooldown behavior, and an attack-mode ult railgun sequence (instant beam + splash visuals, ammo indicators, and charged-shot cadence).
-
----
-
-## 3. Auto-Tiled Map Logic
-
-### 3.1 Implement Auto-Tiling System
-- **Priority**: P1 | **Effort**: L
-- **Current State**: Each tile renders as a single flat sprite from `terrain.png` (3 tile types, each a solid 40x40 square). No edge blending or variation.
-- **Goal**: Tiles should automatically select the correct sprite variant based on their neighbors (e.g., a path tile next to a rock tile shows a path-edge sprite, corners connect smoothly).
-- **Tasks**:
-  - [ ] Research auto-tile approaches:
-    - **Wang tiles** (2-edge or 3-corner) — simple, 16 variants per type
-    - **Bitmasking** (4-bit or 8-bit) — standard for 2D games, 16 or 47 variants per type
-    - **Tiled's native terrain system** — can export auto-tile data in `.tmx`, read via `TmxLoader`
-  - [ ] Read Tiled custom properties documentation: https://doc.mapeditor.org/en/stable/manual/custom-properties/
-  - [ ] Decide approach: manual bitmask in code vs. leverage Tiled's terrain brushes + export
-  - [ ] Create or source a tileset with edge/corner variants for each tile type (see section 7 for asset packs)
-  - [ ] Update `TextureManager.DrawTile()` to select sprite variant based on neighbor context
-  - [ ] Handle edge cases: map borders (treat out-of-bounds as a specific type), runtime tile changes (HighGround placement)
-  - [ ] Recalculate auto-tile when tiles change at runtime (e.g., debug HighGround placement)
-  - [ ] Complexity Warning: Auto-tiling touches rendering, map loading, and runtime tile changes. Plan carefully before implementing.
-
-### 3.2 Tiled Custom Properties Integration
-- **Priority**: P2 | **Effort**: M
-- **Reference**: https://doc.mapeditor.org/en/stable/manual/custom-properties/
-- **Goal**: use Tiled's custom properties to embed game-specific data directly in `.tmx` files, reducing hardcoded values.
-- **Tasks**:
-  - [ ] Extend `TmxLoader` to parse `<properties>` on tiles, objects, and layers
-  - [ ] Potential uses:
-    - Tile properties: movement cost overrides, buildable flag, visual variant hints
-    - Object properties: enemy spawn delay, spawn-schedule triggers, scripted events
-    - Layer properties: rendering order, parallax, visibility toggles
-  - [ ] Store parsed properties in `MapData` for runtime access
-
----
-
-## 4. Gameplay Flow & Tower Placement System
-
-### 4.1 Replace Resource System with Cooldown-Based Placement
-- **Priority**: P1 | **Effort**: L | **Status**: `[x]` done
-- **Implemented**: Per-pool cooldown timers replace gold. Each tower type has a `BaseCooldown` + `CooldownPenalty × existing pool count` added on placement. Champions share one pool. Selling refunds `CooldownPenalty`. Pools tick on scaled game time. UI shows "Locked: X.Xs" when blocked.
-- **Remaining**: Balance cooldown values (base, penalty, per-type).
-
-### 4.2 Timed Spawn Schedule
-- **Priority**: P1 | **Effort**: S | **Status**: `[x]` done
-- **Implemented**:
-  - [x] Remove runtime wave progression and manual wave-start input.
-  - [x] Start spawning automatically from a single match timeline.
-  - [x] Add a fixed 10.0s pre-match countdown before the first spawn.
-  - [x] Replace wave HUD text with `First enemy in: X.Xs` before contact and `Enemies Spawned: N/Total` once spawning begins.
-  - [x] Convert map content from `Content/Waves` to `Content/SpawnSchedules` using absolute match-time spawn entries.
-
-### 4.3 Enemy Crowding Mechanic
-- **Priority**: P2 | **Effort**: L
-- **Concept**: Enemies currently overlap freely on the same tile. A crowding mechanic would make dense groups of enemies interact — slowing each other down, spreading out, or taking crowd damage.
-- **Design Options** (pick one or combine):
-  - **Option A — Speed Penalty**: Enemies in the same cell move slower based on occupant count. Simple to implement, creates natural spreading.
-  - **Option B — Collision Avoidance**: Enemies maintain minimum spacing. Requires per-frame position adjustments. More realistic but harder to tune.
-  - **Option C — Sub-Grid Movement**: Increase grid resolution (e.g., 2x2 or 4x4 cells per tile) so enemies have more spatial granularity. Heavy refactor of pathfinding and rendering.
-- **Tasks**:
-  - [ ] Decide on approach (recommend Option A for simplicity, with Option C as a future enhancement)
-  - [ ] If Option A: track enemy count per tile, apply speed multiplier (e.g., 1.0x for 1 enemy, 0.8x for 2, 0.6x for 3+)
-  - [ ] If Option C: refactor `Map` grid to support sub-tile resolution, update pathfinding costs, update rendering coordinates
-  - [ ] Visual feedback: show enemies visually offset within a tile so overlapping is less jarring even without full collision
-  - [ ] Balance: crowding should create interesting tactical situations (funnel enemies into AoE kill zones) without making the game feel sluggish
-- **Interacts With**: Cannon "most grouped" targeting — crowding makes cannons more valuable. Wall towers — walls create natural chokepoints that trigger crowding.
-
-### 4.4 Enemy Entrance Indicator
-- **Priority**: P2 | **Effort**: S | **Status**: `[x]` done
-- **Concept**: Visual indicator at spawn point(s) warning the player when enemies are about to emerge.
-- **Tasks (Completed)**:
-  - [x] Drive warning windows from upcoming per-lane spawns (not wave-start initialization) using configurable distance-to-speed lead time (1 tile default)
-  - [x] Display animated spawn indicator with pulsing red base + exclamation icon in world-space
-  - [x] Keep SFX deferred to sound-system backlog item 8.2
-  - [x] Dismiss per-lane indicator when tracked enemy exits warning distance
-  - [x] Add 5.0s per-lane cooldown so rapid repeated spawns do not repeatedly retrigger warning
-  - [x] Support multi-spawn maps and legacy spawn-name fallback by resolving unknown spawn lanes to the map's default spawn
-- **Implemented**: `GameplayScene` now keeps persistent per-lane warning state keyed by map spawn points, evaluates nearest pending spawn each frame, gates warning visibility behind a 5.0s lane cooldown since last actual spawn, tracks spawned enemies from spawn-tile matches while they remain near spawn, and renders the flashy pulsing `!` marker with burst rays. Spawn schedule timing in `line`, `maze_test_1`, `maze_test_2`, and `maze_test_3` uses burst + quiet windows to validate suppression/reappearance behavior.
-
----
-
-## 5. Spawn Schedule Tooling
-
-### 5.1 Excel and Script Tooling for Spawn Schedule JSON
-- **Priority**: P3 | **Effort**: M
-- **Current State**: Spawn schedule JSON files (`Content/SpawnSchedules/{mapId}.json`) are hand-written with enemy spawn timings, types, and exit lanes.
-- **Goal**: Create a spreadsheet template and conversion script to reduce manual JSON editing.
-- **Tasks**:
-  - [ ] Design Excel/CSV template: columns for enemy type, count, spawn delay, exit lane, notes
-  - [ ] Create Python or C# script to parse Excel → JSON (or CSV → JSON)
-  - [ ] Script generates properly formatted spawn arrays with the correct JSON structure
-  - [ ] Validate output: check for missing fields, invalid enemy types, duplicate spawn names
-  - [ ] Document template usage (how to fill columns, how to run script)
-  - [ ] Optional: Add a UI dialog in-game to load/preview spawn schedules from a spreadsheet (low priority)
-
----
-
-## 6. UI & Stats Improvements
-
-### 6.1 Improved Tower/Enemy Stats Display
+### 1.1 Rebalance Towers for the Cooldown Economy
 - **Priority**: P1 | **Effort**: M
-- **Current State**: Info panel shows basic stats (HP, damage, fire rate, speed) in plain text. No comparison, no DPS calculation, no visual hierarchy.
+- **Current State**: Cooldown-based placement is live, but tower stat values and cooldown tuning are still placeholder-heavy.
 - **Tasks**:
-  - [ ] **DPS Display**: Calculate and show effective DPS (Damage / FireRateInterval) for towers. More meaningful than raw damage + fire rate separately
-  - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
-  - [ ] **Tower Comparison**: When hovering a tower button while another tower is selected, show stat diff (+/- indicators)
-  - [ ] **Kill Counter**: Track and display kills per tower (motivates strategic placement)
-  - [ ] **Match Stats Summary**: After victory/defeat, show brief stats (damage, kills, towers lost)
-  - [ ] **Enemy Info Enrichment**: Show enemy progress (% of path completed), current status effects (slow, etc.)
-  - [ ] **Health Bars on Enemies**: Currently in backlog — implement colored health bars above enemy sprites (green > yellow > red gradient based on % HP)
-  - [ ] **Tooltip System**: Hover over UI elements for explanatory text (especially useful for new players learning tower abilities)
+  - [ ] Rebalance tower DPS, range, survivability, and utility around cooldown-limited placement instead of gold cost
+  - [ ] Tune `BaseCooldown` and `CooldownPenalty` per tower pool
+  - [ ] Verify spawn schedule enemy stats still feel fair against the new numbers
+  - [ ] Rename tower labels only after a visual theme is chosen; do not block balance on naming work
 
-### 6.2 Upcoming Spawn Preview UI
-- **Priority**: P2 | **Effort**: M
-- **Current State**: Listed in backlog but not implemented.
-- **Tasks**:
-  - [ ] Show upcoming burst composition before the next quiet-window spawn cluster (enemy types, count, spawn points)
-  - [ ] Display during the pre-match countdown and later quiet windows between burst clusters
-  - [ ] Format: icon + count per enemy type, color-coded to match enemy colors
-  - [ ] Optional: show total burst HP to help player gauge difficulty
-
----
-
-## 7. Art & Asset Pipeline
-
-### 7.1 Placeholder Tile Pack with Standard Tile Sizes
-- **Priority**: P1 | **Effort**: M
-- **Current State**: 3 solid-color source tiles in `terrain.png` (40x40 source, rendered at 32x32). No visual variety or edge blending.
-- **Goal**: Replace with a cohesive tileset that supports auto-tiling (section 3.1) and looks like an actual game.
-- **Tile Size Note**: Display tile size is already 32. Source tile size is currently 40 via `GameSettings.TerrainSourceTileSize`.
-  - **Option A**: Keep 40x40 source tiles and continue scaling to 32 display
-  - **Option B**: Move to native 32x32 source tiles and update `TerrainSourceTileSize`
-- **Asset Packs to Evaluate**:
-  - [Schwarnhild Basic Tileset (32x32)](https://schwarnhild.itch.io/basic-tileset-and-asset-pack-32x32-pixels) — simple, clean, good for prototyping
-  - [itch.io 32x32 tag](https://itch.io/game-assets/tag-32x32) — browse for TD-appropriate packs
-  - [Kenney Pixel Assets](https://kenney.nl/assets/tag:pixel) — high quality, public domain (CC0), consistent style
-  - [Pixel Frog Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords) — fantasy themed, may include tower/unit sprites
-- **Tasks**:
-  - [ ] Evaluate each pack for: tile variety, auto-tile compatibility (edge/corner variants), tower sprites, enemy sprites, UI elements
-  - [ ] Decide source tile size policy (keep 40 source or move to native 32 source)
-  - [ ] If moving source size: update `GameSettings.TerrainSourceTileSize`, source spritesheets, and Tiled tileset metadata
-  - [ ] Create new `terrain.png` spritesheet (or multiple sheets) with selected assets
-  - [ ] Update `Content.mgcb` if adding new texture files
-  - [ ] Update Tiled tilesets to match new sprites
-
----
-
-## 8. Existing Backlog (Carried Forward)
-
-These items are from `CURRENT_STATE.md` and remain relevant:
-
-### 8.1 Champion Debuff on Death
+### 1.2 Champion Death Debuff
 - **Priority**: P1 | **Effort**: S
-- **Task**: Implement `Tower.UpdateChampionStatus(bool)` — when champion dies, apply stat debuffs to its generic towers (reduced damage, fire rate, or range). When champion revives, restore stats.
+- **Current State**: `ChampionManager` already calls `Tower.UpdateChampionStatus(bool)`, but the base implementation is still a no-op.
+- **Tasks**:
+  - [ ] Decide how strongly generic towers should be penalized when their champion is dead
+  - [ ] Implement per-type debuff behavior and stat restoration on champion return
+  - [ ] Surface the debuff clearly in the tower info UI
 
-### 8.2 Sound System
+### 1.3 Spawn Timeline Preview UI
 - **Priority**: P2 | **Effort**: M
-- **Task**: Implement SFX + BGM manager. Key sounds: tower fire, enemy death, spawn burst start/end, ability activation, UI clicks. BGM: looping track per map or globally.
+- **Current State**: Enemy spawns are driven by `Content/SpawnSchedules/{mapId}.json` and play out as one continuous match timeline. The HUD already shows a prematch countdown and spawned-count summary; the missing piece is a forward-looking preview of incoming pressure.
+- **Tasks**:
+  - [ ] Show upcoming spawns over a short configurable look-ahead window
+  - [ ] Group the preview by lane and enemy type so each lane's next burst is readable at a glance
+  - [ ] Summarize incoming pressure with count, density, or estimated HP pressure instead of a single total-round number
+  - [ ] Use the same pending-spawn data as the entrance warning system so both UI features stay synchronized
 
-### 8.3 Enemy Variants
+---
+
+## 2. Combat Readability & Feedback
+
+### 2.1 Improve Tower and Enemy Stats Display
+- **Priority**: P1 | **Effort**: M
+- **Current State**: The info panel works, and fire-rate display already reflects temporary attack-speed buffs. The missing work is readability, comparison, and summary.
+- **Tasks**:
+  - [ ] Add DPS display for towers
+  - [ ] Add normalized stat bars for HP, range, and damage
+  - [ ] Show stat deltas when hovering a placement button while a tower is selected
+  - [ ] Show enemy progress and active status effects more clearly
+  - [ ] Add concise tooltips for abilities and special UI states
+  - [ ] Track per-tower kill counts
+  - [ ] Add a short post-match summary (damage dealt, kills, towers lost)
+
+### 2.2 Enemy Health Bars
 - **Priority**: P2 | **Effort**: S
-- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low damage). Can be implemented as named presets in spawn schedule JSON rather than code archetypes.
+- **Tasks**:
+  - [ ] Draw simple HP bars above enemy sprites
+  - [ ] Use a green -> yellow -> red gradient based on remaining health
+  - [ ] Keep the presentation readable in dense enemy bursts without adding numeric clutter
 
-## 9. Suggested Implementation Order
+### 2.3 Sound System
+- **Priority**: P2 | **Effort**: M
+- **Tasks**:
+  - [ ] Add a central SFX/BGM manager
+  - [ ] Hook up key gameplay cues: tower fire, enemy death, spawn burst start/end, abilities, UI clicks
+  - [ ] Add a looping background track strategy (per map or global)
 
-A recommended sequence that respects dependencies and delivers playable value early:
+### 2.4 Enemy Crowding
+- **Priority**: P3 | **Effort**: L
+- **Current State**: Enemies can overlap freely. This is a design enhancement, not a blocker.
+- **Tasks**:
+  - [ ] Start with a simple per-tile speed penalty model before considering sub-grid movement
+  - [ ] Add lightweight visual offsetting so stacked enemies are easier to read
+  - [ ] Rebalance cannon grouping logic and chokepoint interactions after the mechanic lands
 
-| Phase | Items | Rationale |
-|-------|-------|-----------|
-| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, ~~4.2 (timed spawn schedule)~~ | ~~Gold removed~~ (done), spawn schedule flow done |
-| **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 8.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
-| **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~, ~~2.3 (attack mode toggle)~~ | Done — hybrid healing/attack champion with drones, support ult, passive regen, and mode cooldown |
-| **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 7.1 (tile pack), 3.1 (auto-tiling), 6.1 (UI stats) | Game looks, feels, and communicates better |
-| **Phase 5: Polish & Completeness** | 5.1 (spawn schedule JSON tooling), 3.2 (Tiled properties), 8.2 (sound), 4.3 (crowding), 6.2 (upcoming spawn preview), 8.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
+---
 
-## Open Questions & Design Notes
+## 3. Content Pipeline & Authoring
 
-1. **Tower theme/names**: Fantasy (Archer/Catapult), Military (Turret/Mortar), Sci-fi (Laser/Railgun)? This affects art direction.
-2. **Cooldown system tuning**: Values live in each `*TowerStats.cs` — tune `BaseCooldown` and `CooldownPenalty` per type. WallSegment intentionally zero.
-3. **Source tile size policy**: Keep 40x40 source art with scaling, or move to native 32x32 source assets and update `TerrainSourceTileSize`?
-7. **Crowding approach**: Option A (speed penalty, simple) vs Option C (sub-grid, major refactor)? Recommend A first.
-8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense enemy bursts.
+### 3.1 Replace Placeholder Terrain Art
+- **Priority**: P1 | **Effort**: M
+- **Current State**: The game already uses native `32x32` terrain source tiles; the remaining gap is visual quality and tileset coverage.
+- **Tasks**:
+  - [ ] Choose a cohesive terrain set with edge/corner support
+  - [ ] Replace the placeholder terrain sheet, or split it into multiple sheets if that reads better
+  - [ ] Update `Content.mgcb` and Tiled tileset metadata as needed
+  - [ ] Finalize tower naming/theme only if the chosen art direction makes a rename worthwhile
+
+### 3.2 Add Auto-Tiling
+- **Priority**: P1 | **Effort**: L
+- **Depends On**: 3.1 terrain art with usable edge/corner variants
+- **Tasks**:
+  - [ ] Pick one approach: 4/8-bit bitmasking, Wang tiles, or Tiled terrain metadata
+  - [ ] Select tile variants based on neighbor context at draw/load time
+  - [ ] Handle map borders and runtime tile changes such as debug HighGround placement
+  - [ ] Cache or recompute tile variants without adding avoidable per-frame work
+
+### 3.3 Expand Tiled Custom Property Support
+- **Priority**: P2 | **Effort**: M
+- **Current State**: `TmxLoader` already reads the map-level `name` property. The next step is broader property support, not a greenfield parser.
+- **Tasks**:
+  - [ ] Parse custom properties on tiles, objects, and layers
+  - [ ] Store parsed values in `MapData` or related map-loading structures
+  - [ ] Use properties for buildability overrides, movement-cost hints, spawn metadata, or rendering hints
+
+### 3.4 Enemy Variants / Presets
+- **Priority**: P2 | **Effort**: S
+- **Tasks**:
+  - [ ] Define reusable archetype presets such as Fast, Tank, and Swarm
+  - [ ] Decide whether presets live in spawn schedule authoring, loader expansion, or both
+  - [ ] Keep inline per-spawn overrides available for one-off encounters
+
+### 3.5 Spawn Schedule JSON Authoring Tooling
+- **Priority**: P3 | **Effort**: M
+- **Depends On**: 3.4 stable enemy schema
+- **Current State**: `Content/SpawnSchedules/{mapId}.json` is still hand-authored.
+- **Tasks**:
+  - [ ] Define a spreadsheet or CSV template for spawn schedule authoring
+  - [ ] Build a conversion/validation script
+  - [ ] Validate enemy types, spawn names, and required fields before emitting JSON
+  - [ ] Document the workflow briefly once the schema settles
+
+---
+
+## Suggested Implementation Order
+
+1. Rebalance towers and finish the champion-death penalty so combat rules are coherent.
+2. Add a spawn-timeline preview so players can read upcoming pressure in the continuous spawn flow.
+3. Improve combat readability with stats, enemy health bars, and sound feedback.
+4. Replace placeholder terrain art, then add auto-tiling against the chosen tileset.
+5. Expand Tiled metadata and spawn schedule tooling only after the content schema is stable.
+6. Revisit crowding last, because it changes encounter balance and cannon value significantly.
+
+## Open Questions
+
+1. Should tower renaming wait for the art pass, or do we want a theme locked before balance tuning?
+2. How punishing should champion-death debuffs be before the game feels snowbally?
+3. In the continuous spawn flow, how far ahead should the preview look: next few enemies, next burst window, or the next several seconds?
+4. Do we want auto-tiling driven primarily by code bitmasks or Tiled-authored metadata?
+5. Should enemy presets be authoring sugar only, or part of the runtime spawn schedule schema?

@@ -15,14 +15,14 @@ namespace StarterTD.Scenes;
 ///   1. World-space — translated by _mapOffset so the map renders centered on screen.
 ///   2. Screen-space — no transform, used for the UI panel and fullscreen overlays.
 ///
-/// Game1.Draw() opens a batch before calling this, so we End() it first,
-/// then re-open a screen-space batch at the end so Game1's FPS counter draws correctly.
+/// SceneManager opens a screen-space batch before calling this, so we End() it first,
+/// then re-open a screen-space batch at the end so SceneManager can close it consistently.
 /// </summary>
 public partial class GameplayScene
 {
     public void Draw(SpriteBatch spriteBatch)
     {
-        // --- Close Game1's default batch so we can open our own with a matrix ---
+        // --- Close SceneManager's default batch so we can open our own with a matrix ---
         spriteBatch.End();
 
         // === World-space pass (map-local coords translated to screen center) ===
@@ -83,7 +83,7 @@ public partial class GameplayScene
         spriteBatch.End();
 
         // === Screen-space pass (UI panel, overlays — no matrix) ===
-        // Left open so Game1.Draw() can append the FPS counter and call End().
+        // Left open so SceneManager can close the batch after the scene finishes drawing.
         spriteBatch.Begin(
             SpriteSortMode.Deferred,
             BlendState.AlphaBlend,

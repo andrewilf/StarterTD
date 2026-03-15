@@ -70,6 +70,17 @@ public class Game1 : Game
     }
 
     /// <summary>
+    /// Replace the current scene using a timed transition.
+    /// </summary>
+    public void TransitionToScene(
+        IScene scene,
+        SceneTransitionPreset preset = SceneTransitionPreset.MenuForwardSlideFade
+    )
+    {
+        _sceneManager.TransitionToScene(scene, preset);
+    }
+
+    /// <summary>
     /// Push a scene on top (e.g., pause menu overlay). Preserves underlying scene.
     /// </summary>
     public void PushScene(IScene scene)
@@ -102,9 +113,9 @@ public class Game1 : Game
             // Font not available - FPS will use fallback rendering
         }
 
-        // Set up the scene manager and load the map selection scene
-        _sceneManager = new SceneManager();
-        _sceneManager.SetScene(new MapSelectionScene(this));
+        // Set up the scene manager and load the start menu scene.
+        _sceneManager = new SceneManager(GraphicsDevice);
+        _sceneManager.SetScene(new StartMenuScene(this));
     }
 
     protected override void Update(GameTime gameTime)
@@ -144,6 +155,8 @@ public class Game1 : Game
         UpdateFPS(gameTime);
         GraphicsDevice.Clear(Color.Black);
 
+        _sceneManager.Draw(_spriteBatch);
+
         _spriteBatch.Begin(
             SpriteSortMode.Deferred,
             BlendState.AlphaBlend,
@@ -153,8 +166,6 @@ public class Game1 : Game
             null,
             null
         );
-
-        _sceneManager.Draw(_spriteBatch);
 
         // Draw FPS counter in top-left corner
         DrawFPSCounter(_spriteBatch);

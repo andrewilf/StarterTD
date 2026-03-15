@@ -19,17 +19,16 @@ public class MapSelectionScene : IScene
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
     private SpriteFont? _font;
-    private MouseState _previousMouse = new();
 
     private List<MapData> _availableMaps = [];
     private List<RectangleF> _cardBounds = [];
-    private RectangleF _exitButtonBounds;
+    private RectangleF _backButtonBounds;
     private int _layoutWidth;
     private int _layoutHeight;
 
     // Track which card is currently hovered (-1 = none)
     private int _hoveredCardIndex = -1;
-    private bool _isExitHovered;
+    private bool _isBackHovered;
 
     private const int CardsPerRow = 3;
     private const int CardWidth = 280;
@@ -37,9 +36,9 @@ public class MapSelectionScene : IScene
     private const int VerticalGap = 30;
     private const int TitleAreaHeight = 120; // space reserved at top for title
     private const int ScreenPadding = 30; // bottom margin
-    private const int ExitButtonWidth = 150;
-    private const int ExitButtonHeight = 52;
-    private const int ExitButtonMargin = 24;
+    private const int BackButtonWidth = 150;
+    private const int BackButtonHeight = 52;
+    private const int BackButtonMargin = 24;
 
     public MapSelectionScene(Game1 game)
     {
@@ -62,8 +61,6 @@ public class MapSelectionScene : IScene
         {
             // Font not available
         }
-
-        _previousMouse = Mouse.GetState();
     }
 
     public void Update(GameTime gameTime)
@@ -74,7 +71,7 @@ public class MapSelectionScene : IScene
         Vector2 mousePos = _inputManager.MousePosition.ToVector2();
 
         _hoveredCardIndex = -1;
-        _isExitHovered = _exitButtonBounds.Contains(mousePos);
+        _isBackHovered = _backButtonBounds.Contains(mousePos);
         for (int i = 0; i < _cardBounds.Count; i++)
         {
             if (_cardBounds[i].Contains(mousePos))
@@ -84,15 +81,17 @@ public class MapSelectionScene : IScene
             }
         }
 
-        MouseState currentMouse = Mouse.GetState();
-        if (
-            currentMouse.LeftButton == ButtonState.Pressed
-            && _previousMouse.LeftButton == ButtonState.Released
-        )
+        if (_inputManager.IsKeyPressed(Keys.Escape))
         {
-            if (_isExitHovered)
+            ReturnToStartMenu();
+            return;
+        }
+
+        if (_inputManager.IsLeftClick())
+        {
+            if (_isBackHovered)
             {
-                _game.Exit();
+                ReturnToStartMenu();
             }
             else if (_hoveredCardIndex >= 0)
             {
@@ -101,8 +100,6 @@ public class MapSelectionScene : IScene
                 _game.SetScene(gameplayScene);
             }
         }
-
-        _previousMouse = currentMouse;
     }
 
     private void HandleViewportResize()
@@ -113,6 +110,14 @@ public class MapSelectionScene : IScene
             return;
 
         RebuildLayout(viewportWidth, viewportHeight);
+    }
+
+    private void ReturnToStartMenu()
+    {
+        _game.TransitionToScene(
+            new StartMenuScene(_game),
+            SceneTransitionPreset.MenuBackwardSlideFade
+        );
     }
 
     private (int width, int height) GetViewportSize() =>
@@ -133,7 +138,7 @@ public class MapSelectionScene : IScene
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
 
-        DrawExitButton(spriteBatch);
+        DrawBackButton(spriteBatch);
 
         for (int i = 0; i < _availableMaps.Count; i++)
         {
@@ -274,19 +279,19 @@ public class MapSelectionScene : IScene
             _cardBounds.Add(new RectangleF(x, y, CardWidth, cardHeight));
         }
 
-        _exitButtonBounds = new RectangleF(
-            viewportWidth - ExitButtonWidth - ExitButtonMargin,
-            ExitButtonMargin,
-            ExitButtonWidth,
-            ExitButtonHeight
+        _backButtonBounds = new RectangleF(
+            viewportWidth - BackButtonWidth - BackButtonMargin,
+            BackButtonMargin,
+            BackButtonWidth,
+            BackButtonHeight
         );
     }
 
-    private void DrawExitButton(SpriteBatch spriteBatch)
+    private void DrawBackButton(SpriteBatch spriteBatch)
     {
-        Color fill = _isExitHovered ? Color.IndianRed : Color.Maroon;
-        Color border = _isExitHovered ? Color.White : Color.Salmon;
-        Rectangle rect = _exitButtonBounds.ToRectangle();
+        Color fill = _isBackHovered ? Color.SlateGray : Color.DarkSlateGray;
+        Color border = _isBackHovered ? Color.White : Color.LightGray;
+        Rectangle rect = _backButtonBounds.ToRectangle();
 
         TextureManager.DrawRect(spriteBatch, rect, fill);
         TextureManager.DrawRectOutline(spriteBatch, rect, border, 3);
@@ -294,11 +299,11 @@ public class MapSelectionScene : IScene
         if (_font == null)
             return;
 
-        string label = "Exit";
+        string label = "Back";
         Vector2 size = _font.MeasureString(label);
         Vector2 pos = new Vector2(
-            _exitButtonBounds.X + (_exitButtonBounds.Width - size.X) / 2f,
-            _exitButtonBounds.Y + (_exitButtonBounds.Height - size.Y) / 2f
+            _backButtonBounds.X + (_backButtonBounds.Width - size.X) / 2f,
+            _backButtonBounds.Y + (_backButtonBounds.Height - size.Y) / 2f
         );
         spriteBatch.DrawString(_font, label, pos + new Vector2(1, 1), Color.Black);
         spriteBatch.DrawString(_font, label, pos, Color.White);
