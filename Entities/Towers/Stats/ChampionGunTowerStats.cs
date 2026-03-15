@@ -7,8 +7,8 @@ public static class ChampionGunTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Champion Gun",
-        Range: 150f,
-        Damage: 5f,
+        Range: 100f,
+        Damage: 200f,
         FireRate: 0.4f,
         BaseCooldown: 10f,
         CooldownPenalty: 3f,

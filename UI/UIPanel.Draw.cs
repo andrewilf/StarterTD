@@ -17,9 +17,7 @@ public partial class UIPanel
         SpriteBatch spriteBatch,
         IReadOnlyDictionary<TowerType, float> cooldowns,
         int lives,
-        int wave,
-        int totalWaves,
-        bool waveInProgress,
+        string spawnStatusText,
         float timeSlowBankFraction,
         Tower? selectedTower = null,
         IEnemy? selectedEnemy = null
@@ -77,12 +75,7 @@ public partial class UIPanel
                 new Vector2(_x + 10, 10),
                 Color.LimeGreen
             );
-            spriteBatch.DrawString(
-                _font,
-                $"Wave: {wave}/{totalWaves}",
-                new Vector2(_x + 10, 60),
-                Color.White
-            );
+            spriteBatch.DrawString(_font, spawnStatusText, new Vector2(_x + 10, 60), Color.White);
 
             // Debug section
             spriteBatch.DrawString(
@@ -122,22 +115,6 @@ public partial class UIPanel
             );
 
             DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
-
-            // Start Wave button
-            Color waveBtnColor = waveInProgress ? Color.Gray : Color.Green;
-            TextureManager.DrawRect(spriteBatch, _startWaveButton, waveBtnColor);
-            TextureManager.DrawRectOutline(spriteBatch, _startWaveButton, Color.White, 2);
-            string waveText = waveInProgress ? "Wave Active..." : "Start Wave";
-            Vector2 textSize = _font.MeasureString(waveText);
-            spriteBatch.DrawString(
-                _font,
-                waveText,
-                new Vector2(
-                    _startWaveButton.X + (_startWaveButton.Width - textSize.X) / 2,
-                    _startWaveButton.Y + (_startWaveButton.Height - textSize.Y) / 2
-                ),
-                Color.White
-            );
         }
         else
         {
@@ -175,10 +152,9 @@ public partial class UIPanel
 
             TextureManager.DrawRect(
                 spriteBatch,
-                _startWaveButton,
-                waveInProgress ? Color.Gray : Color.Green
+                new Rectangle(_x + 10, 60, _width - 20, 24),
+                Color.Black
             );
-            TextureManager.DrawRectOutline(spriteBatch, _startWaveButton, Color.White, 2);
         }
 
         if (selectedTower != null)
@@ -424,7 +400,7 @@ public partial class UIPanel
 
     /// <summary>
     /// Draws a semi-transparent info panel showing stats for the selected tower.
-    /// Positioned above the Start Wave button.
+    /// Positioned above the bottom time-slow controls.
     /// </summary>
     private void DrawTowerInfoPanel(SpriteBatch spriteBatch, Tower tower)
     {
@@ -437,7 +413,7 @@ public partial class UIPanel
         int numLines = 6; // name + separator + HP + block + damage + fire rate
         int panelHeight = padding * 2 + numLines * lineHeight;
         int panelX = _x + 6;
-        int panelY = _startWaveButton.Y - panelHeight - 10;
+        int panelY = _timeSlowButton.Y - panelHeight - 10;
 
         TextureManager.DrawRect(
             spriteBatch,
@@ -497,7 +473,7 @@ public partial class UIPanel
         int numLines = 5; // name + separator + health + speed + attack damage
         int panelHeight = padding * 2 + numLines * lineHeight;
         int panelX = _x + 6;
-        int panelY = _startWaveButton.Y - panelHeight - 10;
+        int panelY = _timeSlowButton.Y - panelHeight - 10;
 
         TextureManager.DrawRect(
             spriteBatch,

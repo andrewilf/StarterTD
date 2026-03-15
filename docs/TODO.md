@@ -16,7 +16,7 @@
   - [ ] Decide on new tower names and theme (fantasy, sci-fi, etc.)
   - [ ] Rebalance stat values (damage, fire rate, range, BaseCooldown, CooldownPenalty, HP, block capacity)
   - [ ] Update `TowerType` enum, all `*Tower.cs` stat files, `TowerData.GetStats()`, and UI labels
-  - [ ] Verify wave JSON enemy stats still make sense against new tower numbers
+  - [ ] Verify spawn schedule enemy stats still make sense against new tower numbers
 - **Note**: Coordinate with cooldown system (section 4.1) — towers now free to place, so balance becomes purely DPS/cost-effectiveness.
 
 ---
@@ -92,7 +92,7 @@
   - [ ] Extend `TmxLoader` to parse `<properties>` on tiles, objects, and layers
   - [ ] Potential uses:
     - Tile properties: movement cost overrides, buildable flag, visual variant hints
-    - Object properties: enemy spawn delay, wave triggers, scripted events
+    - Object properties: enemy spawn delay, spawn-schedule triggers, scripted events
     - Layer properties: rendering order, parallax, visibility toggles
   - [ ] Store parsed properties in `MapData` for runtime access
 
@@ -105,18 +105,14 @@
 - **Implemented**: Per-pool cooldown timers replace gold. Each tower type has a `BaseCooldown` + `CooldownPenalty × existing pool count` added on placement. Champions share one pool. Selling refunds `CooldownPenalty`. Pools tick on scaled game time. UI shows "Locked: X.Xs" when blocked.
 - **Remaining**: Balance cooldown values (base, penalty, per-type).
 
-### 4.2 Auto-Start Waves After First Manual Start
-- **Priority**: P1 | **Effort**: S
-- **Current State**: Each wave requires a manual "Start Wave" button click.
-- **New Behavior**:
-  1. Wave 1: manual start (player needs setup time)
-  2. Waves 2+: auto-start on a timer after previous wave ends (e.g., 10-15 second intermission countdown)
-  3. Early invoke: after the intermission timer is **50% elapsed**, player can click "Start Wave" to skip the remaining wait
-  4. Display countdown timer in UI (e.g., "Next wave in: 8s")
-- **Tasks**:
-  - [ ] Add intermission timer to `WaveManager` (starts after wave completion, triggers next wave on expiry)
-  - [ ] Add early-start logic: `WaveManager.CanStartEarly()` returns true if timer > 50% elapsed
-  - [ ] Update `UIPanel` to show countdown text and disable/enable "Start Wave" button accordingly
+### 4.2 Timed Spawn Schedule
+- **Priority**: P1 | **Effort**: S | **Status**: `[x]` done
+- **Implemented**:
+  - [x] Remove runtime wave progression and manual wave-start input.
+  - [x] Start spawning automatically from a single match timeline.
+  - [x] Add a fixed 10.0s pre-match countdown before the first spawn.
+  - [x] Replace wave HUD text with `First enemy in: X.Xs` before contact and `Enemies Spawned: N/Total` once spawning begins.
+  - [x] Convert map content from `Content/Waves` to `Content/SpawnSchedules` using absolute match-time spawn entries.
 
 ### 4.3 Enemy Crowding Mechanic
 - **Priority**: P2 | **Effort**: L
@@ -142,24 +138,24 @@
   - [x] Keep SFX deferred to sound-system backlog item 8.2
   - [x] Dismiss per-lane indicator when tracked enemy exits warning distance
   - [x] Add 5.0s per-lane cooldown so rapid repeated spawns do not repeatedly retrigger warning
-  - [x] Support multi-spawn maps and legacy spawn-name fallback by resolving unknown wave lanes to the map's default spawn
-- **Implemented**: `GameplayScene` now keeps persistent per-lane warning state keyed by map spawn points, evaluates nearest pending spawn each frame, gates warning visibility behind a 5.0s lane cooldown since last actual spawn, tracks spawned enemies from spawn-tile matches while they remain near spawn, and renders the flashy pulsing `!` marker with burst rays. Wave timing in `line`, `maze_test_1`, `maze_test_2`, and `maze_test_3` was retuned into burst + quiet windows to validate suppression/reappearance behavior.
+  - [x] Support multi-spawn maps and legacy spawn-name fallback by resolving unknown spawn lanes to the map's default spawn
+- **Implemented**: `GameplayScene` now keeps persistent per-lane warning state keyed by map spawn points, evaluates nearest pending spawn each frame, gates warning visibility behind a 5.0s lane cooldown since last actual spawn, tracks spawned enemies from spawn-tile matches while they remain near spawn, and renders the flashy pulsing `!` marker with burst rays. Spawn schedule timing in `line`, `maze_test_1`, `maze_test_2`, and `maze_test_3` uses burst + quiet windows to validate suppression/reappearance behavior.
 
 ---
 
-## 5. Wave Spawning & JSON Tooling
+## 5. Spawn Schedule Tooling
 
-### 5.1 Excel and Script Tooling for Spawn Wave JSON
+### 5.1 Excel and Script Tooling for Spawn Schedule JSON
 - **Priority**: P3 | **Effort**: M
-- **Current State**: Wave JSON files (`Content/Waves/{mapId}.json`) are hand-written with enemy spawn timings, types, and exit lanes.
+- **Current State**: Spawn schedule JSON files (`Content/SpawnSchedules/{mapId}.json`) are hand-written with enemy spawn timings, types, and exit lanes.
 - **Goal**: Create a spreadsheet template and conversion script to reduce manual JSON editing.
 - **Tasks**:
   - [ ] Design Excel/CSV template: columns for enemy type, count, spawn delay, exit lane, notes
   - [ ] Create Python or C# script to parse Excel → JSON (or CSV → JSON)
-  - [ ] Script generates properly formatted wave array with correct JSON structure
+  - [ ] Script generates properly formatted spawn arrays with the correct JSON structure
   - [ ] Validate output: check for missing fields, invalid enemy types, duplicate spawn names
   - [ ] Document template usage (how to fill columns, how to run script)
-  - [ ] Optional: Add a UI dialog in-game to load/preview waves from a spreadsheet (low priority)
+  - [ ] Optional: Add a UI dialog in-game to load/preview spawn schedules from a spreadsheet (low priority)
 
 ---
 
@@ -173,19 +169,19 @@
   - [ ] **Stat Bars**: Replace plain text numbers with visual bars for HP, range, damage (normalized to max across all tower types for at-a-glance comparison)
   - [ ] **Tower Comparison**: When hovering a tower button while another tower is selected, show stat diff (+/- indicators)
   - [ ] **Kill Counter**: Track and display kills per tower (motivates strategic placement)
-  - [ ] **Wave Stats Summary**: After each wave, show brief stats (damage, kills, towers lost)
+  - [ ] **Match Stats Summary**: After victory/defeat, show brief stats (damage, kills, towers lost)
   - [ ] **Enemy Info Enrichment**: Show enemy progress (% of path completed), current status effects (slow, etc.)
   - [ ] **Health Bars on Enemies**: Currently in backlog — implement colored health bars above enemy sprites (green > yellow > red gradient based on % HP)
   - [ ] **Tooltip System**: Hover over UI elements for explanatory text (especially useful for new players learning tower abilities)
 
-### 6.2 Wave Preview UI
+### 6.2 Upcoming Spawn Preview UI
 - **Priority**: P2 | **Effort**: M
 - **Current State**: Listed in backlog but not implemented.
 - **Tasks**:
-  - [ ] Show upcoming wave composition before wave starts (enemy types, count, spawn points)
-  - [ ] Display during intermission countdown (section 4.2)
+  - [ ] Show upcoming burst composition before the next quiet-window spawn cluster (enemy types, count, spawn points)
+  - [ ] Display during the pre-match countdown and later quiet windows between burst clusters
   - [ ] Format: icon + count per enemy type, color-coded to match enemy colors
-  - [ ] Optional: show total wave HP to help player gauge difficulty
+  - [ ] Optional: show total burst HP to help player gauge difficulty
 
 ---
 
@@ -223,11 +219,11 @@ These items are from `CURRENT_STATE.md` and remain relevant:
 
 ### 8.2 Sound System
 - **Priority**: P2 | **Effort**: M
-- **Task**: Implement SFX + BGM manager. Key sounds: tower fire, enemy death, wave start/end, ability activation, UI clicks. BGM: looping track per map or globally.
+- **Task**: Implement SFX + BGM manager. Key sounds: tower fire, enemy death, spawn burst start/end, ability activation, UI clicks. BGM: looping track per map or globally.
 
 ### 8.3 Enemy Variants
 - **Priority**: P2 | **Effort**: S
-- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low damage). Can be implemented as named presets in wave JSON rather than code archetypes.
+- **Task**: Define archetype presets (Fast: low HP/high speed, Tank: high HP/low speed, Swarm: very low HP/very fast/low damage). Can be implemented as named presets in spawn schedule JSON rather than code archetypes.
 
 ## 9. Suggested Implementation Order
 
@@ -235,11 +231,11 @@ A recommended sequence that respects dependencies and delivers playable value ea
 
 | Phase | Items | Rationale |
 |-------|-------|-----------|
-| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, 4.2 (auto-waves) | ~~Gold removed~~ (done), auto-waves |
+| **Phase 1: Foundation** | ~~4.1 (cooldown placement system)~~, ~~4.2 (timed spawn schedule)~~ | ~~Gold removed~~ (done), spawn schedule flow done |
 | **Phase 2: Combat & Tower Identity** | 1.1 (rename/rebalance), 8.1 (champion debuff) | Towers feel distinct and strategic with new cooldown system |
 | **Phase 3: Healing Tower** | ~~2.1 (ChampionHealing + drones)~~, ~~2.2 (support ultimate + passive regen)~~, ~~2.3 (attack mode toggle)~~ | Done — hybrid healing/attack champion with drones, support ult, passive regen, and mode cooldown |
 | **Phase 4: Visual & UX Upgrade** | 4.4 (entrance indicator), 7.1 (tile pack), 3.1 (auto-tiling), 6.1 (UI stats) | Game looks, feels, and communicates better |
-| **Phase 5: Polish & Completeness** | 5.1 (wave JSON tooling), 3.2 (Tiled properties), 8.2 (sound), 4.3 (crowding), 6.2 (wave preview), 8.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
+| **Phase 5: Polish & Completeness** | 5.1 (spawn schedule JSON tooling), 3.2 (Tiled properties), 8.2 (sound), 4.3 (crowding), 6.2 (upcoming spawn preview), 8.3 (enemy variants) | Tooling, mechanics deepening, and completeness |
 
 ## Open Questions & Design Notes
 
@@ -247,4 +243,4 @@ A recommended sequence that respects dependencies and delivers playable value ea
 2. **Cooldown system tuning**: Values live in each `*TowerStats.cs` — tune `BaseCooldown` and `CooldownPenalty` per type. WallSegment intentionally zero.
 3. **Source tile size policy**: Keep 40x40 source art with scaling, or move to native 32x32 source assets and update `TerrainSourceTileSize`?
 7. **Crowding approach**: Option A (speed penalty, simple) vs Option C (sub-grid, major refactor)? Recommend A first.
-8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense waves.
+8. **Enemy health bars**: Simple bar above sprite, or also show numerical HP? Bars-only is cleaner for dense enemy bursts.

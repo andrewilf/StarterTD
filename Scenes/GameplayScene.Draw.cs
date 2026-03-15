@@ -94,14 +94,11 @@ public partial class GameplayScene
             null
         );
 
-        bool waveActive = _waveManager.WaveInProgress || !_allEnemiesCleared;
         _uiPanel.Draw(
             spriteBatch,
             _placementCooldowns,
             _lives,
-            _waveManager.CurrentWave,
-            _waveManager.TotalWaves,
-            waveActive,
+            GetSpawnStatusText(),
             _timeSlowBank / TimeSlowMaxBank,
             _towerManager.SelectedTower,
             _selectedEnemy
@@ -109,6 +106,23 @@ public partial class GameplayScene
 
         if (_gameOver || _gameWon)
             DrawGameOverOverlay(spriteBatch, _uiPanel.GetFont());
+    }
+
+    private string GetSpawnStatusText()
+    {
+        if (
+            _spawnScheduleManager.SpawnedCount == 0
+            && _spawnScheduleManager.TryGetPendingSpawn(0, out SpawnEntry nextSpawn)
+        )
+        {
+            float secondsUntilSpawn = Math.Max(
+                0f,
+                nextSpawn.At - _spawnScheduleManager.ElapsedSeconds
+            );
+            return $"First enemy in: {secondsUntilSpawn:F1}s";
+        }
+
+        return $"Enemies Spawned: {_spawnScheduleManager.SpawnedCount}/{_spawnScheduleManager.TotalSpawnCount}";
     }
 
     private void DrawHoverIndicator(SpriteBatch spriteBatch)
@@ -220,14 +234,14 @@ public partial class GameplayScene
             string[] stats = _gameWon
                 ? new[]
                 {
-                    $"All {_waveManager.TotalWaves} waves completed!",
+                    "Schedule Complete!",
+                    $"Enemies Spawned: {_spawnScheduleManager.SpawnedCount}/{_spawnScheduleManager.TotalSpawnCount}",
                     $"Lives Remaining: {_lives}",
-                    "",
                     "Press R to return to map selection",
                 }
                 : new[]
                 {
-                    $"Wave Reached: {_waveManager.CurrentWave}/{_waveManager.TotalWaves}",
+                    $"Enemies Spawned: {_spawnScheduleManager.SpawnedCount}/{_spawnScheduleManager.TotalSpawnCount}",
                     $"Lives: {_lives}",
                     "",
                     "Press R to return to map selection",

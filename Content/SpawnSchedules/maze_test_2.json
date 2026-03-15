@@ -1,0 +1,220 @@
+{
+  "spawns": [
+    {
+      "at": 10.0,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 10.35,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 10.8,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 11.15,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 11.6,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 11.95,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 21.95,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 21.6,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 22.75,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 22.4,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 23.55,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 23.2,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 28.75,
+      "spawnPoint": "spawn_b",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Cyan"
+    },
+    {
+      "at": 28.4,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 38.4,
+      "spawnPoint": "spawn_a",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 38.75,
+      "spawnPoint": "spawn_b",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Yellow"
+    },
+    {
+      "at": 39.55,
+      "spawnPoint": "spawn_b",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Yellow"
+    },
+    {
+      "at": 39.2,
+      "spawnPoint": "spawn_a",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 40.35,
+      "spawnPoint": "spawn_b",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Yellow"
+    },
+    {
+      "at": 40.0,
+      "spawnPoint": "spawn_a",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 45.55,
+      "spawnPoint": "spawn_b",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Yellow"
+    },
+    {
+      "at": 45.2,
+      "spawnPoint": "spawn_a",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 46.35,
+      "spawnPoint": "spawn_b",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Yellow"
+    },
+    {
+      "at": 46.0,
+      "spawnPoint": "spawn_a",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    }
+  ]
+}

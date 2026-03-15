@@ -94,12 +94,12 @@ public partial class GameplayScene
         for (int i = 0; i < _entranceWarningLanes.Count; i++)
             _entranceWarningLanes[i].ResetPendingSpawn();
 
-        if (!_waveManager.WaveInProgress)
+        if (_spawnScheduleManager.PendingSpawnCount == 0)
             return;
 
-        for (int i = 0; i < _waveManager.PendingSpawnCount; i++)
+        for (int i = 0; i < _spawnScheduleManager.PendingSpawnCount; i++)
         {
-            if (!_waveManager.TryGetPendingSpawn(i, out SpawnEntry spawn))
+            if (!_spawnScheduleManager.TryGetPendingSpawn(i, out SpawnEntry spawn))
                 continue;
 
             string resolvedSpawnName = ResolveSpawnLaneName(spawn.SpawnPoint);
@@ -181,7 +181,8 @@ public partial class GameplayScene
                     * EntranceWarningLeadDistanceMultiplier
                     / MathF.Max(lane.PendingSpawnSpeed, EntranceWarningMinSpeed)
                 + EntranceWarningLeadBufferSeconds;
-            float timeUntilSpawn = lane.PendingSpawnAtSeconds - _waveManager.CurrentWaveElapsed;
+            float timeUntilSpawn =
+                lane.PendingSpawnAtSeconds - _spawnScheduleManager.ElapsedSeconds;
             if (timeUntilSpawn <= leadSeconds)
                 lane.IsVisible = true;
         }

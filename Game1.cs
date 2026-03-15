@@ -23,9 +23,10 @@ public class Game1 : Game
     private SceneManager _sceneManager = null!;
     private SpriteFont? _debugFont;
 
-    // FPS counter: simple exponential moving average
-    private double _averageFps;
-    private const double FpsSmoothingFactor = 0.1;
+    private double _displayedFps;
+    private int _fpsSampleFrames;
+    private TimeSpan _fpsSampleElapsed = TimeSpan.Zero;
+    private static readonly TimeSpan FpsSampleWindow = TimeSpan.FromMilliseconds(500);
 
     public Game1()
     {
@@ -108,7 +109,6 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
-        UpdateFPS(gameTime);
         _sceneManager.Update(gameTime);
         base.Update(gameTime);
     }
@@ -141,6 +141,7 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
+        UpdateFPS(gameTime);
         GraphicsDevice.Clear(Color.Black);
 
         _spriteBatch.Begin(
@@ -164,18 +165,19 @@ public class Game1 : Game
     }
 
     /// <summary>
-    /// Update FPS counter using exponential moving average.
-    /// Smooths FPS reading without storing frame history.
+    /// Update the FPS counter from rendered frames, not update ticks.
+    /// This keeps the value honest when the fixed-step loop runs catch-up updates.
     /// </summary>
     private void UpdateFPS(GameTime gameTime)
     {
-        double elapsed = gameTime.ElapsedGameTime.TotalSeconds;
-        if (elapsed > 0)
+        _fpsSampleElapsed += gameTime.ElapsedGameTime;
+        _fpsSampleFrames++;
+
+        if (_fpsSampleElapsed >= FpsSampleWindow)
         {
-            double currentFps = 1.0 / elapsed;
-            // Exponential moving average: new_avg = current * factor + old_avg * (1 - factor)
-            _averageFps =
-                (currentFps * FpsSmoothingFactor) + (_averageFps * (1 - FpsSmoothingFactor));
+            _displayedFps = _fpsSampleFrames / _fpsSampleElapsed.TotalSeconds;
+            _fpsSampleElapsed = TimeSpan.Zero;
+            _fpsSampleFrames = 0;
         }
     }
 
@@ -185,7 +187,7 @@ public class Game1 : Game
     /// </summary>
     private void DrawFPSCounter(SpriteBatch spriteBatch)
     {
-        string fpsText = $"FPS: {_averageFps:0}";
+        string fpsText = $"FPS: {_displayedFps:0}";
 
         if (_debugFont != null)
         {
@@ -197,7 +199,7 @@ public class Game1 : Game
         else
         {
             // Fallback: simple colored rectangle (green = good FPS, yellow = ok, red = bad)
-            int fps = (int)_averageFps;
+            int fps = (int)_displayedFps;
             Color indicatorColor;
             if (fps >= 50)
                 indicatorColor = Color.Lime;

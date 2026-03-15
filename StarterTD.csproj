@@ -27,7 +27,7 @@
     <Content Include="Content\Maps\*.tmx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Content\Waves\*.json">
+    <Content Include="Content\SpawnSchedules\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Content\Sprites\Towers\*.png">
