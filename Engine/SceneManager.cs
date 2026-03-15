@@ -32,11 +32,11 @@ public class SceneManager
 
     /// <summary>
     /// Replace the entire stack with a new scene. Used for main scene transitions.
-    /// Calls LoadContent on the new scene.
+    /// Calls UnloadContent on removed scenes and LoadContent on the new scene.
     /// </summary>
     public void SetScene(IScene scene)
     {
-        _activeTransition = null;
+        ClearActiveTransition();
         ReplaceStack(scene, loadContent: true);
     }
 
@@ -49,6 +49,8 @@ public class SceneManager
         SceneTransitionPreset preset = SceneTransitionPreset.MenuForwardSlideFade
     )
     {
+        ClearActiveTransition();
+
         if (CurrentScene == null)
         {
             SetScene(scene);
@@ -66,7 +68,7 @@ public class SceneManager
     /// </summary>
     public void PushScene(IScene scene)
     {
-        _activeTransition = null;
+        ClearActiveTransition();
         _sceneStack.Push(scene);
         scene.LoadContent();
     }
@@ -77,10 +79,13 @@ public class SceneManager
     /// </summary>
     public void PopScene()
     {
-        _activeTransition = null;
+        ClearActiveTransition();
 
         if (_sceneStack.Count > 0)
-            _sceneStack.Pop();
+        {
+            var removed = _sceneStack.Pop();
+            removed.UnloadContent();
+        }
     }
 
     /// <summary>Update the top scene.</summary>
@@ -95,7 +100,10 @@ public class SceneManager
         CurrentScene?.Update(gameTime);
     }
 
-    /// <summary>Draw the top scene.</summary>
+    /// <summary>
+    /// Draw scenes from bottom to top so overlay scenes (for example Pause)
+    /// can render on top of their preserved underlying scene.
+    /// </summary>
     public void Draw(SpriteBatch spriteBatch)
     {
         if (_activeTransition != null)
@@ -104,8 +112,12 @@ public class SceneManager
             return;
         }
 
-        if (CurrentScene != null)
-            DrawScene(CurrentScene, spriteBatch);
+        if (_sceneStack.Count == 0)
+            return;
+
+        var scenes = _sceneStack.ToArray(); // top-first
+        for (int i = scenes.Length - 1; i >= 0; i--)
+            DrawScene(scenes[i], spriteBatch);
     }
 
     private void UpdateTransition(GameTime gameTime)
@@ -197,11 +209,27 @@ public class SceneManager
 
     private void ReplaceStack(IScene scene, bool loadContent)
     {
-        _sceneStack.Clear();
+        while (_sceneStack.Count > 0)
+        {
+            var removed = _sceneStack.Pop();
+            removed.UnloadContent();
+        }
+
         _sceneStack.Push(scene);
 
         if (loadContent)
             scene.LoadContent();
+    }
+
+    private void ClearActiveTransition()
+    {
+        if (_activeTransition == null)
+            return;
+
+        // Incoming scenes are preloaded for transitions. If the transition is canceled
+        // by a direct Set/Push/Pop call, unload the preloaded incoming scene.
+        _activeTransition.IncomingScene.UnloadContent();
+        _activeTransition = null;
     }
 
     private void EnsureRenderTargets()

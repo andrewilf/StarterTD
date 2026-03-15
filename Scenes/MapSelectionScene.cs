@@ -7,6 +7,7 @@ using MonoGame.Extended;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Managers;
+using StarterTD.UI;
 
 namespace StarterTD.Scenes;
 
@@ -18,17 +19,17 @@ public class MapSelectionScene : IScene
 {
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
+    private MapSelectionGumView? _gumView;
     private SpriteFont? _font;
 
     private List<MapData> _availableMaps = [];
     private List<RectangleF> _cardBounds = [];
-    private RectangleF _backButtonBounds;
     private int _layoutWidth;
     private int _layoutHeight;
 
     // Track which card is currently hovered (-1 = none)
     private int _hoveredCardIndex = -1;
-    private bool _isBackHovered;
+    private bool _isNavigatingAway;
 
     private const int CardsPerRow = 3;
     private const int CardWidth = 280;
@@ -50,8 +51,15 @@ public class MapSelectionScene : IScene
         _inputManager = new InputManager();
 
         _availableMaps = MapDataRepository.GetAvailableMaps().ConvertAll(MapDataRepository.GetMap);
+        _isNavigatingAway = false;
+        _gumView = new MapSelectionGumView(
+            _availableMaps,
+            onBackClicked: ReturnToStartMenu,
+            onMapClicked: StartMapByIndex
+        );
         var (viewportWidth, viewportHeight) = GetViewportSize();
         RebuildLayout(viewportWidth, viewportHeight);
+        _gumView.AttachToRoot();
 
         try
         {
@@ -63,6 +71,12 @@ public class MapSelectionScene : IScene
         }
     }
 
+    public void UnloadContent()
+    {
+        _gumView?.Dispose();
+        _gumView = null;
+    }
+
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
@@ -71,7 +85,6 @@ public class MapSelectionScene : IScene
         Vector2 mousePos = _inputManager.MousePosition.ToVector2();
 
         _hoveredCardIndex = -1;
-        _isBackHovered = _backButtonBounds.Contains(mousePos);
         for (int i = 0; i < _cardBounds.Count; i++)
         {
             if (_cardBounds[i].Contains(mousePos))
@@ -84,21 +97,6 @@ public class MapSelectionScene : IScene
         if (_inputManager.IsKeyPressed(Keys.Escape))
         {
             ReturnToStartMenu();
-            return;
-        }
-
-        if (_inputManager.IsLeftClick())
-        {
-            if (_isBackHovered)
-            {
-                ReturnToStartMenu();
-            }
-            else if (_hoveredCardIndex >= 0)
-            {
-                string selectedMapId = _availableMaps[_hoveredCardIndex].Id;
-                var gameplayScene = new GameplayScene(_game, selectedMapId);
-                _game.SetScene(gameplayScene);
-            }
         }
     }
 
@@ -114,10 +112,25 @@ public class MapSelectionScene : IScene
 
     private void ReturnToStartMenu()
     {
-        _game.TransitionToScene(
-            new StartMenuScene(_game),
-            SceneTransitionPreset.MenuBackwardSlideFade
-        );
+        if (_isNavigatingAway)
+            return;
+
+        _isNavigatingAway = true;
+        _game.SetScene(new StartMenuScene(_game));
+    }
+
+    private void StartMapByIndex(int index)
+    {
+        if (_isNavigatingAway)
+            return;
+
+        if (index < 0 || index >= _availableMaps.Count)
+            return;
+
+        _isNavigatingAway = true;
+        string selectedMapId = _availableMaps[index].Id;
+        var gameplayScene = new GameplayScene(_game, selectedMapId);
+        _game.SetScene(gameplayScene);
     }
 
     private (int width, int height) GetViewportSize() =>
@@ -137,8 +150,6 @@ public class MapSelectionScene : IScene
             spriteBatch.DrawString(_font, title, titlePos + new Vector2(2, 2), Color.Black);
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
-
-        DrawBackButton(spriteBatch);
 
         for (int i = 0; i < _availableMaps.Count; i++)
         {
@@ -279,33 +290,14 @@ public class MapSelectionScene : IScene
             _cardBounds.Add(new RectangleF(x, y, CardWidth, cardHeight));
         }
 
-        _backButtonBounds = new RectangleF(
+        RectangleF backButtonBounds = new RectangleF(
             viewportWidth - BackButtonWidth - BackButtonMargin,
             BackButtonMargin,
             BackButtonWidth,
             BackButtonHeight
         );
-    }
 
-    private void DrawBackButton(SpriteBatch spriteBatch)
-    {
-        Color fill = _isBackHovered ? Color.SlateGray : Color.DarkSlateGray;
-        Color border = _isBackHovered ? Color.White : Color.LightGray;
-        Rectangle rect = _backButtonBounds.ToRectangle();
-
-        TextureManager.DrawRect(spriteBatch, rect, fill);
-        TextureManager.DrawRectOutline(spriteBatch, rect, border, 3);
-
-        if (_font == null)
-            return;
-
-        string label = "Back";
-        Vector2 size = _font.MeasureString(label);
-        Vector2 pos = new Vector2(
-            _backButtonBounds.X + (_backButtonBounds.Width - size.X) / 2f,
-            _backButtonBounds.Y + (_backButtonBounds.Height - size.Y) / 2f
-        );
-        spriteBatch.DrawString(_font, label, pos + new Vector2(1, 1), Color.Black);
-        spriteBatch.DrawString(_font, label, pos, Color.White);
+        _gumView?.ResizeToViewport(viewportWidth, viewportHeight);
+        _gumView?.UpdateLayout(_cardBounds, backButtonBounds);
     }
 }

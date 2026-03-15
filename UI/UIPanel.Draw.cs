@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StarterTD.Engine;
@@ -15,7 +14,6 @@ public partial class UIPanel
 {
     public void Draw(
         SpriteBatch spriteBatch,
-        IReadOnlyDictionary<TowerType, float> cooldowns,
         int lives,
         string spawnStatusText,
         float timeSlowBankFraction,
@@ -30,45 +28,6 @@ public partial class UIPanel
 
         if (_font != null)
         {
-            float championCooldown = cooldowns.GetValueOrDefault(TowerType.ChampionGun);
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _gunTowerButton,
-                TowerType.Gun,
-                TowerType.ChampionGun,
-                cooldowns.GetValueOrDefault(TowerType.Gun),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _cannonTowerButton,
-                TowerType.Cannon,
-                TowerType.ChampionCannon,
-                cooldowns.GetValueOrDefault(TowerType.Cannon),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
-
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _wallTowerButton,
-                TowerType.Walling,
-                TowerType.ChampionWalling,
-                cooldowns.GetValueOrDefault(TowerType.Walling),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
-            DrawChampionOnlyTowerButton(
-                spriteBatch,
-                _healingTowerButton,
-                TowerType.ChampionHealing,
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _healingAbilityButton, TowerType.ChampionHealing);
-
             spriteBatch.DrawString(
                 _font,
                 $"Lives: {lives}",
@@ -76,86 +35,23 @@ public partial class UIPanel
                 Color.LimeGreen
             );
             spriteBatch.DrawString(_font, spawnStatusText, new Vector2(_x + 10, 60), Color.White);
-
-            // Debug section
             spriteBatch.DrawString(
                 _font,
                 "Debug Tools:",
                 new Vector2(_x + 10, _placeHighGroundButton.Top - 30),
                 Color.Orange
             );
-            DrawDebugButton(
-                spriteBatch,
-                _placeHighGroundButton,
-                "Place High Ground",
-                UISelectionMode.PlaceHighGround
-            );
-            DrawDebugButton(
-                spriteBatch,
-                _spawnEnemyButton,
-                "Spawn Enemy",
-                UISelectionMode.SpawnEnemy
-            );
-
-            // Time-slow toggle button
-            Color timeSlowBg = IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80);
-            Color timeSlowOutline = IsTimeSlowed ? Color.DeepSkyBlue : Color.SteelBlue;
-            string timeSlowText = IsTimeSlowed ? ">> 0.5x Speed <<" : "Time Slow";
-            TextureManager.DrawRect(spriteBatch, _timeSlowButton, timeSlowBg);
-            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, timeSlowOutline, 2);
-            Vector2 tsSize = _font.MeasureString(timeSlowText);
-            spriteBatch.DrawString(
-                _font,
-                timeSlowText,
-                new Vector2(
-                    _timeSlowButton.X + (_timeSlowButton.Width - tsSize.X) / 2,
-                    _timeSlowButton.Y + (_timeSlowButton.Height - tsSize.Y) / 2
-                ),
-                IsTimeSlowed ? Color.DeepSkyBlue : Color.LightSteelBlue
-            );
-
-            DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
         }
         else
         {
-            // Fallback: no font loaded — draw colored blocks as indicators
-            bool gunChampAlive = _championManager?.IsChampionAlive(TowerType.ChampionGun) ?? false;
-            bool cannonChampAlive =
-                _championManager?.IsChampionAlive(TowerType.ChampionCannon) ?? false;
-
-            DrawButtonNoFont(
-                spriteBatch,
-                _gunTowerButton,
-                gunChampAlive ? TowerType.Gun : TowerType.ChampionGun
-            );
-            DrawButtonNoFont(
-                spriteBatch,
-                _cannonTowerButton,
-                cannonChampAlive ? TowerType.Cannon : TowerType.ChampionCannon
-            );
-            bool wallChampAlive =
-                _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
-            DrawButtonNoFont(
-                spriteBatch,
-                _wallTowerButton,
-                wallChampAlive ? TowerType.Walling : TowerType.ChampionWalling
-            );
-            DrawButtonNoFont(spriteBatch, _healingTowerButton, TowerType.ChampionHealing);
-
-            TextureManager.DrawRect(
-                spriteBatch,
-                _timeSlowButton,
-                IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80)
-            );
-            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, Color.SteelBlue, 2);
-            DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
-
             TextureManager.DrawRect(
                 spriteBatch,
                 new Rectangle(_x + 10, 60, _width - 20, 24),
                 Color.Black
             );
         }
+
+        DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
 
         if (selectedTower != null)
             DrawTowerInfoPanel(spriteBatch, selectedTower);
@@ -186,216 +82,6 @@ public partial class UIPanel
                 fillColor
             );
         }
-    }
-
-    private void DrawButtonNoFont(SpriteBatch spriteBatch, Rectangle rect, TowerType type)
-    {
-        bool isSelected = SelectedTowerType == type;
-        Color bgColor = isSelected ? Color.SlateGray : Color.DarkSlateGray;
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        var stats = TowerData.GetStats(type);
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            stats.Color
-        );
-    }
-
-    /// <summary>
-    /// Draws a single button that acts as the champion button when the champion is dead,
-    /// and switches to the generic button once the champion is alive on the field.
-    /// </summary>
-    private void DrawConsolidatedTowerButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        TowerType genericType,
-        TowerType championType,
-        float genericCooldown,
-        float championCooldown
-    )
-    {
-        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
-        bool isSelected = SelectedTowerType == genericType || SelectedTowerType == championType;
-
-        Color bgColor;
-        Color textColor = Color.White;
-        string mainLabel;
-        string? subLabel = null;
-        TowerType indicatorType;
-
-        if (!championAlive)
-        {
-            indicatorType = championType;
-            mainLabel = $"{genericType} Champion";
-
-            float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
-            float respawnCooldown = _championManager?.GetRespawnCooldown(championType) ?? 0f;
-
-            if (championCooldown > 0f)
-            {
-                bgColor = Color.DarkGray;
-                subLabel = $"Locked: {championCooldown:F1}s";
-                textColor = Color.DarkGray;
-            }
-            else if (globalCooldown > 0)
-            {
-                bgColor = Color.DarkSlateGray;
-                subLabel = $"Global: {globalCooldown:F1}s";
-                textColor = Color.DarkGray;
-            }
-            else if (respawnCooldown > 0)
-            {
-                bgColor = Color.DarkSlateGray;
-                subLabel = $"Respawn: {respawnCooldown:F1}s";
-                textColor = Color.DarkGray;
-            }
-            else
-            {
-                bgColor = Color.DarkSlateGray;
-                subLabel = "Place Champion";
-            }
-        }
-        else
-        {
-            indicatorType = genericType;
-            mainLabel = $"{genericType}";
-            if (genericCooldown > 0f)
-            {
-                bgColor = Color.DarkGray;
-                textColor = Color.DarkGray;
-                subLabel = $"Locked: {genericCooldown:F1}s";
-            }
-            else
-            {
-                bgColor = Color.DarkSlateGray;
-            }
-        }
-
-        if (isSelected)
-            bgColor = Color.SlateGray;
-
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        var stats = TowerData.GetStats(indicatorType);
-        float activeCooldown = championAlive ? genericCooldown : championCooldown;
-        Color swatchColor = activeCooldown > 0f ? Color.DarkGray : stats.Color;
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            swatchColor
-        );
-
-        spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
-
-        if (subLabel != null)
-        {
-            Color subColor;
-            if (subLabel == "Place Champion")
-                subColor = Color.LightGreen;
-            else if (subLabel.StartsWith("Locked"))
-                subColor = Color.OrangeRed;
-            else
-                subColor = Color.Yellow; // global/respawn cooldown text
-            spriteBatch.DrawString(
-                _font,
-                subLabel,
-                new Vector2(rect.X + 50, rect.Y + 28),
-                subColor
-            );
-        }
-    }
-
-    private void DrawChampionOnlyTowerButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        TowerType championType,
-        float championCooldown
-    )
-    {
-        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
-        bool isSelected = SelectedTowerType == championType;
-        float globalCooldown = _championManager?.GlobalCooldownRemaining ?? 0f;
-        float respawnCooldown = _championManager?.GetRespawnCooldown(championType) ?? 0f;
-
-        Color bgColor = Color.DarkSlateGray;
-        Color textColor = Color.White;
-        string mainLabel = "Healing Champion";
-        string? subLabel = null;
-
-        if (championAlive)
-        {
-            bgColor = new Color(35, 70, 40);
-            subLabel = "Champion Active";
-        }
-        else if (championCooldown > 0f)
-        {
-            bgColor = Color.DarkGray;
-            textColor = Color.DarkGray;
-            subLabel = $"Locked: {championCooldown:F1}s";
-        }
-        else if (globalCooldown > 0f)
-        {
-            subLabel = $"Global: {globalCooldown:F1}s";
-            textColor = Color.DarkGray;
-        }
-        else if (respawnCooldown > 0f)
-        {
-            subLabel = $"Respawn: {respawnCooldown:F1}s";
-            textColor = Color.DarkGray;
-        }
-        else
-        {
-            subLabel = "Place Champion";
-        }
-
-        if (isSelected)
-            bgColor = Color.SlateGray;
-
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        var stats = TowerData.GetStats(championType);
-        Color swatchColor = championCooldown > 0f ? Color.DarkGray : stats.Color;
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(rect.X + 8, rect.Y + 8, 34, 34),
-            swatchColor
-        );
-
-        spriteBatch.DrawString(_font, mainLabel, new Vector2(rect.X + 50, rect.Y + 10), textColor);
-
-        if (subLabel == null)
-            return;
-
-        Color subColor;
-        if (subLabel == "Place Champion")
-            subColor = Color.LightGreen;
-        else if (subLabel == "Champion Active")
-            subColor = Color.LightSkyBlue;
-        else if (subLabel.StartsWith("Locked"))
-            subColor = Color.OrangeRed;
-        else
-            subColor = Color.Yellow;
-
-        spriteBatch.DrawString(_font, subLabel, new Vector2(rect.X + 50, rect.Y + 28), subColor);
     }
 
     /// <summary>
@@ -511,90 +197,7 @@ public partial class UIPanel
         spriteBatch.DrawString(_font, speedText, new Vector2(textX, y), Color.CornflowerBlue);
         y += lineHeight;
 
-        string dmgText = $"Attack Dmg: {enemy.AttackDamage}";
-        spriteBatch.DrawString(_font, dmgText, new Vector2(textX, y), Color.White);
-    }
-
-    private void DrawAbilityButton(SpriteBatch spriteBatch, Rectangle rect, TowerType championType)
-    {
-        bool championAlive = _championManager?.IsChampionAlive(championType) ?? false;
-        float cooldown = _championManager?.GetAbilityCooldownRemaining(championType) ?? 0f;
-
-        Color bgColor;
-        string label;
-        Color textColor;
-        Color outlineColor;
-
-        if (!championAlive)
-        {
-            bgColor = new Color(40, 40, 40);
-            label = "ABILITY (no champion)";
-            textColor = Color.DarkGray;
-            outlineColor = Color.DarkGray;
-        }
-        else if (cooldown > 0f)
-        {
-            bgColor = new Color(50, 50, 30);
-            label = $"ABILITY CD: {cooldown:F1}s";
-            textColor = Color.Yellow;
-            outlineColor = Color.DarkGoldenrod;
-        }
-        else
-        {
-            bgColor = new Color(30, 80, 20);
-            label = "USE ABILITY!";
-            textColor = Color.LimeGreen;
-            outlineColor = Color.LimeGreen;
-        }
-
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(spriteBatch, rect, outlineColor, 1);
-
-        if (_font != null)
-        {
-            Vector2 textSize = _font.MeasureString(label);
-            spriteBatch.DrawString(
-                _font,
-                label,
-                new Vector2(
-                    rect.X + (rect.Width - textSize.X) / 2f,
-                    rect.Y + (rect.Height - textSize.Y) / 2f
-                ),
-                textColor
-            );
-        }
-    }
-
-    private void DrawDebugButton(
-        SpriteBatch spriteBatch,
-        Rectangle rect,
-        string label,
-        UISelectionMode mode
-    )
-    {
-        bool isSelected = SelectionMode == mode;
-        Color bgColor = isSelected ? Color.DarkOrange : new Color(60, 40, 20);
-
-        TextureManager.DrawRect(spriteBatch, rect, bgColor);
-        TextureManager.DrawRectOutline(
-            spriteBatch,
-            rect,
-            isSelected ? Color.Yellow : Color.Gray,
-            2
-        );
-
-        if (_font != null)
-        {
-            Vector2 textSize = _font.MeasureString(label);
-            spriteBatch.DrawString(
-                _font,
-                label,
-                new Vector2(
-                    rect.X + (rect.Width - textSize.X) / 2,
-                    rect.Y + (rect.Height - textSize.Y) / 2
-                ),
-                Color.White
-            );
-        }
+        string damageText = $"Attack Dmg: {enemy.AttackDamage}";
+        spriteBatch.DrawString(_font, damageText, new Vector2(textX, y), Color.White);
     }
 }

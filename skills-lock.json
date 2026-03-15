@@ -1,6 +1,21 @@
 {
   "version": 1,
   "skills": {
+    "2d-games": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "ecf1e9025cf25d7a812e8c194362eae4d76b8f9e28d4469ac9b9276aeb4291b5"
+    },
+    "csharp-pro": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "1004185054f329b41d17332ae9b07d70130bbd1fd90c68198c81180a4120a948"
+    },
+    "nuget-manager": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "9081279ef0313a18766c8f03422de9ef31765212d31b13a513e66f39427b4e38"
+    },
     "smithery-ai-cli": {
       "source": "smithery.ai",
       "sourceType": "well-known",

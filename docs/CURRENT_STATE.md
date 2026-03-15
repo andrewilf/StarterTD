@@ -3,11 +3,18 @@
 ## Active Systems
 - Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — drop files in `Content/Maps/`, no code changes)
 - Display starts in windowed maximized mode (not fullscreen). Launch flow opens a start screen with `Start`, `Settings` (no-op), and `Exit`; `Start` opens map selection, and map selection now uses a top-right `Back` button plus `Esc` to return to the start screen
-- Start/menu navigation uses a reusable short slide/fade scene transition via `SceneManager.TransitionToScene()` and render-target compositing. Gameplay and pause scene changes remain instant
+- Start/menu navigation currently uses instant `SetScene()` swaps between Start and Map Selection (no slide/fade) to avoid Gum shared-root artifacts during transition render-target compositing. Gameplay and pause scene changes remain instant
+- Gum runtime is initialized once in `Game1` (`GumService.Default.Initialize(..., DefaultVisualsVersion.V3)`), updated each frame from `Game1.Update`, resized from `Window.ClientSizeChanged` by syncing `GraphicalUiElement.CanvasWidth/CanvasHeight` plus `UpdateLayout()`/`UpdateToFontValues()`, and drawn exactly once per frame from `Game1.Draw`
+- Start menu buttons are Gum code-only controls (`StartMenuGumView` + `GumMenuButtonFactory`) with shared reusable construction; `Start` transitions to map select, `Settings` remains a no-op, and `Exit` closes the game
+- Map selection interactions are also Gum-backed (`MapSelectionGumView`): `Back` and per-map card selection clicks are handled by Gum controls while existing card preview rendering remains scene-drawn
+- Gameplay screen buttons are now Gum-backed (`GameplayHudGumView`): right-panel tower/ability/debug/time-slow buttons and selected-tower world controls (`Sell`, healing mode, wall placement mode) are code-only Gum controls with scene-owned lifecycle/cleanup. Gameplay resize now recomputes panel layout + map centering and resizes the Gum HUD root once per viewport change; button bounds/state updates are cached to avoid redundant per-frame mutations
+- Pause menu actions are Gum-backed (`PauseMenuGumView`): a full-screen 40% black Gum overlay sits above gameplay/UI roots, with `Resume (P/ESC)` and `Map Selection` buttons drawn above the overlay and scene-owned attach/detach + resize layout updates. Pause scene no longer keeps a SpriteBatch button/input fallback path
+- Scene stack rendering draws bottom-to-top, so paused gameplay remains visible under the pause overlay while only the top scene updates
+- Scene lifecycle now includes `IScene.UnloadContent()`. `SceneManager` unloads scenes on replace/pop and also unloads preloaded incoming scenes if a transition is canceled
 - `InputManager` primes current/previous input snapshots on construction, so held clicks/keys do not replay as fresh presses after scene transitions
 - FPS counter samples rendered `Draw()` cadence over a 0.5s window, so it reports displayed frame rate instead of fixed-step `Update()` ticks
 - Map selection layout auto-reflows to current viewport size; map preview tiles scale to fit card bounds
-- Gameplay rendering uses world-space + screen-space spritebatch passes; map is centered via `_worldMatrix` translation and gameplay input is converted through `ScreenToWorld`
+- Gameplay rendering uses world-space + screen-space spritebatch passes; map is centered via `_worldMatrix` translation and gameplay input is converted through `ScreenToWorld`. Window resize in gameplay now rebuilds panel/world layout without resetting selection or time-slow toggle state
 - Tile sizes are decoupled: display tile size is 32 while terrain spritesheet source tile size is 32; TMX object marker conversion uses TMX tilewidth/tileheight
 - Pause: P to toggle, ESC/Resume button
 - MonoGame.Extended: `CountdownTimer` for cooldowns, `RectangleF` for UI bounds
@@ -38,7 +45,7 @@
 - Gun tower testing override: `Gun` is currently tuned to `Damage 100 / Range 90`, and `ChampionGun` to `Damage 200 / Range 100`, so spawn schedules can be cleared quickly during local testing
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
 - Movement input: selected walkable champions move with left-click drag-and-release. Drag can start from any occupied champion tile and destination snaps footprint-aware; move preview/path nodes are anchor-centered and the destination occupied footprint is shown with a white translucent overlay; right-click no longer redirects laser, it deselects the selected laser only
-- Sell flow: selected tower exposes an in-world `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows an in-world mode toggle button directly under sell (`healing`/`attack` icon, disabled while 4.0s mode cooldown is active)
+- Sell flow: selected tower exposes an in-world Gum `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows a Gum in-world mode toggle button directly under sell (`Atk`/`Heal`, disabled while 4.0s mode cooldown is active)
 - Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
 - Enemy FSM (Moving/Attacking); timed spawn schedules driven by `Content/SpawnSchedules/{mapId}.json` (fallback to a built-in schedule if no file)
 - Spawn schedule schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`, with `at` measured as absolute seconds from match start

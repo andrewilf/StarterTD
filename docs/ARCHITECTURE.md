@@ -1,15 +1,18 @@
 # Architecture
 
 ## Scene Stack
-- `SceneManager`: `SetScene()` replaces immediately, `TransitionToScene()` performs preset-driven full-scene swaps, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates/draws; transitions freeze scene updates and composite outgoing/incoming render targets
+- `SceneManager`: `SetScene()` replaces immediately, `TransitionToScene()` performs preset-driven full-scene swaps, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates; draw order is bottom-to-top so overlay scenes can render above preserved underlying scenes. Transitions freeze scene updates and composite outgoing/incoming render targets
+- Scene lifecycle contract: `IScene.LoadContent()` on entry and `IScene.UnloadContent()` when a scene is removed from stack ownership. `SceneManager` unloads popped/replaced scenes and unloads preloaded incoming scenes when transitions are canceled
 - Scenes: `StartMenuScene`, `MapSelectionScene`, `GameplayScene`, `PauseScene`
-- Startup flow: `Game1` enters `StartMenuScene`; `Start` transitions to `MapSelectionScene`
+- Startup flow: `Game1` enters `StartMenuScene`; `Start` currently switches immediately (`SetScene`) to `MapSelectionScene`
 - `MapSelectionScene` is the level-select screen and returns to `StartMenuScene` via top-right `Back` or `Esc`
 
 ## Data Flow
 - Down: Scene -> managers via `Update()` args
 - Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
-- Rendering: `Game1` clears the backbuffer and draws FPS; `SceneManager` owns scene `SpriteBatch` orchestration plus full-scene transition render targets/compositing; scenes draw into the batches they are given
+- Rendering: `Game1` clears the backbuffer, asks `SceneManager` to draw scenes, draws Gum once per frame, then draws FPS. `SceneManager` owns scene `SpriteBatch` orchestration plus full-scene transition render targets/compositing; scenes draw into the batches they are given
+- Gum UI runtime: `Game1` owns `GumService.Default` init/update/resize/draw plumbing. Gum controls are scene-owned roots attached/detached in scene load/unload (used by `StartMenuScene`, `MapSelectionScene`, `GameplayScene`, and `PauseScene`)
+- UI scenes are Gum-first: start/map/gameplay/pause do not keep SpriteBatch button fallbacks; pause scene keyboard shortcuts (`P`/`Esc`) remain as non-UI input controls
 - Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns
@@ -69,6 +72,7 @@
 - `GameplayScene.Draw()` runs two `SpriteBatch` passes: world-space with `_worldMatrix` translation, then screen-space for panel/overlays
 - Placement hover range preview is computed per-frame in `DrawHoverIndicator` from `UIPanel.SelectedTowerType` via `TowerData.GetStats(...)` (no cached range field in `GameplayScene`)
 - Gameplay input converts screen coords to world coords (`ScreenToWorld`) before world hit tests and grid conversion
+- `GameplayScene` tracks viewport size and rebuilds layout on change: `UIPanel.Resize(...)`, map recenter (`_mapOffset`/`_worldMatrix`), and Gum HUD root resize
 - Startup window mode is windowed maximized (not fullscreen); `GameSettings.ScreenWidth/ScreenHeight` sync to final client bounds
 
 ## Tile System
@@ -84,8 +88,10 @@
 - `UISelectionMode`: `None`, `PlaceTower`, `PlaceHighGround`, `SpawnEnemy`
 - Consolidated buttons for Gun/Cannon/Walling: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
 - ChampionHealing uses a dedicated champion-only button (`HandleChampionOnlyTowerClick`) plus standard ability button
-- `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of a resource counter
+- `HandleClick()` accepts `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of a resource counter
 - `Draw()` also accepts a scene-computed spawn status string (`First enemy in: X.Xs` before the first spawn, `Enemies Spawned: N/Total` afterward)
+- Panel buttons are Gum-owned (tower/ability/debug/time-slow/world controls). `UIPanel` owns layout rectangles, selection/cooldown click logic, info panel rendering, and the time-slow bar
+- `Resize(screenWidth, screenHeight)`: recomputes panel rectangles without resetting UI state (selection mode, selected tower type, time-slow toggle)
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Tower info panel fire-rate line reads `Tower.EffectiveFireInterval` (so active speed buffs are reflected in displayed APS)
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
@@ -98,8 +104,9 @@
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold
 
 ## World-Space Tower Controls
-- Selected tower always draws an in-world sell `X` button.
-- Selected `HealingChampionTower` also draws an in-world mode button directly under sell. The icon switches between healing and attack glyphs; while mode cooldown is active, button is disabled and shows remaining seconds.
+- Selected tower controls are Gum buttons positioned from world-space rectangles converted to screen-space each frame (`GetSellButtonRect`, `GetHealingModeButtonRect`, `GetWallPlacementButtonRect` + map offset).
+- Controls shown by selection context: sell `X` for all towers, `Atk`/`Heal` for `HealingChampionTower`, and `+` wall-placement toggle for walling towers.
+- Gameplay input gates world/panel interactions when Gum has captured the primary push so scene click/drag logic does not fire through UI controls.
 
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower. Auto-clears on death/end

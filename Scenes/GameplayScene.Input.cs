@@ -71,35 +71,15 @@ public partial class GameplayScene
         Point screenPos = _inputManager.MousePosition;
         // World-space mouse position (map-local coords, offset removed)
         Vector2 worldMouse = ScreenToWorld(_inputManager.MousePositionVector);
-        Point worldPos = worldMouse.ToPoint();
 
-        // Check if the world-space wall placement button was clicked.
-        // Button rect is in world-space, so test against worldPos.
-        var selectedWalling = GetSelectedWallingAnchor();
-        if (
-            selectedWalling != null
-            && GetWallPlacementButtonRect(selectedWalling).Contains(worldPos)
-        )
-        {
-            _wallPlacementMode = !_wallPlacementMode;
-            if (!_wallPlacementMode)
-                CancelWallDrag();
-        }
-        // Check if click is on UI panel (screen-space)
-        else if (_uiPanel.ContainsPoint(screenPos))
-        {
-            _uiPanel.HandleClick(screenPos, _placementCooldowns);
+        if (IsWorldGumButtonHit(screenPos))
+            return;
 
-            if (_uiPanel.SelectedTowerType.HasValue)
-                DeselectAll();
+        // Panel background still consumes clicks so world interactions do not fire through it.
+        if (_uiPanel.ContainsPoint(screenPos))
+            return;
 
-            if (_uiPanel.SpawnEnemyClicked)
-                SpawnDebugEnemy();
-        }
-        else
-        {
-            HandleGridLeftClick(worldMouse);
-        }
+        HandleGridLeftClick(worldMouse);
     }
 
     /// <summary>
@@ -138,25 +118,10 @@ public partial class GameplayScene
         }
 
         Point gridPos = Map.WorldToGrid(worldMouse);
-        Point worldPos = worldMouse.ToPoint();
 
         var selectedTower = _towerManager.SelectedTower;
         var wallingAnchor = selectedTower;
-        if (
-            selectedTower is HealingChampionTower selectedHealingChampion
-            && GetHealingModeButtonRect(selectedHealingChampion).Contains(worldPos)
-        )
-        {
-            _towerManager.TryToggleHealingChampionMode();
-        }
-        else if (selectedTower != null && GetSellButtonRect(selectedTower).Contains(worldPos))
-        {
-            float penalty = _towerManager.SellTower(selectedTower);
-            var poolKey = GetCooldownPoolKey(selectedTower.TowerType);
-            _placementCooldowns[poolKey] = Math.Max(0f, _placementCooldowns[poolKey] - penalty);
-            DeselectAll();
-        }
-        else if (_wallPlacementMode && wallingAnchor != null)
+        if (_wallPlacementMode && wallingAnchor != null)
         {
             StartWallDrag(gridPos);
         }

@@ -23,6 +23,7 @@ public partial class GameplayScene : IScene
     private SpawnScheduleManager _spawnScheduleManager = null!;
     private InputManager _inputManager = null!;
     private UIPanel _uiPanel = null!;
+    private GameplayHudGumView? _gameplayHudView;
 
     /// <summary>
     /// Pixel offset to center the map on the fullscreen display.
@@ -105,6 +106,8 @@ public partial class GameplayScene : IScene
     private bool _isLaserRedirectActive;
     private Vector2 _laserRedirectTargetWorld;
     private Vector2 _laserRedirectStartWorld;
+    private int _layoutWidth;
+    private int _layoutHeight;
     private const float TowerMoveDragStartThreshold = 6f;
     private const float EntranceWarningDistancePx = 1f * GameSettings.TileSize;
     private const float EntranceWarningMinSpeed = 1f;
@@ -141,19 +144,9 @@ public partial class GameplayScene : IScene
             spawnEntries
         );
         _inputManager = new InputManager();
-        _uiPanel = new UIPanel(
-            GameSettings.ScreenWidth,
-            GameSettings.ScreenHeight,
-            _championManager
-        );
-
-        // Center the map in the screen area left of the UI panel
-        int mapPixelW = _map.Columns * GameSettings.TileSize;
-        int mapPixelH = _map.Rows * GameSettings.TileSize;
-        float ox = (GameSettings.ScreenWidth - GameSettings.UIPanelWidth - mapPixelW) / 2f;
-        float oy = (GameSettings.ScreenHeight - mapPixelH) / 2f;
-        _mapOffset = new Vector2(MathF.Floor(ox), MathF.Floor(oy));
-        _worldMatrix = Matrix.CreateTranslation(_mapOffset.X, _mapOffset.Y, 0);
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+        _uiPanel = new UIPanel(viewportWidth, viewportHeight, _championManager);
+        RebuildLayout(viewportWidth, viewportHeight);
 
         _lives = GameSettings.StartingLives;
         _gameOver = false;
@@ -217,12 +210,37 @@ public partial class GameplayScene : IScene
         {
             // Font not available — UI will use fallback rendering
         }
+
+        InitializeGameplayHudGum();
+    }
+
+    public void UnloadContent()
+    {
+        if (_uiPanel != null)
+            _uiPanel.OnAbilityTriggered = null;
+
+        _gameplayHudView?.Dispose();
+        _gameplayHudView = null;
+
+        if (_towerManager != null)
+        {
+            _towerManager.OnValidatePlacement = null;
+            _towerManager.OnTowerPlaced = null;
+            _towerManager.OnTowerDestroyed = null;
+            _towerManager.OnAOEImpact = null;
+            _towerManager.OnRailgunShot = null;
+            _towerManager.OnWallAttack = null;
+            _towerManager.OnLaserActivated = null;
+            _towerManager.OnLaserCancelled = null;
+        }
     }
 
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
+        HandleViewportResize();
         HandleInput();
+        UpdateGameplayHudGum();
 
         if (_gameOver || _gameWon)
             return;
@@ -350,6 +368,41 @@ public partial class GameplayScene : IScene
             if (!_railgunEffects[i].IsActive)
                 _railgunEffects.RemoveAt(i);
         }
+    }
+
+    private void HandleViewportResize()
+    {
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+        if (viewportWidth == _layoutWidth && viewportHeight == _layoutHeight)
+            return;
+
+        RebuildLayout(viewportWidth, viewportHeight);
+    }
+
+    private (int width, int height) GetViewportSize() =>
+        (
+            Math.Max(1, _game.GraphicsDevice.Viewport.Width),
+            Math.Max(1, _game.GraphicsDevice.Viewport.Height)
+        );
+
+    private void RebuildLayout(int viewportWidth, int viewportHeight)
+    {
+        _layoutWidth = viewportWidth;
+        _layoutHeight = viewportHeight;
+        GameSettings.SetScreenSize(viewportWidth, viewportHeight);
+        _uiPanel.Resize(viewportWidth, viewportHeight);
+        UpdateWorldLayout(viewportWidth, viewportHeight);
+        _gameplayHudView?.ResizeToViewport(viewportWidth, viewportHeight);
+    }
+
+    private void UpdateWorldLayout(int viewportWidth, int viewportHeight)
+    {
+        int mapPixelWidth = _map.Columns * GameSettings.TileSize;
+        int mapPixelHeight = _map.Rows * GameSettings.TileSize;
+        float offsetX = (viewportWidth - GameSettings.UIPanelWidth - mapPixelWidth) / 2f;
+        float offsetY = (viewportHeight - mapPixelHeight) / 2f;
+        _mapOffset = new Vector2(MathF.Floor(offsetX), MathF.Floor(offsetY));
+        _worldMatrix = Matrix.CreateTranslation(_mapOffset.X, _mapOffset.Y, 0f);
     }
 
     /// <summary>

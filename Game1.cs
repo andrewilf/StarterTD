@@ -1,7 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
+using Gum.Forms;
+using Gum.Wireframe;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Scenes;
@@ -27,6 +30,7 @@ public class Game1 : Game
     private int _fpsSampleFrames;
     private TimeSpan _fpsSampleElapsed = TimeSpan.Zero;
     private static readonly TimeSpan FpsSampleWindow = TimeSpan.FromMilliseconds(500);
+    private bool _isApplyingClientResize;
 
     public Game1()
     {
@@ -57,6 +61,7 @@ public class Game1 : Game
         }
 
         Window.Title = "StarterTD — Tower Defense";
+        Window.ClientSizeChanged += HandleClientSizeChanged;
 
         base.Initialize();
     }
@@ -113,6 +118,8 @@ public class Game1 : Game
             // Font not available - FPS will use fallback rendering
         }
 
+        InitializeGum();
+
         // Set up the scene manager and load the start menu scene.
         _sceneManager = new SceneManager(GraphicsDevice);
         _sceneManager.SetScene(new StartMenuScene(this));
@@ -120,8 +127,21 @@ public class Game1 : Game
 
     protected override void Update(GameTime gameTime)
     {
+        if (GumService.Default.IsInitialized)
+            GumService.Default.Update(gameTime);
+
         _sceneManager.Update(gameTime);
         base.Update(gameTime);
+    }
+
+    protected override void UnloadContent()
+    {
+        Window.ClientSizeChanged -= HandleClientSizeChanged;
+
+        if (GumService.Default.IsInitialized)
+            GumService.Default.Uninitialize();
+
+        base.UnloadContent();
     }
 
     private void TryMaximizeWindow()
@@ -150,12 +170,60 @@ public class Game1 : Game
         _graphics.ApplyChanges();
     }
 
+    private void InitializeGum()
+    {
+        GumService.Default.Initialize(this, DefaultVisualsVersion.V3);
+        SyncGumCanvasToViewport();
+    }
+
+    private void HandleClientSizeChanged(object? sender, EventArgs e)
+    {
+        if (_isApplyingClientResize)
+            return;
+
+        Rectangle client = Window.ClientBounds;
+        if (client.Width <= 0 || client.Height <= 0)
+            return;
+
+        _isApplyingClientResize = true;
+        try
+        {
+            SetBackBufferSize(client.Width, client.Height);
+            GameSettings.SetScreenSize(client.Width, client.Height);
+            SyncGumCanvasToViewport();
+        }
+        finally
+        {
+            _isApplyingClientResize = false;
+        }
+    }
+
+    private void SyncGumCanvasToViewport()
+    {
+        if (!GumService.Default.IsInitialized)
+            return;
+
+        int width = Math.Max(1, GraphicsDevice.Viewport.Width);
+        int height = Math.Max(1, GraphicsDevice.Viewport.Height);
+
+        GraphicalUiElement.CanvasWidth = width;
+        GraphicalUiElement.CanvasHeight = height;
+        GumService.Default.CanvasWidth = width;
+        GumService.Default.CanvasHeight = height;
+        GumService.Default.Root.UpdateLayout();
+        GumService.Default.Root.UpdateToFontValues();
+    }
+
     protected override void Draw(GameTime gameTime)
     {
         UpdateFPS(gameTime);
         GraphicsDevice.Clear(Color.Black);
 
         _sceneManager.Draw(_spriteBatch);
+
+        // Draw Gum once per frame from a single owner to avoid scene-level draw coupling.
+        if (GumService.Default.IsInitialized)
+            GumService.Default.Draw();
 
         _spriteBatch.Begin(
             SpriteSortMode.Deferred,

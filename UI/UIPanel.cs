@@ -31,9 +31,9 @@ public enum UISelectionMode
 /// </summary>
 public partial class UIPanel
 {
-    private readonly int _x;
+    private int _x;
     private readonly int _width;
-    private readonly int _height;
+    private int _height;
     private readonly ChampionManager? _championManager;
 
     /// <summary>Which tower type the player has selected to place (null = none).</summary>
@@ -43,17 +43,17 @@ public partial class UIPanel
     public UISelectionMode SelectionMode { get; private set; }
 
     // Consolidated tower buttons (each covers champion + generic for that type)
-    private readonly Rectangle _gunTowerButton;
-    private readonly Rectangle _gunAbilityButton;
-    private readonly Rectangle _cannonTowerButton;
-    private readonly Rectangle _cannonAbilityButton;
-    private readonly Rectangle _wallTowerButton;
-    private readonly Rectangle _wallAbilityButton;
-    private readonly Rectangle _healingTowerButton;
-    private readonly Rectangle _healingAbilityButton;
+    private Rectangle _gunTowerButton;
+    private Rectangle _gunAbilityButton;
+    private Rectangle _cannonTowerButton;
+    private Rectangle _cannonAbilityButton;
+    private Rectangle _wallTowerButton;
+    private Rectangle _wallAbilityButton;
+    private Rectangle _healingTowerButton;
+    private Rectangle _healingAbilityButton;
 
-    private readonly Rectangle _timeSlowButton;
-    private readonly Rectangle _timeSlowBarBg;
+    private Rectangle _timeSlowButton;
+    private Rectangle _timeSlowBarBg;
 
     /// <summary>
     /// Fired when the player clicks a ready ability button.
@@ -62,8 +62,8 @@ public partial class UIPanel
     public Action<TowerType>? OnAbilityTriggered;
 
     // Debug button rectangles
-    private readonly Rectangle _placeHighGroundButton;
-    private readonly Rectangle _spawnEnemyButton;
+    private Rectangle _placeHighGroundButton;
+    private Rectangle _spawnEnemyButton;
 
     /// <summary>Whether time-slow mode is currently active (persistent toggle).</summary>
     public bool IsTimeSlowed { get; private set; }
@@ -84,9 +84,22 @@ public partial class UIPanel
     public UIPanel(int screenWidth, int screenHeight, ChampionManager? championManager = null)
     {
         _width = GameSettings.UIPanelWidth;
+        _championManager = championManager;
+        ApplyLayout(screenWidth, screenHeight);
+    }
+
+    /// <summary>
+    /// Rebuild the panel's screen-space layout for a new viewport size while keeping state.
+    /// </summary>
+    public void Resize(int screenWidth, int screenHeight)
+    {
+        ApplyLayout(screenWidth, screenHeight);
+    }
+
+    private void ApplyLayout(int screenWidth, int screenHeight)
+    {
         _x = screenWidth - _width;
         _height = screenHeight;
-        _championManager = championManager;
 
         int buttonWidth = _width - 20;
         int buttonHeight = 50;
@@ -168,6 +181,30 @@ public partial class UIPanel
     {
         return _font;
     }
+
+    public Rectangle GunTowerButtonRect => _gunTowerButton;
+
+    public Rectangle GunAbilityButtonRect => _gunAbilityButton;
+
+    public Rectangle CannonTowerButtonRect => _cannonTowerButton;
+
+    public Rectangle CannonAbilityButtonRect => _cannonAbilityButton;
+
+    public Rectangle WallTowerButtonRect => _wallTowerButton;
+
+    public Rectangle WallAbilityButtonRect => _wallAbilityButton;
+
+    public Rectangle HealingTowerButtonRect => _healingTowerButton;
+
+    public Rectangle HealingAbilityButtonRect => _healingAbilityButton;
+
+    public Rectangle PlaceHighGroundButtonRect => _placeHighGroundButton;
+
+    public Rectangle SpawnEnemyButtonRect => _spawnEnemyButton;
+
+    public Rectangle TimeSlowButtonRect => _timeSlowButton;
+
+    public Rectangle TimeSlowBarRect => _timeSlowBarBg;
 
     /// <summary>
     /// Handle click input on the UI panel. Returns true if the click was consumed.

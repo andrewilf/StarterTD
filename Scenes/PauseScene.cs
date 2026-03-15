@@ -1,9 +1,11 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Managers;
+using StarterTD.UI;
 
 namespace StarterTD.Scenes;
 
@@ -15,10 +17,10 @@ public class PauseScene : IScene
 {
     private readonly Game1 _game;
     private InputManager _inputManager = null!;
-    private SpriteFont? _font;
-
-    private readonly Rectangle _resumeButton;
-    private readonly Rectangle _mapSelectionButton;
+    private PauseMenuGumView? _gumView;
+    private int _layoutWidth;
+    private int _layoutHeight;
+    private bool _isNavigatingAway;
 
     private const int ButtonWidth = 200;
     private const int ButtonHeight = 60;
@@ -27,112 +29,86 @@ public class PauseScene : IScene
     public PauseScene(Game1 game)
     {
         _game = game;
-
-        int centerX = GameSettings.ScreenWidth / 2 - ButtonWidth / 2;
-        int startY = GameSettings.ScreenHeight / 2 - 80;
-
-        _resumeButton = new Rectangle(centerX, startY, ButtonWidth, ButtonHeight);
-        _mapSelectionButton = new Rectangle(
-            centerX,
-            startY + ButtonHeight + Gap,
-            ButtonWidth,
-            ButtonHeight
-        );
     }
 
     public void LoadContent()
     {
         _inputManager = new InputManager();
+        _isNavigatingAway = false;
 
-        try
-        {
-            _font = _game.Content.Load<SpriteFont>("DefaultFont");
-        }
-        catch
-        {
-            // Font not available — UI will use fallback rendering
-        }
+        _gumView = new PauseMenuGumView(
+            onResumeClicked: HandleResumeClicked,
+            onMapSelectionClicked: HandleMapSelectionClicked
+        );
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+        RebuildLayout(viewportWidth, viewportHeight);
+        _gumView.AttachToRoot();
+    }
+
+    public void UnloadContent()
+    {
+        _gumView?.Dispose();
+        _gumView = null;
     }
 
     public void Update(GameTime gameTime)
     {
         _inputManager.Update();
+        HandleViewportResize();
 
         if (_inputManager.IsKeyPressed(Keys.Escape) || _inputManager.IsKeyPressed(Keys.P))
-        {
-            _game.PopScene();
-            return;
-        }
-
-        if (_inputManager.IsLeftClick())
-        {
-            Point mousePos = _inputManager.MousePosition;
-
-            if (_resumeButton.Contains(mousePos))
-            {
-                _game.PopScene();
-                return;
-            }
-
-            if (_mapSelectionButton.Contains(mousePos))
-            {
-                _game.SetScene(new MapSelectionScene(_game));
-            }
-        }
+            HandleResumeClicked();
     }
 
-    public void Draw(SpriteBatch spriteBatch)
+    public void Draw(SpriteBatch spriteBatch) { }
+
+    private void HandleViewportResize()
     {
-        TextureManager.DrawRect(
-            spriteBatch,
-            new Rectangle(0, 0, GameSettings.ScreenWidth, GameSettings.ScreenHeight),
-            Color.Black * 0.7f
+        var (viewportWidth, viewportHeight) = GetViewportSize();
+
+        if (viewportWidth == _layoutWidth && viewportHeight == _layoutHeight)
+            return;
+
+        RebuildLayout(viewportWidth, viewportHeight);
+    }
+
+    private (int width, int height) GetViewportSize() =>
+        (
+            Math.Max(1, _game.GraphicsDevice.Viewport.Width),
+            Math.Max(1, _game.GraphicsDevice.Viewport.Height)
         );
 
-        if (_font != null)
-        {
-            string title = "PAUSED";
-            Vector2 titleSize = _font.MeasureString(title);
-            spriteBatch.DrawString(
-                _font,
-                title,
-                new Vector2(
-                    GameSettings.ScreenWidth / 2 - titleSize.X / 2,
-                    GameSettings.ScreenHeight / 2 - 150
-                ),
-                Color.White
-            );
+    private void RebuildLayout(int viewportWidth, int viewportHeight)
+    {
+        _layoutWidth = viewportWidth;
+        _layoutHeight = viewportHeight;
+        GameSettings.SetScreenSize(viewportWidth, viewportHeight);
 
-            DrawButton(spriteBatch, _resumeButton, "Resume (P/ESC)");
-            DrawButton(spriteBatch, _mapSelectionButton, "Map Selection");
-        }
-        else
-        {
-            TextureManager.DrawRect(spriteBatch, _resumeButton, Color.DarkSlateGray);
-            TextureManager.DrawRectOutline(spriteBatch, _resumeButton, Color.White, 2);
+        int centerX = viewportWidth / 2 - ButtonWidth / 2;
+        int startY = viewportHeight / 2 - 80;
+        var resumeButton = new Rectangle(centerX, startY, ButtonWidth, ButtonHeight);
+        var mapSelectionButton = new Rectangle(
+            centerX,
+            startY + ButtonHeight + Gap,
+            ButtonWidth,
+            ButtonHeight
+        );
 
-            TextureManager.DrawRect(spriteBatch, _mapSelectionButton, Color.DarkSlateGray);
-            TextureManager.DrawRectOutline(spriteBatch, _mapSelectionButton, Color.White, 2);
-        }
+        _gumView?.ResizeToViewport(viewportWidth, viewportHeight);
+        _gumView?.UpdateLayout(resumeButton, mapSelectionButton);
     }
 
-    private void DrawButton(SpriteBatch spriteBatch, Rectangle rect, string label)
+    private void HandleResumeClicked()
     {
-        TextureManager.DrawRect(spriteBatch, rect, Color.DarkSlateGray);
-        TextureManager.DrawRectOutline(spriteBatch, rect, Color.White, 2);
+        _game.PopScene();
+    }
 
-        if (_font != null)
-        {
-            Vector2 textSize = _font.MeasureString(label);
-            spriteBatch.DrawString(
-                _font,
-                label,
-                new Vector2(
-                    rect.X + (rect.Width - textSize.X) / 2,
-                    rect.Y + (rect.Height - textSize.Y) / 2
-                ),
-                Color.White
-            );
-        }
+    private void HandleMapSelectionClicked()
+    {
+        if (_isNavigatingAway)
+            return;
+
+        _isNavigatingAway = true;
+        _game.SetScene(new MapSelectionScene(_game));
     }
 }
