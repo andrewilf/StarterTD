@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Entities;
 using StarterTD.UI;
@@ -106,6 +107,24 @@ public partial class GameplayScene
 
         if (_gameOver || _gameWon)
             DrawGameOverOverlay(spriteBatch, _uiPanel.GetFont());
+
+        if (!GumService.Default.IsInitialized)
+            return;
+
+        // SceneManager owns the SpriteBatch lifecycle around scene draws. Gum renders
+        // through its own pipeline, so we end the current batch, draw Gum, and reopen
+        // a matching batch so SceneManager can end it safely.
+        spriteBatch.End();
+        GumService.Default.Draw();
+        spriteBatch.Begin(
+            SpriteSortMode.Deferred,
+            BlendState.AlphaBlend,
+            SamplerState.PointClamp,
+            null,
+            null,
+            null,
+            null
+        );
     }
 
     private string GetSpawnStatusText()
@@ -350,108 +369,6 @@ public partial class GameplayScene
                 h
             );
             TextureManager.DrawRectOutline(spriteBatch, rect, Color.Yellow, borderThickness);
-
-            var sellRect = GetSellButtonRect(tower);
-            const int sellGlyphThickness = 2;
-            const int sellGlyphLengthOffset = 4;
-            TextureManager.DrawRect(spriteBatch, sellRect, new Color(130, 0, 0));
-            TextureManager.DrawRectOutline(spriteBatch, sellRect, Color.DarkRed, 2);
-
-            Vector2 sellCenter = new Vector2(
-                sellRect.X + sellRect.Width / 2f,
-                sellRect.Y + sellRect.Height / 2f
-            );
-            int sellGlyphLength = sellRect.Width - sellGlyphLengthOffset;
-            TextureManager.DrawSprite(
-                spriteBatch,
-                sellCenter,
-                new Vector2(sellGlyphThickness, sellGlyphLength),
-                Color.White,
-                MathF.PI / 4f,
-                new Vector2(0.5f, 0.5f)
-            );
-            TextureManager.DrawSprite(
-                spriteBatch,
-                sellCenter,
-                new Vector2(sellGlyphThickness, sellGlyphLength),
-                Color.White,
-                -MathF.PI / 4f,
-                new Vector2(0.5f, 0.5f)
-            );
-
-            if (tower is HealingChampionTower healingChampionTower)
-            {
-                var modeRect = GetHealingModeButtonRect(healingChampionTower);
-                bool isModeToggleCoolingDown =
-                    healingChampionTower.ModeToggleCooldownRemaining > 0f;
-                bool isAttackMode = healingChampionTower.Mode == HealingChampionMode.Attack;
-
-                Color modeBg = isAttackMode ? new Color(85, 18, 18) : new Color(18, 55, 88);
-                Color modeOutline = isAttackMode
-                    ? new Color(255, 110, 70)
-                    : new Color(90, 235, 255);
-                Color glyphColor = isAttackMode
-                    ? new Color(255, 215, 120)
-                    : new Color(195, 255, 215);
-
-                if (isModeToggleCoolingDown)
-                {
-                    modeBg = new Color(45, 45, 45);
-                    modeOutline = Color.DimGray;
-                    glyphColor = Color.Gray;
-                }
-
-                TextureManager.DrawRect(spriteBatch, modeRect, modeBg);
-                TextureManager.DrawRectOutline(spriteBatch, modeRect, modeOutline, 2);
-
-                if (isAttackMode)
-                    DrawAttackModeGlyph(spriteBatch, modeRect, glyphColor);
-                else
-                    DrawHealingModeGlyph(spriteBatch, modeRect, glyphColor);
-
-                if (isModeToggleCoolingDown)
-                {
-                    var font = _uiPanel.GetFont();
-                    if (font != null)
-                    {
-                        string cooldownLabel = MathF
-                            .Ceiling(healingChampionTower.ModeToggleCooldownRemaining)
-                            .ToString("0");
-                        Vector2 textSize = font.MeasureString(cooldownLabel);
-                        spriteBatch.DrawString(
-                            font,
-                            cooldownLabel,
-                            new Vector2(
-                                modeRect.X + (modeRect.Width - textSize.X) / 2f,
-                                modeRect.Y + (modeRect.Height - textSize.Y) / 2f
-                            ),
-                            Color.Yellow
-                        );
-                    }
-                }
-            }
-
-            if (tower.TowerType.IsWallingChampion() || tower.TowerType.IsWallingGeneric())
-            {
-                var btnRect = GetWallPlacementButtonRect(tower);
-                Color btnBg = _wallPlacementMode ? Color.DarkGreen : new Color(20, 60, 20);
-                Color btnOutline = _wallPlacementMode ? Color.LimeGreen : Color.DarkGreen;
-                TextureManager.DrawRect(spriteBatch, btnRect, btnBg);
-                TextureManager.DrawRectOutline(spriteBatch, btnRect, btnOutline, 2);
-
-                int cx = btnRect.X + btnRect.Width / 2;
-                int cy = btnRect.Y + btnRect.Height / 2;
-                TextureManager.DrawRect(
-                    spriteBatch,
-                    new Rectangle(cx - 4, cy - 1, 8, 3),
-                    Color.White
-                );
-                TextureManager.DrawRect(
-                    spriteBatch,
-                    new Rectangle(cx - 1, cy - 4, 3, 8),
-                    Color.White
-                );
-            }
         }
 
         if (_selectedEnemy != null)
@@ -564,31 +481,6 @@ public partial class GameplayScene
         const int btnSize = 18;
         var sellRect = GetSellButtonRect(tower);
         return new Rectangle(sellRect.X, sellRect.Bottom + 2, btnSize, btnSize);
-    }
-
-    private static void DrawHealingModeGlyph(SpriteBatch spriteBatch, Rectangle rect, Color color)
-    {
-        int cx = rect.X + rect.Width / 2;
-        int cy = rect.Y + rect.Height / 2;
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 1, cy - 5, 3, 11), color);
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 5, cy - 1, 11, 3), color);
-
-        // Support mode accent pips around the center plus.
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy - 6, 2, 2), color);
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy - 6, 2, 2), color);
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy + 4, 2, 2), color);
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy + 4, 2, 2), color);
-    }
-
-    private static void DrawAttackModeGlyph(SpriteBatch spriteBatch, Rectangle rect, Color color)
-    {
-        int cx = rect.X + rect.Width / 2;
-        int cy = rect.Y + rect.Height / 2;
-        // Attack mode uses a projectile-arrow glyph to avoid confusion with the sell "X" button.
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 6, cy - 1, 8, 3), color); // shaft
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 2, cy - 2, 2, 5), color); // head base
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx + 4, cy - 3, 2, 7), color); // head tip
-        TextureManager.DrawRect(spriteBatch, new Rectangle(cx - 7, cy - 2, 1, 5), color); // tail fin
     }
 
     /// <summary>

@@ -42,6 +42,12 @@ public partial class UIPanel
     /// <summary>Current UI selection mode.</summary>
     public UISelectionMode SelectionMode { get; private set; }
 
+    /// <summary>
+    /// When true, gameplay buttons are rendered through Gum instead of SpriteBatch.
+    /// Non-button panel elements (background, status text, info panels) still render here.
+    /// </summary>
+    public bool UseGumButtons { get; set; }
+
     // Consolidated tower buttons (each covers champion + generic for that type)
     private readonly Rectangle _gunTowerButton;
     private readonly Rectangle _gunAbilityButton;
@@ -168,6 +174,30 @@ public partial class UIPanel
     {
         return _font;
     }
+
+    public Rectangle GunTowerButtonRect => _gunTowerButton;
+
+    public Rectangle GunAbilityButtonRect => _gunAbilityButton;
+
+    public Rectangle CannonTowerButtonRect => _cannonTowerButton;
+
+    public Rectangle CannonAbilityButtonRect => _cannonAbilityButton;
+
+    public Rectangle WallTowerButtonRect => _wallTowerButton;
+
+    public Rectangle WallAbilityButtonRect => _wallAbilityButton;
+
+    public Rectangle HealingTowerButtonRect => _healingTowerButton;
+
+    public Rectangle HealingAbilityButtonRect => _healingAbilityButton;
+
+    public Rectangle PlaceHighGroundButtonRect => _placeHighGroundButton;
+
+    public Rectangle SpawnEnemyButtonRect => _spawnEnemyButton;
+
+    public Rectangle TimeSlowButtonRect => _timeSlowButton;
+
+    public Rectangle TimeSlowBarRect => _timeSlowBarBg;
 
     /// <summary>
     /// Handle click input on the UI panel. Returns true if the click was consumed.

@@ -32,42 +32,45 @@ public partial class UIPanel
         {
             float championCooldown = cooldowns.GetValueOrDefault(TowerType.ChampionGun);
 
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _gunTowerButton,
-                TowerType.Gun,
-                TowerType.ChampionGun,
-                cooldowns.GetValueOrDefault(TowerType.Gun),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
+            if (!UseGumButtons)
+            {
+                DrawConsolidatedTowerButton(
+                    spriteBatch,
+                    _gunTowerButton,
+                    TowerType.Gun,
+                    TowerType.ChampionGun,
+                    cooldowns.GetValueOrDefault(TowerType.Gun),
+                    championCooldown
+                );
+                DrawAbilityButton(spriteBatch, _gunAbilityButton, TowerType.ChampionGun);
 
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _cannonTowerButton,
-                TowerType.Cannon,
-                TowerType.ChampionCannon,
-                cooldowns.GetValueOrDefault(TowerType.Cannon),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
+                DrawConsolidatedTowerButton(
+                    spriteBatch,
+                    _cannonTowerButton,
+                    TowerType.Cannon,
+                    TowerType.ChampionCannon,
+                    cooldowns.GetValueOrDefault(TowerType.Cannon),
+                    championCooldown
+                );
+                DrawAbilityButton(spriteBatch, _cannonAbilityButton, TowerType.ChampionCannon);
 
-            DrawConsolidatedTowerButton(
-                spriteBatch,
-                _wallTowerButton,
-                TowerType.Walling,
-                TowerType.ChampionWalling,
-                cooldowns.GetValueOrDefault(TowerType.Walling),
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
-            DrawChampionOnlyTowerButton(
-                spriteBatch,
-                _healingTowerButton,
-                TowerType.ChampionHealing,
-                championCooldown
-            );
-            DrawAbilityButton(spriteBatch, _healingAbilityButton, TowerType.ChampionHealing);
+                DrawConsolidatedTowerButton(
+                    spriteBatch,
+                    _wallTowerButton,
+                    TowerType.Walling,
+                    TowerType.ChampionWalling,
+                    cooldowns.GetValueOrDefault(TowerType.Walling),
+                    championCooldown
+                );
+                DrawAbilityButton(spriteBatch, _wallAbilityButton, TowerType.ChampionWalling);
+                DrawChampionOnlyTowerButton(
+                    spriteBatch,
+                    _healingTowerButton,
+                    TowerType.ChampionHealing,
+                    championCooldown
+                );
+                DrawAbilityButton(spriteBatch, _healingAbilityButton, TowerType.ChampionHealing);
+            }
 
             spriteBatch.DrawString(
                 _font,
@@ -84,70 +87,79 @@ public partial class UIPanel
                 new Vector2(_x + 10, _placeHighGroundButton.Top - 30),
                 Color.Orange
             );
-            DrawDebugButton(
-                spriteBatch,
-                _placeHighGroundButton,
-                "Place High Ground",
-                UISelectionMode.PlaceHighGround
-            );
-            DrawDebugButton(
-                spriteBatch,
-                _spawnEnemyButton,
-                "Spawn Enemy",
-                UISelectionMode.SpawnEnemy
-            );
 
-            // Time-slow toggle button
-            Color timeSlowBg = IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80);
-            Color timeSlowOutline = IsTimeSlowed ? Color.DeepSkyBlue : Color.SteelBlue;
-            string timeSlowText = IsTimeSlowed ? ">> 0.5x Speed <<" : "Time Slow";
-            TextureManager.DrawRect(spriteBatch, _timeSlowButton, timeSlowBg);
-            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, timeSlowOutline, 2);
-            Vector2 tsSize = _font.MeasureString(timeSlowText);
-            spriteBatch.DrawString(
-                _font,
-                timeSlowText,
-                new Vector2(
-                    _timeSlowButton.X + (_timeSlowButton.Width - tsSize.X) / 2,
-                    _timeSlowButton.Y + (_timeSlowButton.Height - tsSize.Y) / 2
-                ),
-                IsTimeSlowed ? Color.DeepSkyBlue : Color.LightSteelBlue
-            );
+            if (!UseGumButtons)
+            {
+                DrawDebugButton(
+                    spriteBatch,
+                    _placeHighGroundButton,
+                    "Place High Ground",
+                    UISelectionMode.PlaceHighGround
+                );
+                DrawDebugButton(
+                    spriteBatch,
+                    _spawnEnemyButton,
+                    "Spawn Enemy",
+                    UISelectionMode.SpawnEnemy
+                );
+
+                // Time-slow toggle button
+                Color timeSlowBg = IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80);
+                Color timeSlowOutline = IsTimeSlowed ? Color.DeepSkyBlue : Color.SteelBlue;
+                string timeSlowText = IsTimeSlowed ? ">> 0.5x Speed <<" : "Time Slow";
+                TextureManager.DrawRect(spriteBatch, _timeSlowButton, timeSlowBg);
+                TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, timeSlowOutline, 2);
+                Vector2 tsSize = _font.MeasureString(timeSlowText);
+                spriteBatch.DrawString(
+                    _font,
+                    timeSlowText,
+                    new Vector2(
+                        _timeSlowButton.X + (_timeSlowButton.Width - tsSize.X) / 2,
+                        _timeSlowButton.Y + (_timeSlowButton.Height - tsSize.Y) / 2
+                    ),
+                    IsTimeSlowed ? Color.DeepSkyBlue : Color.LightSteelBlue
+                );
+            }
 
             DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
         }
         else
         {
             // Fallback: no font loaded — draw colored blocks as indicators
-            bool gunChampAlive = _championManager?.IsChampionAlive(TowerType.ChampionGun) ?? false;
-            bool cannonChampAlive =
-                _championManager?.IsChampionAlive(TowerType.ChampionCannon) ?? false;
+            if (!UseGumButtons)
+            {
+                bool gunChampAlive =
+                    _championManager?.IsChampionAlive(TowerType.ChampionGun) ?? false;
+                bool cannonChampAlive =
+                    _championManager?.IsChampionAlive(TowerType.ChampionCannon) ?? false;
 
-            DrawButtonNoFont(
-                spriteBatch,
-                _gunTowerButton,
-                gunChampAlive ? TowerType.Gun : TowerType.ChampionGun
-            );
-            DrawButtonNoFont(
-                spriteBatch,
-                _cannonTowerButton,
-                cannonChampAlive ? TowerType.Cannon : TowerType.ChampionCannon
-            );
-            bool wallChampAlive =
-                _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
-            DrawButtonNoFont(
-                spriteBatch,
-                _wallTowerButton,
-                wallChampAlive ? TowerType.Walling : TowerType.ChampionWalling
-            );
-            DrawButtonNoFont(spriteBatch, _healingTowerButton, TowerType.ChampionHealing);
+                DrawButtonNoFont(
+                    spriteBatch,
+                    _gunTowerButton,
+                    gunChampAlive ? TowerType.Gun : TowerType.ChampionGun
+                );
+                DrawButtonNoFont(
+                    spriteBatch,
+                    _cannonTowerButton,
+                    cannonChampAlive ? TowerType.Cannon : TowerType.ChampionCannon
+                );
+                bool wallChampAlive =
+                    _championManager?.IsChampionAlive(TowerType.ChampionWalling) ?? false;
+                DrawButtonNoFont(
+                    spriteBatch,
+                    _wallTowerButton,
+                    wallChampAlive ? TowerType.Walling : TowerType.ChampionWalling
+                );
+                DrawButtonNoFont(spriteBatch, _healingTowerButton, TowerType.ChampionHealing);
 
-            TextureManager.DrawRect(
-                spriteBatch,
-                _timeSlowButton,
-                IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80)
-            );
-            TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, Color.SteelBlue, 2);
+                TextureManager.DrawRect(
+                    spriteBatch,
+                    _timeSlowButton,
+                    IsTimeSlowed ? new Color(0, 80, 120) : new Color(20, 60, 80)
+                );
+                TextureManager.DrawRectOutline(spriteBatch, _timeSlowButton, Color.SteelBlue, 2);
+            }
+
             DrawTimeSlowBar(spriteBatch, timeSlowBankFraction);
 
             TextureManager.DrawRect(

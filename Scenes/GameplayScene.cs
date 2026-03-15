@@ -23,6 +23,7 @@ public partial class GameplayScene : IScene
     private SpawnScheduleManager _spawnScheduleManager = null!;
     private InputManager _inputManager = null!;
     private UIPanel _uiPanel = null!;
+    private GameplayHudGumView? _gameplayHudView;
 
     /// <summary>
     /// Pixel offset to center the map on the fullscreen display.
@@ -145,7 +146,10 @@ public partial class GameplayScene : IScene
             GameSettings.ScreenWidth,
             GameSettings.ScreenHeight,
             _championManager
-        );
+        )
+        {
+            UseGumButtons = true,
+        };
 
         // Center the map in the screen area left of the UI panel
         int mapPixelW = _map.Columns * GameSettings.TileSize;
@@ -217,12 +221,17 @@ public partial class GameplayScene : IScene
         {
             // Font not available — UI will use fallback rendering
         }
+
+        InitializeGameplayHudGum();
     }
 
     public void UnloadContent()
     {
         if (_uiPanel != null)
             _uiPanel.OnAbilityTriggered = null;
+
+        _gameplayHudView?.Dispose();
+        _gameplayHudView = null;
 
         if (_towerManager != null)
         {
@@ -241,6 +250,7 @@ public partial class GameplayScene : IScene
     {
         _inputManager.Update();
         HandleInput();
+        UpdateGameplayHudGum();
 
         if (_gameOver || _gameWon)
             return;

@@ -31,4 +31,15 @@ internal static class GumMenuButtonFactory
             HeightUnits = DimensionUnitType.Absolute,
         };
     }
+
+    public static void ApplyStyle(Button button, GumMenuButtonStyle style)
+    {
+        if (button.Visual is not ButtonVisual visual)
+            return;
+
+        visual.BackgroundColor = style.BackgroundColor;
+        visual.FocusedIndicatorColor = style.FocusedIndicatorColor;
+        visual.ForegroundColor = style.ForegroundColor;
+        button.UpdateState();
+    }
 }

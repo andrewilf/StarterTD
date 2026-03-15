@@ -7,6 +7,7 @@
 - Gum runtime is initialized once in `Game1` (`GumService.Default.Initialize(..., DefaultVisualsVersion.V3)`), updated each frame from `Game1.Update`, and resized from `Window.ClientSizeChanged` by syncing `GraphicalUiElement.CanvasWidth/CanvasHeight` plus `UpdateLayout()`/`UpdateToFontValues()`
 - Start menu buttons are Gum code-only controls (`StartMenuGumView` + `GumMenuButtonFactory`) with shared reusable construction; `Start` transitions to map select, `Settings` remains a no-op, and `Exit` closes the game
 - Map selection interactions are also Gum-backed (`MapSelectionGumView`): `Back` and per-map card selection clicks are handled by Gum controls while existing card preview rendering remains scene-drawn
+- Gameplay screen buttons are now Gum-backed (`GameplayHudGumView`): right-panel tower/ability/debug/time-slow buttons and selected-tower world controls (`Sell`, healing mode, wall placement mode) are code-only Gum controls with scene-owned lifecycle/cleanup. Placement buttons currently share one unified color, and healing-mode toggle uses symbol labels (`+` heal, `>` attack)
 - Scene lifecycle now includes `IScene.UnloadContent()`. `SceneManager` unloads scenes on replace/pop and also unloads preloaded incoming scenes if a transition is canceled
 - `InputManager` primes current/previous input snapshots on construction, so held clicks/keys do not replay as fresh presses after scene transitions
 - FPS counter samples rendered `Draw()` cadence over a 0.5s window, so it reports displayed frame rate instead of fixed-step `Update()` ticks
@@ -42,7 +43,7 @@
 - Gun tower testing override: `Gun` is currently tuned to `Damage 100 / Range 90`, and `ChampionGun` to `Damage 200 / Range 100`, so spawn schedules can be cleared quickly during local testing
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
 - Movement input: selected walkable champions move with left-click drag-and-release. Drag can start from any occupied champion tile and destination snaps footprint-aware; move preview/path nodes are anchor-centered and the destination occupied footprint is shown with a white translucent overlay; right-click no longer redirects laser, it deselects the selected laser only
-- Sell flow: selected tower exposes an in-world `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows an in-world mode toggle button directly under sell (`healing`/`attack` icon, disabled while 4.0s mode cooldown is active)
+- Sell flow: selected tower exposes an in-world Gum `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows a Gum in-world mode toggle button directly under sell (`Atk`/`Heal`, disabled while 4.0s mode cooldown is active)
 - Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
 - Enemy FSM (Moving/Attacking); timed spawn schedules driven by `Content/SpawnSchedules/{mapId}.json` (fallback to a built-in schedule if no file)
 - Spawn schedule schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`, with `at` measured as absolute seconds from match start

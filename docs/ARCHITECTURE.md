@@ -11,7 +11,7 @@
 - Down: Scene -> managers via `Update()` args
 - Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
 - Rendering: `Game1` clears the backbuffer and draws FPS; `SceneManager` owns scene `SpriteBatch` orchestration plus full-scene transition render targets/compositing; scenes draw into the batches they are given
-- Gum UI runtime: `Game1` owns `GumService.Default` init/update/resize plumbing. Gum controls are scene-owned roots attached/detached in scene load/unload (currently used by `StartMenuScene` and `MapSelectionScene`)
+- Gum UI runtime: `Game1` owns `GumService.Default` init/update/resize plumbing. Gum controls are scene-owned roots attached/detached in scene load/unload (used by `StartMenuScene`, `MapSelectionScene`, and `GameplayScene`)
 - Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns
@@ -88,6 +88,7 @@
 - ChampionHealing uses a dedicated champion-only button (`HandleChampionOnlyTowerClick`) plus standard ability button
 - `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of a resource counter
 - `Draw()` also accepts a scene-computed spawn status string (`First enemy in: X.Xs` before the first spawn, `Enemies Spawned: N/Total` afterward)
+- `UseGumButtons`: when enabled, panel button visuals/input are delegated to Gum while `UIPanel` continues to own layout rectangles, selection/cooldown logic, info panel rendering, and the time-slow bar
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Tower info panel fire-rate line reads `Tower.EffectiveFireInterval` (so active speed buffs are reflected in displayed APS)
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
@@ -100,8 +101,9 @@
 - Clears on: ESC, tower/enemy selection change, UI `SelectedTowerType` set, tower sold
 
 ## World-Space Tower Controls
-- Selected tower always draws an in-world sell `X` button.
-- Selected `HealingChampionTower` also draws an in-world mode button directly under sell. The icon switches between healing and attack glyphs; while mode cooldown is active, button is disabled and shows remaining seconds.
+- Selected tower controls are Gum buttons positioned from world-space rectangles converted to screen-space each frame (`GetSellButtonRect`, `GetHealingModeButtonRect`, `GetWallPlacementButtonRect` + map offset).
+- Controls shown by selection context: sell `X` for all towers, `Atk`/`Heal` for `HealingChampionTower`, and `+` wall-placement toggle for walling towers.
+- Gameplay input gates world/panel interactions when Gum has captured the primary push so scene click/drag logic does not fire through UI controls.
 
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower. Auto-clears on death/end
