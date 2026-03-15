@@ -11,7 +11,7 @@
 - Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns
-`Map`, `WaveManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`, `RailgunEffects`
+`Map`, `SpawnScheduleManager`, `ChampionManager`, `TowerManager`, `InputManager`, `UIPanel`, `AoEEffects`, `SpikeEffects`, `RailgunEffects`
 - Entrance-warning lane state for spawn indicators (per-lane cooldown timing, tracked enemy near spawn, pulse animation time)
 
 ## Tower System
@@ -83,6 +83,7 @@
 - Consolidated buttons for Gun/Cannon/Walling: champion mode when dead; generic mode when alive. `HandleConsolidatedTowerClick()` dispatches. Sub-labels: "Place Champion" (green), "Global/Respawn: X.Xs" (yellow), "Locked: X.Xs" (orange-red when placement pool CD > 0). Placement blocked (click ignored, swatch grayed) while pool CD > 0
 - ChampionHealing uses a dedicated champion-only button (`HandleChampionOnlyTowerClick`) plus standard ability button
 - `Draw()` and `HandleClick()` accept `IReadOnlyDictionary<TowerType, float> cooldowns` (pool key → remaining seconds) instead of a resource counter
+- `Draw()` also accepts a scene-computed spawn status string (`First enemy in: X.Xs` before the first spawn, `Enemies Spawned: N/Total` afterward)
 - Ability button per type: disabled (no champion) / CD with timer / ready (green). Fires `OnAbilityTriggered` only when `IsAbilityReady()`
 - Tower info panel fire-rate line reads `Tower.EffectiveFireInterval` (so active speed buffs are reflected in displayed APS)
 - Debug: Place High Ground (grid click mode), Spawn Enemy (instant)
@@ -101,12 +102,12 @@
 ## Enemy Selection
 - `GameplayScene._selectedEnemy` via `GetEnemyAt()` (15px radius). Mutually exclusive with tower. Auto-clears on death/end
 
-## Wave System
-- `Content/Waves/{mapId}.json` via `WaveLoader.TryLoad()`. Fallback: `FallbackWaves()` in `GameplayScene`
-- Schema: `{ waves: [ { wave, spawns: [ { at, spawnPoint, name, health, speed, attackDamage, color } ] } ] }`. `at` = seconds from wave start
-- `WaveManager(Func<string, List<Point>?>, List<WaveData>)`: dequeues by elapsed time; wave ends when list empty
-- `WaveManager` read APIs for warning scheduling: `CurrentWaveElapsed`, `PendingSpawnCount`, `TryGetPendingSpawn(index, out SpawnEntry)`
-- `WaveLoader.ParseColor(string)`: XNA `Color` by name via reflection
+## Spawn Schedule System
+- `Content/SpawnSchedules/{mapId}.json` via `SpawnScheduleLoader.TryLoad()`. Fallback: `FallbackSpawnSchedule()` in `GameplayScene`
+- Schema: `{ spawns: [ { at, spawnPoint, name, health, speed, attackDamage, color } ] }`. `at` = absolute seconds from match start
+- `SpawnScheduleManager(Func<string, List<Point>?>, IEnumerable<SpawnEntry>)`: dequeues by elapsed match time; schedule starts immediately on scene load
+- `SpawnScheduleManager` read APIs for warning scheduling and HUD state: `ElapsedSeconds`, `TotalSpawnCount`, `SpawnedCount`, `PendingSpawnCount`, `IsScheduleComplete`, `TryGetPendingSpawn(index, out SpawnEntry)`
+- `SpawnScheduleLoader.ParseColor(string)`: XNA `Color` by name via reflection
 - Entrance warning flow is spawn-driven and scene-owned: `GameplayScene` keeps persistent lane state per map spawn, resolves unknown spawn names to the default map spawn, evaluates nearest pending spawn per lane each frame, and shows pre-spawn warnings only when that lane has been quiet for at least 5 seconds
 
 ## TextureManager

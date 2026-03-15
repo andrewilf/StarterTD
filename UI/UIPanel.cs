@@ -52,7 +52,6 @@ public partial class UIPanel
     private readonly Rectangle _healingTowerButton;
     private readonly Rectangle _healingAbilityButton;
 
-    private readonly Rectangle _startWaveButton;
     private readonly Rectangle _timeSlowButton;
     private readonly Rectangle _timeSlowBarBg;
 
@@ -65,9 +64,6 @@ public partial class UIPanel
     // Debug button rectangles
     private readonly Rectangle _placeHighGroundButton;
     private readonly Rectangle _spawnEnemyButton;
-
-    /// <summary>Whether the "Start Wave" button was clicked this frame.</summary>
-    public bool StartWaveClicked { get; private set; }
 
     /// <summary>Whether time-slow mode is currently active (persistent toggle).</summary>
     public bool IsTimeSlowed { get; private set; }
@@ -98,6 +94,8 @@ public partial class UIPanel
         int startY = 120;
         int gap = 10;
         int abilityGap = 5;
+        int debugHeaderReservedHeight = 38;
+        int debugBottomGap = 20;
 
         _gunTowerButton = new Rectangle(_x + 10, startY, buttonWidth, buttonHeight);
         _gunAbilityButton = new Rectangle(
@@ -134,10 +132,18 @@ public partial class UIPanel
             abilityButtonHeight
         );
 
-        int minimumDebugStartY =
-            healingStartY + buttonHeight + abilityGap + abilityButtonHeight + 16;
-        // Debug buttons pushed up to leave room for time-slow button above Start Wave.
-        int debugStartY = Math.Max(_height - 270, minimumDebugStartY);
+        _timeSlowButton = new Rectangle(_x + 10, _height - 70, buttonWidth, buttonHeight);
+        _timeSlowBarBg = new Rectangle(
+            _timeSlowButton.X,
+            _timeSlowButton.Bottom + 4,
+            _timeSlowButton.Width,
+            6
+        );
+
+        int minimumDebugStartY = _healingAbilityButton.Bottom + debugHeaderReservedHeight;
+        int debugButtonsHeight = buttonHeight * 2 + gap;
+        int preferredDebugStartY = _timeSlowButton.Top - debugButtonsHeight - debugBottomGap;
+        int debugStartY = Math.Max(preferredDebugStartY, minimumDebugStartY);
         _placeHighGroundButton = new Rectangle(_x + 10, debugStartY, buttonWidth, buttonHeight);
         _spawnEnemyButton = new Rectangle(
             _x + 10,
@@ -145,15 +151,6 @@ public partial class UIPanel
             buttonWidth,
             buttonHeight
         );
-
-        _timeSlowButton = new Rectangle(_x + 10, _height - 140, buttonWidth, buttonHeight);
-        _timeSlowBarBg = new Rectangle(
-            _timeSlowButton.X,
-            _timeSlowButton.Bottom + 4,
-            _timeSlowButton.Width,
-            6
-        );
-        _startWaveButton = new Rectangle(_x + 10, _height - 70, buttonWidth, buttonHeight);
     }
 
     /// <summary>
@@ -177,7 +174,6 @@ public partial class UIPanel
     /// </summary>
     public bool HandleClick(Point mousePos, IReadOnlyDictionary<TowerType, float> cooldowns)
     {
-        StartWaveClicked = false;
         SpawnEnemyClicked = false;
 
         // Debug buttons
@@ -266,13 +262,6 @@ public partial class UIPanel
             if (!IsTimeSlowed && !CanActivateTimeSlow)
                 return true;
             IsTimeSlowed = !IsTimeSlowed;
-            return true;
-        }
-
-        // Wave start button
-        if (_startWaveButton.Contains(mousePos))
-        {
-            StartWaveClicked = true;
             return true;
         }
 

@@ -23,7 +23,7 @@ Source of truth: `docs/ARCHITECTURE.md`.
 
 ## Feature Implementation Rules
 1.  **Event Handling**: Use `Action<T>` for cross-system events. Avoid `EventHandler`.
-2.  **State**: Global state (Lives, wave progression) resides in `GameplayScene`.
+2.  **State**: Global state (Lives, spawn-schedule progression) resides in `GameplayScene`.
 3.  **Clean-up**: If code is made redundant from changes, remove it.
 4.  **Verification**: Run `dotnet build` after generating code.
 5.  **Formatting**: Run `dotnet csharpier format .` once at the end of all code changes.

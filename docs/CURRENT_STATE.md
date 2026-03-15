@@ -3,6 +3,7 @@
 ## Active Systems
 - Core loop, stack-based scene management, Tiled `.tmx` maps (dynamic — drop files in `Content/Maps/`, no code changes)
 - Display starts in windowed maximized mode (not fullscreen). Main map-selection screen includes a clickable Exit button
+- FPS counter samples rendered `Draw()` cadence over a 0.5s window, so it reports displayed frame rate instead of fixed-step `Update()` ticks
 - Map selection layout auto-reflows to current viewport size; map preview tiles scale to fit card bounds
 - Gameplay rendering uses world-space + screen-space spritebatch passes; map is centered via `_worldMatrix` translation and gameplay input is converted through `ScreenToWorld`
 - Tile sizes are decoupled: display tile size is 32 while terrain spritesheet source tile size stays 40; TMX object marker conversion uses TMX tilewidth/tileheight
@@ -32,21 +33,23 @@
 - Projectile tracking: projectiles now track live target position each update (until target dies/escapes), then lock to last known position. Hit resolves if the projectile reaches hit distance or would overshoot this frame, preventing visible pass-through on fast shots
 - Placement cooldown system: each tower type has a shared pool (`_placementCooldowns` in `GameplayScene`). On placement: `pool += BaseCooldown + CooldownPenalty × (towers already in pool)`. On sell: `pool -= CooldownPenalty` (capped at 0). All champions share one pool (keyed on `ChampionGun`). Pools tick down using scaled game time (time-slow extends the wait). `GameplayScene.GetCooldownPoolKey()` maps any champion type → `ChampionGun`
 - UI: consolidated tower buttons for Gun/Cannon/Walling (champion mode when dead, generic mode when alive), plus a dedicated champion-only Healing Champion button; cooldown/"Locked" sub-labels; ability button per champion type (disabled/CD/ready states)
+- Gun tower testing override: `Gun` is currently tuned to `Damage 100 / Range 90`, and `ChampionGun` to `Damage 200 / Range 100`, so spawn schedules can be cleared quickly during local testing
 - Tower state machine: `TowerState` enum (Active, Moving, Cooldown) with `Update()` dispatch
 - Movement input: selected walkable champions move with left-click drag-and-release. Drag can start from any occupied champion tile and destination snaps footprint-aware; move preview/path nodes are anchor-centered and the destination occupied footprint is shown with a white translucent overlay; right-click no longer redirects laser, it deselects the selected laser only
 - Sell flow: selected tower exposes an in-world `X` button next to it for selling; right-click no longer triggers any tower sell action. Selected ChampionHealing also shows an in-world mode toggle button directly under sell (`healing`/`attack` icon, disabled while 4.0s mode cooldown is active)
 - Tower targeting strategies: `TargetingStrategy` enum on `TowerStats`/`Tower`. Gun types: `LowestHP`. Cannon types: `MostGrouped` (most enemies within AoE radius, tie-break lowest HP). Default: `Closest`
-- Enemy FSM (Moving/Attacking); waves driven by `Content/Waves/{mapId}.json` (fallback to hardcoded waves if no file)
-- Wave spawn schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`
-- Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Wave JSON assigns each enemy to a named spawn point
+- Enemy FSM (Moving/Attacking); timed spawn schedules driven by `Content/SpawnSchedules/{mapId}.json` (fallback to a built-in schedule if no file)
+- Spawn schedule schema: `at`, `spawnPoint`, `name`, `health`, `speed`, `attackDamage`, `color`, with `at` measured as absolute seconds from match start
+- Spawn flow: schedule starts automatically on scene load. Built-in/converted schedules use a 10.0s pre-match countdown before the first spawn, then the HUD swaps from `First enemy in: X.Xs` to `Enemies Spawned: N/Total`
+- Multi-spawn support: maps can define multiple named spawn/exit points (`spawn_a`/`exit_a`, etc.); each gets an independent path. Spawn schedule JSON assigns each enemy to a named spawn point
 - Enemy entrance indicator: spawn-driven, per-lane warnings render as flashy pulsing red exclamation markers with burst rays. For each lane, pre-spawn warning uses lead time `warningDistance * 2.5 / speed + 0.4s`, is gated by a 5.0s lane cooldown since the last actual spawn, and tracks a spawned enemy only while it remains within 1 tile of spawn. Unknown spawn names still fall back to the map's default spawn lane
-- Wave timing retune for warning validation: all wave files (`line`, `maze_test_1`, `maze_test_2`, `maze_test_3`) use burst + quiet-window timing so warning suppression/reappearance can be observed clearly under the 5.0s lane cooldown
+- Spawn timing retune for warning validation: all schedule files (`line`, `maze_test_1`, `maze_test_2`, `maze_test_3`) use burst + quiet-window timing so warning suppression/reappearance can be observed clearly under the 5.0s lane cooldown
 - Info panel: click tower/enemy for stats overlay (bottom-right). Tower fire-rate display uses effective APS (includes temporary attack-speed buffs). Dismiss: ESC/empty tile/new selection
 - Selection indicators: yellow outline, auto-deselect on death/end. Single-selection invariant enforced via `DeselectAll()` — selecting any object (tower, enemy, laser beam) clears all others
 - Range indicators, AoE visuals, railgun beam visuals, victory/defeat flow
 - Placement range preview is derived at draw-time from `UIPanel.SelectedTowerType` stats (no cached range state), so champion and generic non-zero-range tower selections render consistently; walling (`Range = 0`) shows no circle
 - Debug sidebar: Place High Ground tiles, Spawn Enemy
-- Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, wave spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank uses real (wall-clock) time, unaffected by the slowdown itself
+- Time-slow: toggle button in UI panel scales all game systems (enemies, towers, effects, timed spawning) to half speed via a scaled `GameTime`. Has a regenerating bank — drains while active, regens while inactive. Auto-deactivates at 0. Activation blocked below a minimum threshold. Bank uses real (wall-clock) time, unaffected by the slowdown itself
 
 ## Backlog
 

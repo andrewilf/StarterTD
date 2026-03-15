@@ -6,8 +6,8 @@ public static class GunTowerStats
 {
     public static readonly TowerStats Stats = new(
         Name: "Gun Tower",
-        Range: 120f,
-        Damage: 3f,
+        Range: 90f,
+        Damage: 100f,
         FireRate: 0.3f,
         BaseCooldown: 15f,
         CooldownPenalty: 5f,

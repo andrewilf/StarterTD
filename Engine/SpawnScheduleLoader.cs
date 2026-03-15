@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Microsoft.Xna.Framework;
@@ -7,10 +6,10 @@ using Microsoft.Xna.Framework;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// Loads wave definitions from Content/Waves/{mapId}.json.
-/// Returns null when no file exists so callers can fall back to hardcoded waves.
+/// Loads spawn schedules from Content/SpawnSchedules/{mapId}.json.
+/// Returns null when no file exists so callers can fall back to a built-in schedule.
 /// </summary>
-public static class WaveLoader
+public static class SpawnScheduleLoader
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -18,16 +17,16 @@ public static class WaveLoader
     };
 
     /// <summary>
-    /// Tries to load wave data for the given map ID.
-    /// Returns null if Content/Waves/{mapId}.json does not exist.
+    /// Tries to load spawn data for the given map ID.
+    /// Returns null if Content/SpawnSchedules/{mapId}.json does not exist.
     /// Throws on malformed JSON.
     /// </summary>
-    public static List<WaveData>? TryLoad(string mapId)
+    public static SpawnScheduleData? TryLoad(string mapId)
     {
         string path = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory,
             "Content",
-            "Waves",
+            "SpawnSchedules",
             $"{mapId}.json"
         );
 
@@ -35,11 +34,10 @@ public static class WaveLoader
             return null;
 
         string json = File.ReadAllText(path);
-        var file =
-            JsonSerializer.Deserialize<WaveFileData>(json, JsonOptions)
-            ?? throw new InvalidOperationException($"Wave file '{path}': failed to deserialize");
-
-        return file.Waves;
+        return JsonSerializer.Deserialize<SpawnScheduleData>(json, JsonOptions)
+            ?? throw new InvalidOperationException(
+                $"Spawn schedule file '{path}': failed to deserialize"
+            );
     }
 
     /// <summary>

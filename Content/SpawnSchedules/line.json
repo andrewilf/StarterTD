@@ -1,0 +1,454 @@
+{
+  "spawns": [
+    {
+      "at": 10.0,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 10.8,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 11.6,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 16.8,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 17.6,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 27.6,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 28.4,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 29.2,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 34.4,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 35.2,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 36.0,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 41.2,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 42.0,
+      "spawnPoint": "spawn",
+      "name": "Goblin",
+      "health": 400,
+      "speed": 95,
+      "attackDamage": 5,
+      "color": "Purple"
+    },
+    {
+      "at": 52.0,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 52.8,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 53.6,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 58.8,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 59.6,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 60.4,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 65.6,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 66.4,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 67.2,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 72.4,
+      "spawnPoint": "spawn",
+      "name": "Orc",
+      "health": 600,
+      "speed": 100,
+      "attackDamage": 8,
+      "color": "Green"
+    },
+    {
+      "at": 82.4,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 83.2,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 84.0,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 89.2,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 90.0,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 90.8,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 96.0,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 96.8,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 97.6,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 102.8,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 103.6,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 104.4,
+      "spawnPoint": "spawn",
+      "name": "Troll",
+      "health": 800,
+      "speed": 110,
+      "attackDamage": 8,
+      "color": "DarkGreen"
+    },
+    {
+      "at": 114.4,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 115.2,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 116.0,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 121.2,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 122.0,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 122.8,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 128.0,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 128.8,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 129.6,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 134.8,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 135.6,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 136.4,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 141.6,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 142.4,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    },
+    {
+      "at": 143.2,
+      "spawnPoint": "spawn",
+      "name": "Giant",
+      "health": 1000,
+      "speed": 120,
+      "attackDamage": 12,
+      "color": "Red"
+    }
+  ]
+}

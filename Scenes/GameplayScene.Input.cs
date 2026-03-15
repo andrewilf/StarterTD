@@ -93,9 +93,6 @@ public partial class GameplayScene
             if (_uiPanel.SelectedTowerType.HasValue)
                 DeselectAll();
 
-            if (_uiPanel.StartWaveClicked && !_waveManager.WaveInProgress && _allEnemiesCleared)
-                _waveManager.StartNextWave();
-
             if (_uiPanel.SpawnEnemyClicked)
                 SpawnDebugEnemy();
         }

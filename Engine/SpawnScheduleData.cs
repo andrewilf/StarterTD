@@ -3,11 +3,11 @@ using System.Collections.Generic;
 namespace StarterTD.Engine;
 
 /// <summary>
-/// A single enemy spawn event within a wave.
+/// A single enemy spawn event on the match timeline.
 /// All stats are fully specified inline — no shared enemy archetype lookup.
 /// </summary>
 public record SpawnEntry(
-    /// <summary>Seconds from wave start at which this enemy spawns.</summary>
+    /// <summary>Absolute seconds from match start when this enemy spawns.</summary>
     float At,
     /// <summary>Must match a key in Map.ActivePaths (e.g. "spawn", "spawn_a").</summary>
     string SpawnPoint,
@@ -19,8 +19,5 @@ public record SpawnEntry(
     string Color
 );
 
-/// <summary>Wave definition loaded from JSON. Wave number is 1-based for human authoring.</summary>
-public record WaveData(int Wave, List<SpawnEntry> Spawns);
-
-/// <summary>Root object of a per-map wave JSON file.</summary>
-public record WaveFileData(List<WaveData> Waves);
+/// <summary>Root object of a per-map spawn schedule JSON file.</summary>
+public record SpawnScheduleData(List<SpawnEntry> Spawns);

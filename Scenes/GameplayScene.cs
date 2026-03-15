@@ -12,7 +12,7 @@ namespace StarterTD.Scenes;
 
 /// <summary>
 /// The main gameplay scene. This is where the tower defense game loop runs.
-/// Manages the map, towers, enemies, waves, and UI.
+/// Manages the map, towers, enemies, timed spawn schedule, and UI.
 /// </summary>
 public partial class GameplayScene : IScene
 {
@@ -20,7 +20,7 @@ public partial class GameplayScene : IScene
     private Map _map = null!;
     private ChampionManager _championManager = null!;
     private TowerManager _towerManager = null!;
-    private WaveManager _waveManager = null!;
+    private SpawnScheduleManager _spawnScheduleManager = null!;
     private InputManager _inputManager = null!;
     private UIPanel _uiPanel = null!;
 
@@ -134,10 +134,11 @@ public partial class GameplayScene : IScene
 
         _championManager = new ChampionManager();
         _towerManager = new TowerManager(_map, _championManager);
-        List<WaveData> waveDefinitions = WaveLoader.TryLoad(_selectedMapId) ?? FallbackWaves();
-        _waveManager = new WaveManager(
+        List<SpawnEntry> spawnEntries =
+            SpawnScheduleLoader.TryLoad(_selectedMapId)?.Spawns ?? FallbackSpawnSchedule();
+        _spawnScheduleManager = new SpawnScheduleManager(
             spawnName => _map.ActivePaths.GetValueOrDefault(spawnName) ?? _map.ActivePath,
-            waveDefinitions
+            spawnEntries
         );
         _inputManager = new InputManager();
         _uiPanel = new UIPanel(
@@ -157,11 +158,11 @@ public partial class GameplayScene : IScene
         _lives = GameSettings.StartingLives;
         _gameOver = false;
         _gameWon = false;
-        _allEnemiesCleared = true;
+        _allEnemiesCleared = _spawnScheduleManager.TotalSpawnCount == 0;
         ClearEntranceWarnings();
 
         // Wire up enemy spawning
-        _waveManager.OnEnemySpawned = enemy =>
+        _spawnScheduleManager.OnEnemySpawned = enemy =>
         {
             _enemies.Add(enemy);
             TrackEntranceWarningEnemy(enemy);
@@ -244,8 +245,8 @@ public partial class GameplayScene : IScene
         }
 
         // Scale elapsed time uniformly when time-slow is active. All downstream systems
-        // (CountdownTimers, float dt, wave spawning) propagate this automatically through
-        // their GameTime parameter, requiring no changes inside Enemy, Tower, or WaveManager.
+        // (CountdownTimers, float dt, timed spawning) propagate this automatically through
+        // their GameTime parameter, requiring no changes inside Enemy, Tower, or SpawnScheduleManager.
         GameTime activeTime = _uiPanel.IsTimeSlowed
             ? new GameTime(
                 gameTime.TotalGameTime,
@@ -258,8 +259,8 @@ public partial class GameplayScene : IScene
         foreach (var key in CooldownPoolKeys)
             _placementCooldowns[key] = Math.Max(0f, _placementCooldowns[key] - scaledDt);
 
-        // --- Update wave spawning ---
-        _waveManager.Update(activeTime);
+        // --- Update timed enemy spawning ---
+        _spawnScheduleManager.Update(activeTime);
 
         // --- Update enemies ---
         for (int i = _enemies.Count - 1; i >= 0; i--)
@@ -291,12 +292,12 @@ public partial class GameplayScene : IScene
             }
         }
 
-        // Check if all enemies are cleared (wave done spawning + no enemies alive)
-        _allEnemiesCleared = !_waveManager.WaveInProgress && _enemies.Count == 0;
+        // Check if the schedule has completed and the field is empty.
+        _allEnemiesCleared = _spawnScheduleManager.IsScheduleComplete && _enemies.Count == 0;
         UpdateEntranceWarnings(activeTime);
 
         // Check win condition
-        if (_waveManager.CurrentWave >= _waveManager.TotalWaves && _allEnemiesCleared)
+        if (_allEnemiesCleared)
         {
             _gameWon = true;
         }
@@ -413,12 +414,15 @@ public partial class GameplayScene : IScene
     }
 
     /// <summary>
-    /// Hardcoded wave definitions used when no Content/Waves/{mapId}.json exists.
-    /// Mirrors the original 5-wave progression so existing maps work without a JSON file.
+    /// Hardcoded spawn schedule used when no Content/SpawnSchedules/{mapId}.json exists.
+    /// Mirrors the legacy 5-burst progression on a single match timeline.
     /// </summary>
-    private static List<WaveData> FallbackWaves()
+    private static List<SpawnEntry> FallbackSpawnSchedule()
     {
-        static List<SpawnEntry> MakeWave(
+        const float firstBurstStartSeconds = 10f;
+        const float interBurstGapSeconds = 10f;
+
+        static List<SpawnEntry> MakeBurst(
             int count,
             float health,
             float speed,
@@ -444,13 +448,37 @@ public partial class GameplayScene : IScene
             return entries;
         }
 
-        return new List<WaveData>
+        static void AppendBurst(
+            List<SpawnEntry> schedule,
+            List<SpawnEntry> burst,
+            ref float nextBurstStartSeconds
+        )
         {
-            new(1, MakeWave(5, 300, 90, 1.0f, 5)),
-            new(2, MakeWave(8, 400, 95, 0.9f, 5)),
-            new(3, MakeWave(10, 600, 100, 0.8f, 8)),
-            new(4, MakeWave(12, 800, 110, 0.8f, 8)),
-            new(5, MakeWave(15, 1000, 120, 0.7f, 12)),
-        };
+            float burstStartSeconds = nextBurstStartSeconds;
+            float burstFirstAt = burst.Count > 0 ? burst[0].At : 0f;
+
+            for (int i = 0; i < burst.Count; i++)
+            {
+                SpawnEntry spawn = burst[i];
+                schedule.Add(spawn with { At = burstStartSeconds + (spawn.At - burstFirstAt) });
+            }
+
+            if (burst.Count == 0)
+                return;
+
+            float burstLastAt = schedule[^1].At;
+            nextBurstStartSeconds = burstLastAt + interBurstGapSeconds;
+        }
+
+        var schedule = new List<SpawnEntry>();
+        float nextBurstStartSeconds = firstBurstStartSeconds;
+
+        AppendBurst(schedule, MakeBurst(5, 300, 90, 1.0f, 5), ref nextBurstStartSeconds);
+        AppendBurst(schedule, MakeBurst(8, 400, 95, 0.9f, 5), ref nextBurstStartSeconds);
+        AppendBurst(schedule, MakeBurst(10, 600, 100, 0.8f, 8), ref nextBurstStartSeconds);
+        AppendBurst(schedule, MakeBurst(12, 800, 110, 0.8f, 8), ref nextBurstStartSeconds);
+        AppendBurst(schedule, MakeBurst(15, 1000, 120, 0.7f, 12), ref nextBurstStartSeconds);
+
+        return schedule;
     }
 }

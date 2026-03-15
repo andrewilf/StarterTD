@@ -6,7 +6,7 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Dynamic Mazing**: Dijkstra pathfinding with per-tower movement costs for strategic maze control.
 * **Tiled Maps**: Maps are `.tmx` files in `Content/Maps/`, edited in [Tiled map editor](https://www.mapeditor.org).
 * **Multi-Spawn Lanes**: Maps support multiple named spawn/exit points (`spawn_a`/`exit_a`, `spawn_b`/`exit_b`, etc.), each with an independent path.
-* **JSON Wave Config**: Waves are defined in `Content/Waves/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to hardcoded waves if no file exists.
+* **JSON Spawn Schedules**: Match-long spawn timelines are defined in `Content/SpawnSchedules/{mapId}.json` — each enemy entry specifies spawn point, timing, and stats. Falls back to a built-in schedule if no file exists.
 * **Entrance Warnings**: Per-lane spawn indicators render in world-space as pulsing `!` markers with flash/burst effects; warnings are spawn-driven with speed-based pre-spawn lead time and a 5s per-lane cooldown to avoid spam.
 * **Tower System**: 3 Generic (Gun, Cannon, Walling) + 4 Champion tower types (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with walking, abilities, and blocking capacity.
 * **ChampionHealing Modes + Ult**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and swaps between Healing/Attack modes. Ult uses a shared `50s` cooldown: Healing mode grants a 15s support window (drone refill + free drone healing + +30% attack speed for attacking towers), while Attack mode arms 5 instant railgun shots (`+75%` main-hit damage, `50%` pierce/impact AoE damage, `1.5x` base fire interval during charged shots).
@@ -66,28 +66,23 @@ The tileset is `Content/Maps/terrain32.png` — a horizontal spritesheet, curren
 
 Open the `.tmx` in Tiled, save, then build. To remove a map, delete its `.tmx` file. No other changes needed.
 
-## Wave Workflow
+## Spawn Schedule Workflow
 
-Each map can have a matching wave file at `Content/Waves/{mapId}.json`. Drop the file in and rebuild — it is picked up automatically via the `*.json` glob.
+Each map can have a matching spawn schedule file at `Content/SpawnSchedules/{mapId}.json`. Drop the file in and rebuild — it is picked up automatically via the `*.json` glob.
 
 ### Schema
 
 ```json
 {
-  "waves": [
+  "spawns": [
     {
-      "wave": 1,
-      "spawns": [
-        {
-          "at": 0.0,
-          "spawnPoint": "spawn_a",
-          "name": "Goblin",
-          "health": 300,
-          "speed": 90,
-          "attackDamage": 5,
-          "color": "Purple"
-        }
-      ]
+      "at": 10.0,
+      "spawnPoint": "spawn_a",
+      "name": "Goblin",
+      "health": 300,
+      "speed": 90,
+      "attackDamage": 5,
+      "color": "Purple"
     }
   ]
 }
@@ -95,11 +90,13 @@ Each map can have a matching wave file at `Content/Waves/{mapId}.json`. Drop the
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `at` | float | Seconds from wave start when this enemy spawns |
+| `at` | float | Absolute seconds from match start when this enemy spawns |
 | `spawnPoint` | string | Must match a named spawn object in the map's Markers layer |
 | `color` | string | Any `Microsoft.Xna.Framework.Color` property name (e.g. `"Red"`, `"Cyan"`) |
 
-If no JSON file exists for the selected map, the game falls back to 5 built-in waves spawning from `"spawn"`.
+Schedules begin automatically when gameplay starts. The built-in fallback and converted map schedules use a 10-second pre-match countdown before the first enemy appears.
+
+If no JSON file exists for the selected map, the game falls back to a built-in spawn schedule from `"spawn"`.
 
 ### Tileset tips
 
