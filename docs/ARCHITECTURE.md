@@ -1,13 +1,15 @@
 # Architecture
 
 ## Scene Stack
-- `SceneManager`: `SetScene()` replaces, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates/draws
-- Scenes: `MapSelectionScene`, `GameplayScene`, `PauseScene`
+- `SceneManager`: `SetScene()` replaces immediately, `TransitionToScene()` performs preset-driven full-scene swaps, `PushScene()` overlays, `PopScene()` removes top. Only top scene updates/draws; transitions freeze scene updates and composite outgoing/incoming render targets
+- Scenes: `StartMenuScene`, `MapSelectionScene`, `GameplayScene`, `PauseScene`
+- Startup flow: `Game1` enters `StartMenuScene`; `Start` transitions to `MapSelectionScene`
+- `MapSelectionScene` is the level-select screen and returns to `StartMenuScene` via top-right `Back` or `Esc`
 
 ## Data Flow
 - Down: Scene -> managers via `Update()` args
 - Up: Managers -> Scene via `Action<T>` callbacks. Managers never reference each other
-- Rendering: `SpriteBatch`/fonts passed via `Draw()`
+- Rendering: `Game1` clears the backbuffer and draws FPS; `SceneManager` owns scene `SpriteBatch` orchestration plus full-scene transition render targets/compositing; scenes draw into the batches they are given
 - Gameplay uses split coordinate spaces: world-space for map entities, screen-space for UI/overlays
 
 ## GameplayScene Owns

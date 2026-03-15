@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
+using StarterTD.Managers;
 
 namespace StarterTD.Scenes;
 
@@ -13,12 +14,11 @@ namespace StarterTD.Scenes;
 public class PauseScene : IScene
 {
     private readonly Game1 _game;
+    private InputManager _inputManager = null!;
     private SpriteFont? _font;
-    private KeyboardState _previousKeyboard = new();
 
     private readonly Rectangle _resumeButton;
-    private readonly Rectangle _mainMenuButton;
-    private MouseState _previousMouse = new();
+    private readonly Rectangle _mapSelectionButton;
 
     private const int ButtonWidth = 200;
     private const int ButtonHeight = 60;
@@ -32,7 +32,7 @@ public class PauseScene : IScene
         int startY = GameSettings.ScreenHeight / 2 - 80;
 
         _resumeButton = new Rectangle(centerX, startY, ButtonWidth, ButtonHeight);
-        _mainMenuButton = new Rectangle(
+        _mapSelectionButton = new Rectangle(
             centerX,
             startY + ButtonHeight + Gap,
             ButtonWidth,
@@ -42,6 +42,8 @@ public class PauseScene : IScene
 
     public void LoadContent()
     {
+        _inputManager = new InputManager();
+
         try
         {
             _font = _game.Content.Load<SpriteFont>("DefaultFont");
@@ -50,52 +52,33 @@ public class PauseScene : IScene
         {
             // Font not available — UI will use fallback rendering
         }
-
-        _previousKeyboard = Keyboard.GetState();
-        _previousMouse = Mouse.GetState();
     }
 
     public void Update(GameTime gameTime)
     {
-        KeyboardState currentKeyboard = Keyboard.GetState();
+        _inputManager.Update();
 
-        if (
-            (currentKeyboard.IsKeyDown(Keys.Escape) && _previousKeyboard.IsKeyUp(Keys.Escape))
-            || (currentKeyboard.IsKeyDown(Keys.P) && _previousKeyboard.IsKeyUp(Keys.P))
-        )
+        if (_inputManager.IsKeyPressed(Keys.Escape) || _inputManager.IsKeyPressed(Keys.P))
         {
             _game.PopScene();
-            _previousKeyboard = currentKeyboard;
             return;
         }
 
-        MouseState currentMouse = Mouse.GetState();
-        if (
-            currentMouse.LeftButton == ButtonState.Pressed
-            && _previousMouse.LeftButton == ButtonState.Released
-        )
+        if (_inputManager.IsLeftClick())
         {
-            Point mousePos = currentMouse.Position;
+            Point mousePos = _inputManager.MousePosition;
 
             if (_resumeButton.Contains(mousePos))
             {
                 _game.PopScene();
-                _previousKeyboard = currentKeyboard;
-                _previousMouse = currentMouse;
                 return;
             }
 
-            if (_mainMenuButton.Contains(mousePos))
+            if (_mapSelectionButton.Contains(mousePos))
             {
                 _game.SetScene(new MapSelectionScene(_game));
-                _previousKeyboard = currentKeyboard;
-                _previousMouse = currentMouse;
-                return;
             }
         }
-
-        _previousKeyboard = currentKeyboard;
-        _previousMouse = currentMouse;
     }
 
     public void Draw(SpriteBatch spriteBatch)
@@ -121,15 +104,15 @@ public class PauseScene : IScene
             );
 
             DrawButton(spriteBatch, _resumeButton, "Resume (P/ESC)");
-            DrawButton(spriteBatch, _mainMenuButton, "Main Menu");
+            DrawButton(spriteBatch, _mapSelectionButton, "Map Selection");
         }
         else
         {
             TextureManager.DrawRect(spriteBatch, _resumeButton, Color.DarkSlateGray);
             TextureManager.DrawRectOutline(spriteBatch, _resumeButton, Color.White, 2);
 
-            TextureManager.DrawRect(spriteBatch, _mainMenuButton, Color.DarkSlateGray);
-            TextureManager.DrawRectOutline(spriteBatch, _mainMenuButton, Color.White, 2);
+            TextureManager.DrawRect(spriteBatch, _mapSelectionButton, Color.DarkSlateGray);
+            TextureManager.DrawRectOutline(spriteBatch, _mapSelectionButton, Color.White, 2);
         }
     }
 

@@ -11,8 +11,9 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 * **Tower System**: 3 Generic (Gun, Cannon, Walling) + 4 Champion tower types (ChampionGun, ChampionCannon, ChampionWalling, ChampionHealing) with walking, abilities, and blocking capacity.
 * **ChampionHealing Modes + Ult**: ChampionHealing deploys 3 healing drones (non-overlapping heal targets), passively regenerates `2 HP/s` (1s ticks), and swaps between Healing/Attack modes. Ult uses a shared `50s` cooldown: Healing mode grants a 15s support window (drone refill + free drone healing + +30% attack speed for attacking towers), while Attack mode arms 5 instant railgun shots (`+75%` main-hit damage, `50%` pierce/impact AoE damage, `1.5x` base fire interval during charged shots).
 * **Enemy Combat**: State machine (Moving/Attacking) with tower engagement system.
-* **Game Loop**: Map Selection → Gameplay → Victory/Defeat.
-* **Windowing**: Launches in windowed maximized mode with native window controls. Map selection includes an `Exit` button.
+* **Game Loop**: Start Screen → Map Selection → Gameplay → Victory/Defeat.
+* **Windowing**: Launches in windowed maximized mode with native window controls. Start screen provides `Start`, `Settings` (no-op), and `Exit`; map selection provides `Back`.
+* **Menu Transitions**: Start/menu navigation uses a short slide/fade transition. Gameplay and pause scene swaps remain immediate.
 
 ## Build & Run
     # Restore dependencies
@@ -31,8 +32,10 @@ A Tower Defense game built with **MonoGame** and **.NET 9**.
 
 | Input | Context | Action |
 | :--- | :--- | :--- |
+| **Left Click** | Start Screen | Click `Start`, `Settings`, or `Exit` |
 | **Left Click** | Map Selection | Select Map |
-| **Left Click** | Map Selection | Click `Exit` button to quit |
+| **Left Click** | Map Selection | Click `Back` to return to start screen |
+| **Esc** | Map Selection | Return to start screen |
 | **Left Click** | Gameplay | Place Tower |
 | **Key 'R'** | Game Over | Restart / Return to Menu |
 

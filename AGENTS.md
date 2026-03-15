@@ -38,6 +38,7 @@ This file is the canonical agent policy for this repository. `CLAUDE.md` is lega
 
 ## Skills
 A skill is a local instruction set in `SKILL.md`. Use these when matched:
+- create-branch-and-set-upstream
 - document-changes-from-last-merge
 - document-changes-uncommitted
 - optimizing-ai-content

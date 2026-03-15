@@ -15,6 +15,16 @@ public class InputManager
     private KeyboardState _currentKeyboard;
     private KeyboardState _previousKeyboard;
 
+    public InputManager()
+    {
+        // Prime both snapshots so a newly created scene does not treat an
+        // already-held mouse button or key as a fresh click/press.
+        _currentMouse = Mouse.GetState();
+        _previousMouse = _currentMouse;
+        _currentKeyboard = Keyboard.GetState();
+        _previousKeyboard = _currentKeyboard;
+    }
+
     /// <summary>Current mouse position as a Point (grid-friendly).</summary>
     public Point MousePosition => _currentMouse.Position;
 
