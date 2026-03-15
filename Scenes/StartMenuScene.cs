@@ -1,7 +1,6 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.UI;
@@ -78,23 +77,6 @@ public class StartMenuScene : IScene
             spriteBatch.DrawString(_font, title, titlePos + new Vector2(2, 2), Color.Black);
             spriteBatch.DrawString(_font, title, titlePos, Color.White);
         }
-
-        if (!GumService.Default.IsInitialized)
-            return;
-
-        // SceneManager has already started a SpriteBatch. Gum renders with its own pipeline,
-        // so we briefly close this batch, draw Gum, then restore SceneManager's expected state.
-        spriteBatch.End();
-        GumService.Default.Draw();
-        spriteBatch.Begin(
-            SpriteSortMode.Deferred,
-            BlendState.AlphaBlend,
-            SamplerState.PointClamp,
-            null,
-            null,
-            null,
-            null
-        );
     }
 
     private void HandleViewportResize()

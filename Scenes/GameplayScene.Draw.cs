@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Entities;
 using StarterTD.UI;
@@ -97,7 +96,6 @@ public partial class GameplayScene
 
         _uiPanel.Draw(
             spriteBatch,
-            _placementCooldowns,
             _lives,
             GetSpawnStatusText(),
             _timeSlowBank / TimeSlowMaxBank,
@@ -107,24 +105,6 @@ public partial class GameplayScene
 
         if (_gameOver || _gameWon)
             DrawGameOverOverlay(spriteBatch, _uiPanel.GetFont());
-
-        if (!GumService.Default.IsInitialized)
-            return;
-
-        // SceneManager owns the SpriteBatch lifecycle around scene draws. Gum renders
-        // through its own pipeline, so we end the current batch, draw Gum, and reopen
-        // a matching batch so SceneManager can end it safely.
-        spriteBatch.End();
-        GumService.Default.Draw();
-        spriteBatch.Begin(
-            SpriteSortMode.Deferred,
-            BlendState.AlphaBlend,
-            SamplerState.PointClamp,
-            null,
-            null,
-            null,
-            null
-        );
     }
 
     private string GetSpawnStatusText()

@@ -30,19 +30,22 @@ internal enum GameplayHudButtonId
 
 internal sealed class GameplayHudGumView : IDisposable
 {
+    private readonly record struct ButtonStateSnapshot(
+        string Text,
+        bool IsEnabled,
+        bool IsVisible,
+        GumMenuButtonStyle Style
+    );
+
     private readonly Panel _rootPanel;
     private readonly Dictionary<GameplayHudButtonId, Button> _buttons = new();
     private readonly List<(Button button, EventHandler handler)> _registeredHandlers = new();
+    private readonly Dictionary<GameplayHudButtonId, Rectangle> _boundsCache = new();
+    private readonly Dictionary<GameplayHudButtonId, ButtonStateSnapshot> _stateCache = new();
     private bool _isDisposed;
 
     public GameplayHudGumView(IReadOnlyDictionary<GameplayHudButtonId, Action> handlers)
     {
-        var towerPlacementStyle = new GumMenuButtonStyle(
-            new Color(50, 70, 92),
-            new Color(182, 212, 236),
-            Color.White
-        );
-
         _rootPanel = new Panel
         {
             WidthUnits = DimensionUnitType.Absolute,
@@ -50,73 +53,78 @@ internal sealed class GameplayHudGumView : IDisposable
             Name = "GameplayHudRoot",
         };
 
-        CreateButton(GameplayHudButtonId.GunTower, "Gun", towerPlacementStyle, handlers);
+        CreateButton(
+            GameplayHudButtonId.GunTower,
+            "Gun",
+            GameplayHudStyles.TowerPlacement,
+            handlers
+        );
         CreateButton(
             GameplayHudButtonId.GunAbility,
             "Gun Ability",
-            new GumMenuButtonStyle(new Color(40, 64, 84), new Color(160, 205, 240), Color.White),
+            GameplayHudStyles.GunAbility,
             handlers
         );
-        CreateButton(GameplayHudButtonId.CannonTower, "Cannon", towerPlacementStyle, handlers);
+        CreateButton(
+            GameplayHudButtonId.CannonTower,
+            "Cannon",
+            GameplayHudStyles.TowerPlacement,
+            handlers
+        );
         CreateButton(
             GameplayHudButtonId.CannonAbility,
             "Cannon Ability",
-            new GumMenuButtonStyle(new Color(56, 52, 40), new Color(212, 194, 147), Color.White),
+            GameplayHudStyles.CannonAbility,
             handlers
         );
-        CreateButton(GameplayHudButtonId.WallTower, "Walling", towerPlacementStyle, handlers);
+        CreateButton(
+            GameplayHudButtonId.WallTower,
+            "Walling",
+            GameplayHudStyles.TowerPlacement,
+            handlers
+        );
         CreateButton(
             GameplayHudButtonId.WallAbility,
             "Walling Ability",
-            new GumMenuButtonStyle(new Color(34, 70, 40), new Color(156, 218, 164), Color.White),
+            GameplayHudStyles.WallAbility,
             handlers
         );
         CreateButton(
             GameplayHudButtonId.HealingTower,
             "Healing Champion",
-            towerPlacementStyle,
+            GameplayHudStyles.TowerPlacement,
             handlers
         );
         CreateButton(
             GameplayHudButtonId.HealingAbility,
             "Healing Ability",
-            new GumMenuButtonStyle(new Color(38, 74, 56), new Color(176, 232, 200), Color.White),
+            GameplayHudStyles.HealingAbility,
             handlers
         );
         CreateButton(
             GameplayHudButtonId.PlaceHighGround,
             "Place High Ground",
-            new GumMenuButtonStyle(new Color(78, 58, 34), new Color(230, 198, 153), Color.White),
+            GameplayHudStyles.DebugButton,
             handlers
         );
         CreateButton(
             GameplayHudButtonId.SpawnEnemy,
             "Spawn Enemy",
-            new GumMenuButtonStyle(new Color(74, 46, 46), new Color(224, 148, 148), Color.White),
+            GameplayHudStyles.DebugButton,
             handlers
         );
         CreateButton(
             GameplayHudButtonId.TimeSlow,
             "Time Slow",
-            new GumMenuButtonStyle(new Color(20, 60, 80), new Color(120, 220, 255), Color.White),
+            GameplayHudStyles.TimeSlowBase,
             handlers
         );
-        CreateButton(
-            GameplayHudButtonId.Sell,
-            "X",
-            new GumMenuButtonStyle(new Color(130, 0, 0), new Color(214, 110, 110), Color.White),
-            handlers
-        );
-        CreateButton(
-            GameplayHudButtonId.HealingMode,
-            "M",
-            new GumMenuButtonStyle(new Color(18, 55, 88), new Color(90, 235, 255), Color.White),
-            handlers
-        );
+        CreateButton(GameplayHudButtonId.Sell, "X", GameplayHudStyles.SellButton, handlers);
+        CreateButton(GameplayHudButtonId.HealingMode, "M", GameplayHudStyles.HealingMode, handlers);
         CreateButton(
             GameplayHudButtonId.WallPlacementMode,
             "+",
-            new GumMenuButtonStyle(new Color(20, 60, 20), new Color(140, 220, 140), Color.White),
+            GameplayHudStyles.WallMode,
             handlers
         );
 
@@ -160,6 +168,9 @@ internal sealed class GameplayHudGumView : IDisposable
         if (_isDisposed || !_buttons.TryGetValue(id, out var button))
             return;
 
+        if (_boundsCache.TryGetValue(id, out Rectangle cachedBounds) && cachedBounds == bounds)
+            return;
+
         button.XOrigin = HorizontalAlignment.Left;
         button.YOrigin = VerticalAlignment.Top;
         button.XUnits = GeneralUnitType.PixelsFromSmall;
@@ -170,6 +181,8 @@ internal sealed class GameplayHudGumView : IDisposable
         button.Height = bounds.Height;
         button.WidthUnits = DimensionUnitType.Absolute;
         button.HeightUnits = DimensionUnitType.Absolute;
+
+        _boundsCache[id] = bounds;
     }
 
     public void SetButtonState(
@@ -183,16 +196,52 @@ internal sealed class GameplayHudGumView : IDisposable
         if (_isDisposed || !_buttons.TryGetValue(id, out var button))
             return;
 
-        button.Text = text;
-        button.IsEnabled = isEnabled;
-        button.IsVisible = isVisible;
-        GumMenuButtonFactory.ApplyStyle(button, style);
+        var state = new ButtonStateSnapshot(text, isEnabled, isVisible, style);
+        bool hasCachedState = _stateCache.TryGetValue(id, out ButtonStateSnapshot cachedState);
+        if (hasCachedState && cachedState == state)
+            return;
+
+        if (!hasCachedState)
+        {
+            button.Text = text;
+            button.IsEnabled = isEnabled;
+            button.IsVisible = isVisible;
+            GumMenuButtonFactory.ApplyStyle(button, style);
+            _stateCache[id] = state;
+            return;
+        }
+
+        if (cachedState.Text != text)
+            button.Text = text;
+
+        if (cachedState.IsEnabled != isEnabled)
+            button.IsEnabled = isEnabled;
+
+        if (cachedState.IsVisible != isVisible)
+            button.IsVisible = isVisible;
+
+        if (cachedState.Style != style)
+            GumMenuButtonFactory.ApplyStyle(button, style);
+
+        _stateCache[id] = state;
     }
 
     public void SetButtonVisible(GameplayHudButtonId id, bool isVisible)
     {
         if (_isDisposed || !_buttons.TryGetValue(id, out var button))
             return;
+
+        if (_stateCache.TryGetValue(id, out ButtonStateSnapshot cachedState))
+        {
+            if (cachedState.IsVisible == isVisible)
+                return;
+
+            _stateCache[id] = cachedState with { IsVisible = isVisible };
+        }
+        else if (button.IsVisible == isVisible)
+        {
+            return;
+        }
 
         button.IsVisible = isVisible;
     }
@@ -209,6 +258,8 @@ internal sealed class GameplayHudGumView : IDisposable
             _rootPanel.Visual.Parent.RemoveChild(_rootPanel.Visual);
 
         _rootPanel.Visual.RemoveFromManagers();
+        _boundsCache.Clear();
+        _stateCache.Clear();
         _isDisposed = true;
     }
 
@@ -221,6 +272,7 @@ internal sealed class GameplayHudGumView : IDisposable
     {
         var button = GumMenuButtonFactory.Create(text, 1f, 1f, style);
         _buttons[id] = button;
+        _stateCache[id] = new ButtonStateSnapshot(text, true, true, style);
         _rootPanel.AddChild(button);
 
         if (!handlers.TryGetValue(id, out var action))

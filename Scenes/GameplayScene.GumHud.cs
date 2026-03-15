@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using StarterTD.Engine;
 using StarterTD.Entities;
 using StarterTD.UI;
 
@@ -13,113 +12,19 @@ namespace StarterTD.Scenes;
 /// </summary>
 public partial class GameplayScene
 {
-    private static readonly GumMenuButtonStyle SelectedButtonStyle = new(
-        BackgroundColor: new Color(84, 86, 112),
-        FocusedIndicatorColor: new Color(250, 230, 118),
-        ForegroundColor: Color.White
-    );
+    private enum HudCooldownLabelKind
+    {
+        Locked,
+        Global,
+        Respawn,
+        AbilityCooldown,
+    }
 
-    private static readonly GumMenuButtonStyle DisabledButtonStyle = new(
-        BackgroundColor: new Color(52, 52, 52),
-        FocusedIndicatorColor: new Color(102, 102, 102),
-        ForegroundColor: new Color(150, 150, 150)
-    );
-
-    private static readonly GumMenuButtonStyle AbilityCooldownStyle = new(
-        BackgroundColor: new Color(64, 64, 64),
-        FocusedIndicatorColor: new Color(140, 140, 140),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle AbilityUnavailableStyle = new(
-        BackgroundColor: new Color(48, 48, 48),
-        FocusedIndicatorColor: new Color(110, 110, 110),
-        ForegroundColor: new Color(150, 150, 150)
-    );
-
-    private static readonly GumMenuButtonStyle DebugButtonStyle = new(
-        BackgroundColor: new Color(78, 58, 34),
-        FocusedIndicatorColor: new Color(230, 198, 153),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle DebugSelectedStyle = new(
-        BackgroundColor: new Color(112, 84, 44),
-        FocusedIndicatorColor: new Color(250, 224, 160),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle TimeSlowBaseStyle = new(
-        BackgroundColor: new Color(20, 60, 80),
-        FocusedIndicatorColor: new Color(120, 220, 255),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle TimeSlowActiveStyle = new(
-        BackgroundColor: new Color(0, 92, 128),
-        FocusedIndicatorColor: new Color(140, 240, 255),
-        ForegroundColor: new Color(232, 250, 255)
-    );
-
-    private static readonly GumMenuButtonStyle SellButtonStyle = new(
-        BackgroundColor: new Color(130, 0, 0),
-        FocusedIndicatorColor: new Color(214, 110, 110),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle HealingModeStyle = new(
-        BackgroundColor: new Color(18, 55, 88),
-        FocusedIndicatorColor: new Color(90, 235, 255),
-        ForegroundColor: new Color(195, 255, 215)
-    );
-
-    private static readonly GumMenuButtonStyle HealingModeAttackStyle = new(
-        BackgroundColor: new Color(85, 18, 18),
-        FocusedIndicatorColor: new Color(255, 110, 70),
-        ForegroundColor: new Color(255, 215, 120)
-    );
-
-    private static readonly GumMenuButtonStyle WallModeStyle = new(
-        BackgroundColor: new Color(20, 60, 20),
-        FocusedIndicatorColor: new Color(140, 220, 140),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle WallModeActiveStyle = new(
-        BackgroundColor: new Color(8, 96, 24),
-        FocusedIndicatorColor: new Color(180, 255, 180),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle TowerPlacementStyle = new(
-        BackgroundColor: new Color(50, 70, 92),
-        FocusedIndicatorColor: new Color(182, 212, 236),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle GunAbilityStyle = new(
-        BackgroundColor: new Color(40, 64, 84),
-        FocusedIndicatorColor: new Color(160, 205, 240),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle CannonAbilityStyle = new(
-        BackgroundColor: new Color(56, 52, 40),
-        FocusedIndicatorColor: new Color(212, 194, 147),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle WallAbilityStyle = new(
-        BackgroundColor: new Color(34, 70, 40),
-        FocusedIndicatorColor: new Color(156, 218, 164),
-        ForegroundColor: Color.White
-    );
-
-    private static readonly GumMenuButtonStyle HealingAbilityStyle = new(
-        BackgroundColor: new Color(38, 74, 56),
-        FocusedIndicatorColor: new Color(176, 232, 200),
-        ForegroundColor: Color.White
-    );
+    private readonly Dictionary<int, string> _cooldownTenthsTextCache = new();
+    private readonly Dictionary<
+        (GameplayHudButtonId ButtonId, HudCooldownLabelKind Kind, int Tenths),
+        string
+    > _cooldownLabelCache = new();
 
     private void InitializeGameplayHudGum()
     {
@@ -153,7 +58,7 @@ public partial class GameplayScene
         };
 
         _gameplayHudView = new GameplayHudGumView(handlers);
-        _gameplayHudView.ResizeToViewport(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
+        _gameplayHudView.ResizeToViewport(_layoutWidth, _layoutHeight);
         _gameplayHudView.AttachToRoot();
         UpdateGameplayHudGum();
     }
@@ -162,8 +67,6 @@ public partial class GameplayScene
     {
         if (_gameplayHudView == null)
             return;
-
-        _gameplayHudView.ResizeToViewport(GameSettings.ScreenWidth, GameSettings.ScreenHeight);
 
         // Static panel layout from UIPanel.
         _gameplayHudView.SetButtonBounds(GameplayHudButtonId.GunTower, _uiPanel.GunTowerButtonRect);
@@ -222,7 +125,7 @@ public partial class GameplayScene
             championType: TowerType.ChampionGun,
             genericCooldown: _placementCooldowns.GetValueOrDefault(TowerType.Gun),
             championCooldown,
-            baseStyle: TowerPlacementStyle
+            baseStyle: GameplayHudStyles.TowerPlacement
         );
 
         UpdateConsolidatedTowerButton(
@@ -231,7 +134,7 @@ public partial class GameplayScene
             championType: TowerType.ChampionCannon,
             genericCooldown: _placementCooldowns.GetValueOrDefault(TowerType.Cannon),
             championCooldown,
-            baseStyle: TowerPlacementStyle
+            baseStyle: GameplayHudStyles.TowerPlacement
         );
 
         UpdateConsolidatedTowerButton(
@@ -240,7 +143,7 @@ public partial class GameplayScene
             championType: TowerType.ChampionWalling,
             genericCooldown: _placementCooldowns.GetValueOrDefault(TowerType.Walling),
             championCooldown,
-            baseStyle: TowerPlacementStyle
+            baseStyle: GameplayHudStyles.TowerPlacement
         );
 
         bool isSelected = _uiPanel.SelectedTowerType == TowerType.ChampionHealing;
@@ -259,17 +162,34 @@ public partial class GameplayScene
         if (isAlive)
             text = "Healing Champion (Active)";
         else if (isCooldownLocked)
-            text = $"Healing Champion (Locked {championCooldown:F1}s)";
+            text = GetCooldownLabel(
+                GameplayHudButtonId.HealingTower,
+                "Healing Champion",
+                HudCooldownLabelKind.Locked,
+                championCooldown
+            );
         else if (globalCooldown > 0f)
-            text = $"Healing Champion (Global {globalCooldown:F1}s)";
+            text = GetCooldownLabel(
+                GameplayHudButtonId.HealingTower,
+                "Healing Champion",
+                HudCooldownLabelKind.Global,
+                globalCooldown
+            );
         else if (respawnCooldown > 0f)
-            text = $"Healing Champion (Respawn {respawnCooldown:F1}s)";
+            text = GetCooldownLabel(
+                GameplayHudButtonId.HealingTower,
+                "Healing Champion",
+                HudCooldownLabelKind.Respawn,
+                respawnCooldown
+            );
         else
             text = "Healing Champion";
 
-        GumMenuButtonStyle style = enabled ? TowerPlacementStyle : DisabledButtonStyle;
+        GumMenuButtonStyle style = enabled
+            ? GameplayHudStyles.TowerPlacement
+            : GameplayHudStyles.DisabledButton;
         if (isSelected)
-            style = SelectedButtonStyle;
+            style = GameplayHudStyles.SelectedButton;
 
         _gameplayHudView!.SetButtonState(GameplayHudButtonId.HealingTower, text, enabled, style);
     }
@@ -293,15 +213,31 @@ public partial class GameplayScene
         {
             float globalCooldown = _championManager.GlobalCooldownRemaining;
             float respawnCooldown = _championManager.GetRespawnCooldown(championType);
+            string championLabel = $"{genericType} Champion";
 
             if (championCooldown > 0f)
-                text = $"{genericType} Champion (Locked {championCooldown:F1}s)";
+                text = GetCooldownLabel(
+                    buttonId,
+                    championLabel,
+                    HudCooldownLabelKind.Locked,
+                    championCooldown
+                );
             else if (globalCooldown > 0f)
-                text = $"{genericType} Champion (Global {globalCooldown:F1}s)";
+                text = GetCooldownLabel(
+                    buttonId,
+                    championLabel,
+                    HudCooldownLabelKind.Global,
+                    globalCooldown
+                );
             else if (respawnCooldown > 0f)
-                text = $"{genericType} Champion (Respawn {respawnCooldown:F1}s)";
+                text = GetCooldownLabel(
+                    buttonId,
+                    championLabel,
+                    HudCooldownLabelKind.Respawn,
+                    respawnCooldown
+                );
             else
-                text = $"{genericType} Champion";
+                text = championLabel;
 
             enabled =
                 championCooldown <= 0f
@@ -311,16 +247,22 @@ public partial class GameplayScene
         }
         else
         {
+            string genericLabel = genericType.ToString();
             text =
                 genericCooldown > 0f
-                    ? $"{genericType} (Locked {genericCooldown:F1}s)"
-                    : genericType.ToString();
+                    ? GetCooldownLabel(
+                        buttonId,
+                        genericLabel,
+                        HudCooldownLabelKind.Locked,
+                        genericCooldown
+                    )
+                    : genericLabel;
             enabled = genericCooldown <= 0f && _championManager.CanPlaceGeneric(genericType);
         }
 
-        GumMenuButtonStyle style = enabled ? baseStyle : DisabledButtonStyle;
+        GumMenuButtonStyle style = enabled ? baseStyle : GameplayHudStyles.DisabledButton;
         if (isSelected)
-            style = SelectedButtonStyle;
+            style = GameplayHudStyles.SelectedButton;
 
         _gameplayHudView!.SetButtonState(buttonId, text, enabled, style);
     }
@@ -331,25 +273,25 @@ public partial class GameplayScene
             GameplayHudButtonId.GunAbility,
             TowerType.ChampionGun,
             "Gun Ability",
-            GunAbilityStyle
+            GameplayHudStyles.GunAbility
         );
         UpdateAbilityButton(
             GameplayHudButtonId.CannonAbility,
             TowerType.ChampionCannon,
             "Cannon Ability",
-            CannonAbilityStyle
+            GameplayHudStyles.CannonAbility
         );
         UpdateAbilityButton(
             GameplayHudButtonId.WallAbility,
             TowerType.ChampionWalling,
             "Walling Ability",
-            WallAbilityStyle
+            GameplayHudStyles.WallAbility
         );
         UpdateAbilityButton(
             GameplayHudButtonId.HealingAbility,
             TowerType.ChampionHealing,
             "Healing Ability",
-            HealingAbilityStyle
+            GameplayHudStyles.HealingAbility
         );
     }
 
@@ -370,16 +312,21 @@ public partial class GameplayScene
         else if (ready)
             text = $"{label} (Ready)";
         else
-            text = $"{label} ({cooldown:F1}s)";
+            text = GetCooldownLabel(
+                buttonId,
+                label,
+                HudCooldownLabelKind.AbilityCooldown,
+                cooldown
+            );
 
         bool enabled = ready;
         GumMenuButtonStyle style;
         if (ready)
             style = readyBaseStyle;
         else if (championAlive)
-            style = AbilityCooldownStyle;
+            style = GameplayHudStyles.AbilityCooldown;
         else
-            style = AbilityUnavailableStyle;
+            style = GameplayHudStyles.AbilityUnavailable;
 
         _gameplayHudView!.SetButtonState(buttonId, text, enabled, style);
     }
@@ -393,13 +340,13 @@ public partial class GameplayScene
             GameplayHudButtonId.PlaceHighGround,
             "Place High Ground",
             true,
-            isHighGroundSelected ? DebugSelectedStyle : DebugButtonStyle
+            isHighGroundSelected ? GameplayHudStyles.DebugSelected : GameplayHudStyles.DebugButton
         );
         _gameplayHudView.SetButtonState(
             GameplayHudButtonId.SpawnEnemy,
             "Spawn Enemy",
             true,
-            isSpawnSelected ? DebugSelectedStyle : DebugButtonStyle
+            isSpawnSelected ? GameplayHudStyles.DebugSelected : GameplayHudStyles.DebugButton
         );
     }
 
@@ -409,11 +356,11 @@ public partial class GameplayScene
         string text = _uiPanel.IsTimeSlowed ? ">> 0.5x Speed <<" : "Time Slow";
         GumMenuButtonStyle style;
         if (_uiPanel.IsTimeSlowed)
-            style = TimeSlowActiveStyle;
+            style = GameplayHudStyles.TimeSlowActive;
         else if (canToggle)
-            style = TimeSlowBaseStyle;
+            style = GameplayHudStyles.TimeSlowBase;
         else
-            style = DisabledButtonStyle;
+            style = GameplayHudStyles.DisabledButton;
 
         _gameplayHudView!.SetButtonState(GameplayHudButtonId.TimeSlow, text, canToggle, style);
     }
@@ -433,7 +380,7 @@ public partial class GameplayScene
             GameplayHudButtonId.Sell,
             "X",
             true,
-            SellButtonStyle,
+            GameplayHudStyles.SellButton,
             isVisible: true
         );
 
@@ -457,11 +404,11 @@ public partial class GameplayScene
 
             GumMenuButtonStyle modeStyle;
             if (isCooldownActive)
-                modeStyle = DisabledButtonStyle;
+                modeStyle = GameplayHudStyles.DisabledButton;
             else if (isAttackMode)
-                modeStyle = HealingModeAttackStyle;
+                modeStyle = GameplayHudStyles.HealingModeAttack;
             else
-                modeStyle = HealingModeStyle;
+                modeStyle = GameplayHudStyles.HealingMode;
 
             _gameplayHudView.SetButtonState(
                 GameplayHudButtonId.HealingMode,
@@ -492,7 +439,7 @@ public partial class GameplayScene
                 GameplayHudButtonId.WallPlacementMode,
                 "+",
                 true,
-                _wallPlacementMode ? WallModeActiveStyle : WallModeStyle,
+                _wallPlacementMode ? GameplayHudStyles.WallModeActive : GameplayHudStyles.WallMode,
                 isVisible: true
             );
         }
@@ -594,5 +541,47 @@ public partial class GameplayScene
             worldRect.Width,
             worldRect.Height
         );
+    }
+
+    private string GetCooldownLabel(
+        GameplayHudButtonId buttonId,
+        string label,
+        HudCooldownLabelKind kind,
+        float seconds
+    )
+    {
+        int tenths = QuantizeCooldownToTenths(seconds);
+        var cacheKey = (buttonId, kind, tenths);
+        if (_cooldownLabelCache.TryGetValue(cacheKey, out string? cached))
+            return cached;
+
+        string cooldownText = GetCachedTenthsText(tenths);
+        string formatted = kind switch
+        {
+            HudCooldownLabelKind.Locked => $"{label} (Locked {cooldownText}s)",
+            HudCooldownLabelKind.Global => $"{label} (Global {cooldownText}s)",
+            HudCooldownLabelKind.Respawn => $"{label} (Respawn {cooldownText}s)",
+            HudCooldownLabelKind.AbilityCooldown => $"{label} ({cooldownText}s)",
+            _ => $"{label} ({cooldownText}s)",
+        };
+
+        _cooldownLabelCache[cacheKey] = formatted;
+        return formatted;
+    }
+
+    private string GetCachedTenthsText(int tenths)
+    {
+        if (_cooldownTenthsTextCache.TryGetValue(tenths, out string? cached))
+            return cached;
+
+        string formatted = (tenths / 10f).ToString("0.0");
+        _cooldownTenthsTextCache[tenths] = formatted;
+        return formatted;
+    }
+
+    private static int QuantizeCooldownToTenths(float seconds)
+    {
+        float clamped = Math.Max(0f, seconds);
+        return (int)MathF.Ceiling(clamped * 10f);
     }
 }

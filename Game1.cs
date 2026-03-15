@@ -221,6 +221,10 @@ public class Game1 : Game
 
         _sceneManager.Draw(_spriteBatch);
 
+        // Draw Gum once per frame from a single owner to avoid scene-level draw coupling.
+        if (GumService.Default.IsInitialized)
+            GumService.Default.Draw();
+
         _spriteBatch.Begin(
             SpriteSortMode.Deferred,
             BlendState.AlphaBlend,

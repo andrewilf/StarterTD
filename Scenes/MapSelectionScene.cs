@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
-using MonoGameGum;
 using StarterTD.Engine;
 using StarterTD.Interfaces;
 using StarterTD.Managers;
@@ -156,23 +155,6 @@ public class MapSelectionScene : IScene
         {
             DrawMapCard(spriteBatch, _cardBounds[i], _availableMaps[i], _hoveredCardIndex == i);
         }
-
-        if (!GumService.Default.IsInitialized)
-            return;
-
-        // SceneManager has already started a SpriteBatch. Gum renders with its own pipeline,
-        // so we briefly close this batch, draw Gum, then restore SceneManager's expected state.
-        spriteBatch.End();
-        GumService.Default.Draw();
-        spriteBatch.Begin(
-            SpriteSortMode.Deferred,
-            BlendState.AlphaBlend,
-            SamplerState.PointClamp,
-            null,
-            null,
-            null,
-            null
-        );
     }
 
     /// <summary>
