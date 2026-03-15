@@ -126,10 +126,7 @@ public class StartMenuScene : IScene
             return;
 
         _isNavigatingAway = true;
-        _game.TransitionToScene(
-            new MapSelectionScene(_game),
-            SceneTransitionPreset.MenuForwardSlideFade
-        );
+        _game.SetScene(new MapSelectionScene(_game));
     }
 
     private void HandleSettingsClicked()
